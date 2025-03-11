@@ -9,11 +9,7 @@
             <div class="card-body p-4">
                 <div class="card-content p-3">
                     <div class="text-center mb-4">
-                        @if($settings && $settings->logo)
-                            <img width="200" src="{{ asset($settings->logo) }}" alt="{{ $settings->company_name }} Logo" class="mb-3"/>
-                        @else
-                            <img width="200" src="{{ asset('public/assets/img/logo.png') }}" alt="Default Logo" class="mb-3"/>
-                        @endif
+                            <img width="120" src="{{ asset('public/assets/img/logo.png') }}" alt="Default Logo" class="mb-3"/>
                         <hr class="border-secondary">
                     </div>
                     <div class="card-title text-uppercase text-center py-2 text-white">{{ $settings->company_name ?? 'Company Name' }} Login</div>

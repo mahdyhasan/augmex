@@ -405,7 +405,7 @@ hr {
 /* Logo */
 .brand-logo{
   width: 100%;
-  height: 60px;
+  height: 35px;
   border-bottom: 1px solid #33444a;
 }
 
@@ -427,11 +427,11 @@ hr {
    /* margin-left: 20px;
     width: 35px;*/
 
-    width: 35px;
-    width: 100%;
+    /* width: 100%; */
     object-fit: contain;
     object-position: center;
-    height: 58px !important;
+    padding-bottom: 10px;
+    height: 38px !important;
 }
 
 /* SearachBar */

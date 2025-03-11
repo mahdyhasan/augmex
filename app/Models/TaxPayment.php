@@ -8,4 +8,5 @@ use Illuminate\Database\Eloquent\Model;
 class TaxPayment extends Model
 {
     use HasFactory;
+    protected $fillable = ['type', 'amount', 'payment_date'];
 }

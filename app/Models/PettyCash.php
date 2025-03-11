@@ -8,4 +8,5 @@ use Illuminate\Database\Eloquent\Model;
 class PettyCash extends Model
 {
     use HasFactory;
+    protected $fillable = ['amount', 'description', 'date'];
 }

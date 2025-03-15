@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Model;
 class Employee extends Model
 {
     use HasFactory;
-    protected $fillable = ['name', 'email', 'phone', 'position', 'department', 'salary_type', 'salary_amount'];
+    protected $fillable = ['name', 'email', 'phone', 'position', 'department', 'salary_type', 'salary_amount', 'date_of_termination', 'user_id'];
     
     public function attendances()
     {
@@ -19,4 +19,16 @@ class Employee extends Model
     {
         return $this->hasMany(Payroll::class);
     }
+
+    public function details()
+    {
+    return $this->hasOne(EmployeeDetail::class, 'employee_id');
+    }
+
+    public function user()
+    {
+        return $this->belongsTo(User::class, 'user_id');
+    }
+
+
 }

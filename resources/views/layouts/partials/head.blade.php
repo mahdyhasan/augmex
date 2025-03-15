@@ -1,42 +1,63 @@
 <head>
-    <meta charset="utf-8"/>
-    <meta http-equiv="X-UA-Compatible" content="IE=edge"/>
-    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no"/>
-    <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>@yield('title') | {{ config('app.name') }}</title>
-    <!--favicon-->
-    {{-- <link rel="icon" href="{{ ($settings && $settings->logo) ? asset($settings->logo) : asset('public/assets/img/logo.png') }}" type="image/x-icon"> --}}
-    <!-- Bootstrap core CSS-->
-    <link href="{{ asset('public/all-assets/expert/assets/css/bootstrap.min.css') }}" rel="stylesheet"/>
 
-    <!--Select Plugins-->
-{{--    <link href="{{ asset('public/all-assets/expert/assets/plugins/select2/css/select2.min.css') }}" rel="stylesheet" />--}}
+    <!-- Meta Tags -->
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Augmex Accounting & HRM">
+    <meta name="author" content="Augmex">
+    <meta name="robots" content="noindex, nofollow">
 
-    <!--Bootstrap Datepicker-->
-{{--    <link href="{{ asset('public/all-assets/expert/assets/plugins/bootstrap-datepicker/css/bootstrap-datepicker.min.css')}}" rel="stylesheet" type="text/css">--}}
+    <!-- Title -->
+    <title>@yield('title') | {{ config('app.name', 'Augmex') }}</title>
 
-    <!--Data Tables -->
-    <link href="{{ asset('public/all-assets/expert/assets/plugins/bootstrap-datatable/css/dataTables.bootstrap4.min.css') }}" rel="stylesheet" type="text/css">
+    <!-- Themescript JS -->
+    <script src="{{ asset('public/assets/js/theme-script.js') }}" type="b82e39c220b185c3080ff033-text/javascript"></script>
 
-    <!-- animate CSS-->
-    <link href="{{ asset('public/all-assets/expert/assets/css/animate.css') }}" rel="stylesheet" type="text/css"/>
-    <!-- Icons CSS-->
-    <link href="{{ asset('public/all-assets/expert/assets/css/icons.css') }}" rel="stylesheet" type="text/css"/>
+    <!-- Apple Touch Icon -->
+    <link rel="apple-touch-icon" sizes="180x180" href="{{ asset('public/assets/img/apple-touch-icon.png') }}">
 
-    <!-- notifications css -->
-{{--    <link rel="stylesheet" href="{{ asset('public/all-assets/expert/assets/plugins/notifications/css/lobibox.min.css') }}"/>--}}
-    <!-- Vector CSS -->
-{{--    <link href="{{ asset('public/all-assets/expert/assets/plugins/vectormap/jquery-jvectormap-2.0.2.css') }}" rel="stylesheet"/>--}}
-    <!-- simplebar CSS-->
-    <link href="{{ asset('public/all-assets/expert/assets/plugins/simplebar/css/simplebar.css') }}" rel="stylesheet"/>
-    <!-- Sidebar CSS-->
-    <link href="{{ asset('public/all-assets/expert/assets/css/sidebar-menu.css') }}" rel="stylesheet"/>
+    <!-- Favicon -->
+    <link rel="icon" href="{{ asset('public/assets/img/favicon.png') }}" type="image/x-icon">
+    <link rel="shortcut icon" type="image/x-icon" href="{{ asset('public/assets/img/favicon.png') }}">
 
-    <!-- Custom Style-->
-    <link href="{{ asset('public/all-assets/expert/assets/css/app-style.css') }}" rel="stylesheet"/>
-    <link href="{{ asset('public/all-assets/expert/assets/css/custom.css') }}" rel="stylesheet"/>
+    <!-- Bootstrap CSS -->
+    <link rel="stylesheet" href="{{ asset('public/assets/css/bootstrap.min.css') }}">
 
-{{--    <link href="{{ asset('public/all-assets/expert/assets/plugins/summernote/dist/summernote-bs4.css') }}" rel="stylesheet"/>--}}
+    <!-- Tabler Icon CSS -->
+    <link rel="stylesheet" href="{{ asset('public/assets/plugins/tabler-icons/tabler-icons.css') }}">
 
-    @yield('head.css')
+    <!-- Fontawesome CSS -->
+    <link rel="stylesheet" href="{{ asset('public/assets/plugins/fontawesome/css/fontawesome.min.css') }}">
+    <link rel="stylesheet" href="{{ asset('public/assets/plugins/fontawesome/css/all.min.css') }}">
+
+    <!-- Color Picker CSS -->
+    <link rel="stylesheet" href="{{ asset('public/assets/plugins/flatpickr/flatpickr.min.css') }}">
+    <link rel="stylesheet" href="{{ asset('public/assets/plugins/%40simonwep/pickr/themes/nano.min.css') }}">
+
+    <!-- Datatable CSS -->
+    <link rel="stylesheet" href="{{ asset('public/assets/css/dataTables.bootstrap5.min.css') }}">
+
+    <!-- Daterangepicker CSS -->
+    <link rel="stylesheet" href="{{ asset('public/assets/plugins/daterangepicker/daterangepicker.css') }}">
+
+    <!-- Select2 CSS -->
+    <link rel="stylesheet" href="{{ asset('public/assets/plugins/select2/css/select2.min.css') }}">
+
+    <!-- Bootstrap Tagsinput CSS -->
+    <link rel="stylesheet" href="{{ asset('public/assets/plugins/bootstrap-tagsinput/bootstrap-tagsinput.css') }}">
+
+    <!-- Datetimepicker CSS -->
+    <link rel="stylesheet" href="{{ asset('public/assets/css/bootstrap-datetimepicker.min.css') }}">
+
+    <!-- Summernote CSS -->
+    <link rel="stylesheet" href="{{ asset('public/assets/plugins/summernote/summernote-lite.min.css') }}">
+
+    <!-- Feathericon CSS -->
+    <link rel="stylesheet" href="{{ asset('public/assets/css/feather.css') }}">
+
+    <!-- Main CSS -->
+    <link rel="stylesheet" href="{{ asset('public/assets/css/style.css') }}">
+
+    @yield('css')
 </head>

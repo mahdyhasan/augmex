@@ -1,94 +1,93 @@
-@extends('auth.layouts.app')
+@extends('layouts.auth')
 
 @section('title', 'Login')
 
 @section('content')
-    <!-- Start wrapper -->
-    <div id="wrapper" class="bg-dark min-vh-100 d-flex align-items-center justify-content-center">
-        <div class="card card-authentication1 mx-auto my-5 animated zoomIn bg-dark border-0 shadow-lg">
-            <div class="card-body p-4">
-                <div class="card-content p-3">
-                    <div class="text-center mb-4">
-                            <img width="120" src="{{ asset('public/assets/img/logo.png') }}" alt="Default Logo" class="mb-3"/>
-                        <hr class="border-secondary">
-                    </div>
-                    <div class="card-title text-uppercase text-center py-2 text-white">{{ $settings->company_name ?? 'Company Name' }} Login</div>
-
-                    @if(session('message'))
-                        <div class="alert alert-{{ session('class') }} alert-dismissible fade show" role="alert">
-                            <div class="alert-icon contrast-alert">
-                                <i class="icon-close"></i>
-                            </div>
-                            <div class="alert-message">
-                                <span>{{ session('message') }}</span>
-                            </div>
-                            <button type="button" class="close" data-dismiss="alert" aria-label="Close">
-                                <span aria-hidden="true">&times;</span>
-                            </button>
+    <div class="account-content">
+        <div class="d-flex flex-wrap w-100 vh-100 overflow-hidden account-bg-01">
+            <div class="d-flex align-items-center justify-content-center flex-wrap vh-100 overflow-auto p-4 w-50 bg-backdrop">
+                <form action="{{ route('login') }}" method="POST" class="flex-fill">
+                    @csrf
+                    <div class="mx-auto mw-450">
+                        <div class="text-center mb-4">
+                            <img src="{{ asset('public/assets/img/logo.png') }}" class="img-fluid" alt="Logo">
                         </div>
-                    @endif
-
-                    <form method="post" action="{{ route('login') }}" class="color-form">
-                        @csrf
-                        <div class="form-group mb-3">
-                            <div class="position-relative has-icon-left">
-                                <label for="email" class="sr-only">Email</label>
-                                <input type="email" id="email" name="email" class="form-control @error('email') is-invalid @enderror" placeholder="Email" value="{{ old('email') }}" required autofocus>
-                                <div class="form-control-position">
-                                    <i class="icon-user"></i>
-                                </div>
-                            </div>
-                            @error('email')
-                                <span class="text-danger small">{{ $message }}</span>
-                            @enderror
+                        <div class="mb-4">
+                            <h4 class="mb-2 fs-20">Sign In</h4>
+                            <p>Access the {{ config('app.name', 'Augmex') }} panel using your email and passcode.</p>
                         </div>
-
-                        <div class="form-group mb-3">
-                            <div class="position-relative has-icon-left">
-                                <label for="password" class="sr-only">Password</label>
-                                <input type="password" id="password" name="password" class="form-control @error('password') is-invalid @enderror" placeholder="Password" required>
-                                <div class="form-control-position">
-                                    <i class="icon-lock"></i>
-                                </div>
+                        <div class="mb-3">
+                            <label class="col-form-label" for="email">Email Address</label>
+                            <div class="position-relative">
+                                    <span class="input-icon-addon">
+                                        <i class="ti ti-mail"></i>
+                                    </span>
+                                <input type="email" class="form-control @error('email') is-invalid @enderror" id="email" name="email" placeholder="Email Address" value="{{ old('email') }}" required>
                             </div>
                             @error('password')
-                                <span class="text-danger small">{{ $message }}</span>
+                            <span class="invalid-feedback" role="alert">
+                                    <strong>{{ $message }}</strong>
+                                </span>
                             @enderror
                         </div>
-
-                        <div class="form-row mb-3">
-                            <div class="form-group col-6">
-                                <div class="demo-checkbox">
-                                    <input type="checkbox" id="remember" name="remember" class="filled-in chk-col-danger" checked/>
-                                    <label for="remember" class="text-white">Remember me</label>
-                                </div>
+                        <div class="mb-3">
+                            <label class="col-form-label" for="password">Password</label>
+                            <div class="pass-group">
+                                <input type="password" class="pass-input form-control @error('password') is-invalid @enderror" id="password" name="password" placeholder="********" required>
+                                <span class="ti toggle-password ti-eye-off"></span>
                             </div>
-                            <!-- Uncomment if you want to add a "Forgot Password" link -->
-                            <!-- <div class="form-group col-6 text-right">
-                                <a href="{{ route('password.request') }}" class="text-white">Forgot Password?</a>
+                            @error('password')
+                                <span class="invalid-feedback" role="alert">
+                                    <strong>{{ $message }}</strong>
+                                </span>
+                            @enderror
+                        </div>
+                        <div class="d-flex align-items-center justify-content-between mb-3">
+                            <div class="form-check form-check-md d-flex align-items-center">
+                                <input class="form-check-input" type="checkbox" value="" id="checkebox-md" checked="">
+                                <label class="form-check-label" for="checkebox-md">
+                                    Remember Me
+                                </label>
+                            </div>
+                            <!-- <div class="text-end">
+                                <a href="forgot-password.html" class="text-primary fw-medium link-hover">Forgot Password?</a>
                             </div> -->
                         </div>
-
-                        <div class="form-group mb-3">
-                            <button type="submit" class="btn btn-danger btn-block waves-effect waves-light">Sign In</button>
+                        <div class="mb-3">
+                            <button type="submit" class="btn btn-primary w-100">Sign In</button>
                         </div>
-
-                        <div class="form-group text-center">
-                            <hr class="border-secondary">
+                        <!-- <div class="mb-3">
+                            <h6>New on our platform?<a href="register.html" class="text-purple link-hover"> Create an account</a></h6>
                         </div>
-                    </form>
-                </div>
+                        <div class="form-set-login or-text mb-3">
+                            <h4>OR</h4>
+                        </div>
+                        <div class="d-flex align-items-center justify-content-center flex-wrap mb-3">
+                            <div class="text-center me-2 flex-fill">
+                                <a href="javascript:void(0);"
+                                   class="br-10 p-2 px-4 btn bg-pending  d-flex align-items-center justify-content-center">
+                                    <img class="img-fluid m-1" src="{{ asset('public/assets/img/icons/facebook-logo.svg') }}" alt="Facebook">
+                                </a>
+                            </div>
+                            <div class="text-center me-2 flex-fill">
+                                <a href="javascript:void(0);"
+                                   class="br-10 p-2 px-4 btn bg-white d-flex align-items-center justify-content-center">
+                                    <img class="img-fluid  m-1" src="{{ asset('public/assets/img/icons/google-logo.svg') }}" alt="Facebook">
+                                </a>
+                            </div>
+                            <div class="text-center flex-fill">
+                                <a href="javascript:void(0);"
+                                   class="bg-dark br-10 p-2 px-4 btn btn-dark d-flex align-items-center justify-content-center">
+                                    <img class="img-fluid  m-1" src="{{ asset('public/assets/img/icons/apple-logo.svg') }}" alt="Apple">
+                                </a>
+                            </div>
+                        </div> -->
+                        <div class="text-center">
+                            <p class="fw-medium text-gray">Copyright &copy; {{ date('Y') }} - {{ config('app.name', 'Augmex') }}</p>
+                        </div>
+                    </div>
+                </form>
             </div>
         </div>
-
-        <!-- Modal -->
-        <div class="modal fade" id="darkmodal">
-            <div class="modal-dialog modal-lg">
-                <div class="modal-content border-dark"></div>
-            </div>
-        </div>
-
-        <!-- Back To Top Button -->
-        <a href="javascript:void(0);" class="back-to-top"><i class="fa fa-angle-double-up"></i></a>
-    </div><!-- End wrapper -->
+    </div>
 @endsection

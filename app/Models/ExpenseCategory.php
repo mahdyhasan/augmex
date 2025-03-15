@@ -8,4 +8,12 @@ use Illuminate\Database\Eloquent\Model;
 class ExpenseCategory extends Model
 {
     use HasFactory;
+
+    protected $fillable = ['name', 'type'];
+
+    public function expenses()
+    {
+        return $this->hasMany(Expense::class, 'category_id');
+    }
+
 }

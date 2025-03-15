@@ -27,25 +27,32 @@ use App\Http\Controllers\TransactionController;
 |
 */
 
+
+
 Auth::routes(['register' => false]);
 
-Route::group(['middleware' => 'auth'], function () {
-    // Dashboard
-    Route::get('/', [HomeController::class, 'dashboard'])->name('dashboard');
+Route::group(['middleware' => 'auth', 'role:superAdmin'], function () {
 
-    //Settings
-    Route::group(['prefix' => 'setting', 'as' => 'setting.'], function () {
-        Route::get('/show', [SettingController::class, 'show'])->name('show');
-        Route::post('/list', [SettingController::class, 'list'])->name('list');
-        Route::get('/create', [SettingController::class, 'create'])->name('create');
-        Route::post('/store', [SettingController::class, 'store'])->name('store');
-        Route::get('/edit/{id}', [SettingController::class, 'edit'])->name('edit');
-        Route::post('/update/{id}', [SettingController::class, 'update'])->name('update');
-    });
+    Route::get('/', function () {
+        return view('dashboard');
+    })->name('dashboard');
 
-    // Accounts
+    Route::get('/user/profile', function () {
+        return view('user.profile');
+    })->name('user.profile');
+
+    Route::get('/company', function () {
+        return view('company');
+    })->name('company');
+
+    //Route::get('/home', [App\Http\Controllers\HomeController::class, 'index'])->name('home');
+
+
+
+   // Accounts
     Route::prefix('accounts')->group(function () {
         Route::get('/', [AccountController::class, 'listAllAccounts']);
+        Route::get('/incomeStatement', [AccountController::class, 'incomeStatement']);
         Route::get('/{id}', [AccountController::class, 'viewAccountDetails']);
         Route::post('/create', [AccountController::class, 'createNewAccount']);
         Route::put('/update/{id}', [AccountController::class, 'updateAccountDetails']);
@@ -53,24 +60,25 @@ Route::group(['middleware' => 'auth'], function () {
     });
 
 
-    Route::prefix('employees')->group(function () {
+    Route::prefix('employees')->middleware(['auth'])->group(function () {
         Route::get('/', [EmployeeController::class, 'listAllEmployees']);
-        Route::get('/{id}', [EmployeeController::class, 'viewEmployeeProfile']);
-        Route::post('/register', [EmployeeController::class, 'registerNewEmployee']);
-        Route::put('/update/{id}', [EmployeeController::class, 'updateEmployeeDetails']);
-        Route::delete('/delete/{id}', [EmployeeController::class, 'removeEmployee']);
+        Route::get('/profile', [EmployeeController::class, 'employeeProfile'])->name('employee.profile');
+        Route::post('/profile', [EmployeeController::class, 'updateEmployeeProfile'])->name('employee.profile.update');
+        Route::get('/list', [EmployeeController::class, 'employeeDetails'])->name('employee.list');
+    });
+        
+    // Attendances
+    Route::prefix('attendance')->middleware(['auth'])->group(function () {
+        Route::get('/', [AttendanceController::class, 'listAllAttendance'])->name('attendance.index');
+        Route::get('/clock-in', [AttendanceController::class, 'clockIn'])->name('attendance.clockIn');
+        Route::post('/login', [AttendanceController::class, 'logIn'])->name('attendance.login');
+        Route::post('/logout', [AttendanceController::class, 'logOut'])->name('attendance.logout');
     });
     
-    Route::prefix('attendance')->group(function () {
-        Route::get('/', [AttendanceController::class, 'listAllAttendance']);
-        Route::get('/{employee_id}', [AttendanceController::class, 'listEmployeeAttendance']);
-        Route::post('/check-in', [AttendanceController::class, 'recordEmployeeCheckIn']);
-        Route::post('/check-out', [AttendanceController::class, 'recordEmployeeCheckOut']);
-    });
-    
+    //EXPENSES 
     Route::prefix('expenses')->group(function () {
-        Route::get('/', [ExpenseController::class, 'listAllExpenses']);
-        Route::post('/record', [ExpenseController::class, 'recordNewExpense']);
+        Route::get('/', [ExpenseController::class, 'listAllExpenses'])->name('expenses.index');
+        Route::post('/record', [ExpenseController::class, 'recordNewExpense'])->name('expenses.store');
         Route::put('/update/{id}', [ExpenseController::class, 'updateExpenseRecord']);
         Route::delete('/delete/{id}', [ExpenseController::class, 'deleteExpense']);
     });
@@ -113,9 +121,15 @@ Route::group(['middleware' => 'auth'], function () {
         Route::post('/{id}/mark-paid', [InvoiceController::class, 'markInvoiceAsPaid'])->name('invoices.markPaid');
         Route::get('/client/{client_id}', [InvoiceController::class, 'getInvoicesByClient'])->name('invoices.byClient');
     });
-    
+
+
+
+
+
+
 
 
 
 
 });
+

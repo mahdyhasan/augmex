@@ -1,75 +1,62 @@
-<!-- Bootstrap core JavaScript-->
-<script src="{{ asset('public/all-assets/expert/assets/js/jquery.min.js') }}"></script>
-<script src="{{ asset('public/all-assets/expert/assets/js/popper.min.js') }}"></script>
-<script src="{{ asset('public/all-assets/expert/assets/js/bootstrap.min.js') }}"></script>
-<script src="{{ asset('public/all-assets/expert/assets/js/bootstrap-treeview.js') }}"></script>
+<!-- jQuery -->
+<script data-cfasync="false" src="{{ asset('public/assets/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js') }}"></script>
+<script src="{{ asset('public/assets/js/jquery-3.7.1.min.js') }}" type="b82e39c220b185c3080ff033-text/javascript"></script>
 
-<!-- simplebar js -->
-<script src="{{ asset('public/all-assets/expert/assets/plugins/simplebar/js/simplebar.js') }}"></script>
+<!-- Bootstrap Core JS -->
+<script src="{{ asset('public/assets/js/bootstrap.bundle.min.js') }}" type="b82e39c220b185c3080ff033-text/javascript"></script>
 
-<!-- waves effect js -->
-<script src="{{ asset('public/all-assets/expert/assets/js/waves.js') }}"></script>
+<!-- Feather Icon JS -->
+<script src="{{ asset('public/assets/js/feather.min.js') }}" type="b82e39c220b185c3080ff033-text/javascript"></script>
 
-<!-- sidebar-menu js -->
-<script src="{{ asset('public/all-assets/expert/assets/js/sidebar-menu.js') }}"></script>
+<!-- Slimscroll JS -->
+<script src="{{ asset('public/assets/js/jquery.slimscroll.min.js') }}" type="b82e39c220b185c3080ff033-text/javascript"></script>
 
-<!-- Custom scripts -->
-<script src="{{ asset('public/all-assets/expert/assets/js/app-script.js') }}"></script>
+<!-- Sticky Sidebar JS -->
+<script src="{{ asset('public/assets/plugins/theia-sticky-sidebar/ResizeSensor.js') }}" type="e598d6943448beaf67f3ccc1-text/javascript"></script>
+<script src="{{ asset('public/assets/plugins/theia-sticky-sidebar/theia-sticky-sidebar.js') }}" type="e598d6943448beaf67f3ccc1-text/javascript"></script>
 
-<!--Form Validatin Script-->
-<script src="{{ asset('public/all-assets/expert/assets/plugins/jquery-validation/js/jquery.validate.min.js') }}"></script>
+<!-- Datatable JS -->
+<script src="{{ asset('public/assets/js/jquery.dataTables.min.js') }}" type="b82e39c220b185c3080ff033-text/javascript"></script>
+<script src="{{ asset('public/assets/js/dataTables.bootstrap5.min.js') }}" type="b82e39c220b185c3080ff033-text/javascript"></script>
 
-<!--notification js -->
-{{--<script src="{{ asset('public/all-assets/expert/assets/plugins/notifications/js/lobibox.min.js') }}"></script>--}}
-{{--<script src="{{ asset('public/all-assets/expert/assets/plugins/notifications/js/notifications.min.js') }}"></script>--}}
+<!-- Daterangepicker JS -->
+<script src="{{ asset('public/assets/js/moment.min.js') }}" type="b82e39c220b185c3080ff033-text/javascript"></script>
+<script src="{{ asset('public/assets/plugins/daterangepicker/daterangepicker.js') }}" type="b82e39c220b185c3080ff033-text/javascript"></script>
 
-<!--Sweet Alerts -->
-<script src="{{ asset('public/all-assets/expert/assets/plugins/alerts-boxes/js/sweetalert.min.js') }}"></script>
+<!-- Datetimepicker JS -->
+<script src="{{ asset('public/assets/js/bootstrap-datetimepicker.min.js') }}" type="b82e39c220b185c3080ff033-text/javascript"></script>
 
-<!--Bootstrap Datepicker Js-->
-{{--<script src="{{ asset('public/all-assets/expert/assets/plugins/bootstrap-datepicker/js/bootstrap-datepicker.min.js') }}"></script>--}}
+<!-- Bootstrap Tagsinput JS -->
+<script src="{{ asset('public/assets/plugins/bootstrap-tagsinput/bootstrap-tagsinput.js') }}" type="b82e39c220b185c3080ff033-text/javascript"></script>
 
-<!--Select Plugins Js-->
-{{--<script src="{{ asset('public/all-assets/expert/assets/plugins/select2/js/select2.min.js') }}"></script>--}}
+<!-- Apexchart JS -->
+<script src="{{ asset('public/assets/plugins/apexchart/apexcharts.min.js') }}" type="b82e39c220b185c3080ff033-text/javascript"></script>
+<script src="{{ asset('public/assets/plugins/apexchart/chart-data.js') }}" type="b82e39c220b185c3080ff033-text/javascript"></script>
 
-<!--Data Tables js-->
-<script src="{{ asset('public/all-assets/expert/assets/plugins/bootstrap-datatable/js/jquery.dataTables.min.js') }}"></script>
-<script src="{{ asset('public/all-assets/expert/assets/plugins/bootstrap-datatable/js/dataTables.bootstrap4.min.js') }}"></script>
-{{--<script src="{{ asset('public/all-assets/expert/assets/plugins/bootstrap-datatable/js/dataTables.buttons.min.js') }}"></script>--}}
-{{--<script src="{{ asset('public/all-assets/expert/assets/plugins/bootstrap-datatable/js/buttons.bootstrap4.min.js') }}"></script>--}}
-{{--<script src="{{ asset('public/all-assets/expert/assets/plugins/bootstrap-datatable/js/jszip.min.js') }}"></script>--}}
-{{--<script src="{{ asset('public/all-assets/expert/assets/plugins/bootstrap-datatable/js/pdfmake.min.js') }}"></script>--}}
-{{--<script src="{{ asset('public/all-assets/expert/assets/plugins/bootstrap-datatable/js/vfs_fonts.js') }}"></script>--}}
-{{--<script src="{{ asset('public/all-assets/expert/assets/plugins/bootstrap-datatable/js/buttons.html5.min.js') }}"></script>--}}
-{{--<script src="{{ asset('public/all-assets/expert/assets/plugins/bootstrap-datatable/js/buttons.print.min.js') }}"></script>--}}
-{{--<script src="{{ asset('public/all-assets/expert/assets/plugins/bootstrap-datatable/js/buttons.colVis.min.js') }}"></script>--}}
+<!-- Chart JS -->
+<script src="{{ asset('public/assets/plugins/peity/jquery.peity.min.js') }}" type="b82e39c220b185c3080ff033-text/javascript"></script>
+<script src="{{ asset('public/assets/plugins/peity/chart-data.js') }}" type="b82e39c220b185c3080ff033-text/javascript"></script>
 
-<!-- CKEditor 4.22.1 -->
-{{--<script src="https://cdn.ckeditor.com/4.22.1/standard/ckeditor.js"></script>--}}
+<!-- Select2 JS -->
+<script src="{{ asset('public/assets/plugins/select2/js/select2.min.js') }}" type="b82e39c220b185c3080ff033-text/javascript"></script>
 
-<!-- Custom JS -->
-<script src="{{ asset('public/all-assets/expert/assets/js/custom.js') }}"></script>
+<!-- Summernote JS -->
+<script src="{{ asset('public/assets/plugins/summernote/summernote-lite.min.js') }}" type="5f5a525903e1bda563f72aae-text/javascript"></script>
 
-<script>
-    // $(document).ready(function() {
-    //     $('.single-select').select2();
-    // });
+<!-- Profile Upload JS -->
+<script src="{{ asset('public/assets/js/profile-upload.js') }}" type="5f5a525903e1bda563f72aae-text/javascript"></script>
 
-    @if(session('success'))
-        swal({
-            title: "Success",
-            text: "{{ session('success') }}",
-            icon: "success"
-        });
-    @endif
+<!-- Custom Json Js -->
+<script src="{{ asset('public/assets/js/jsonscript.js') }}" type="b82e39c220b185c3080ff033-text/javascript"></script>
 
-    @if(session('error'))
-        swal({
-            title: "Error",
-            text: "{{ session('error') }}",
-            icon: "error"
-        });
-    @endif
-</script>
+<!-- Color Picker JS -->
+<script src="{{ asset('public/assets/plugins/%40simonwep/pickr/pickr.es5.min.js') }}" type="b82e39c220b185c3080ff033-text/javascript"></script>
 
-@yield('script')
+<!--- Custom Js -->
+<script src="{{ asset('public/assets/js/theme-colorpicker.js') }}" type="b82e39c220b185c3080ff033-text/javascript"></script>
+<script src="{{ asset('public/assets/js/script.js') }}" type="b82e39c220b185c3080ff033-text/javascript"></script>
+
+<script src="{{ asset('public/assets/cdn-cgi/scripts/7d0fa10a/cloudflare-static/rocket-loader.min.js') }}" data-cf-settings="b82e39c220b185c3080ff033-|49" defer></script>
+<script defer src="https://static.cloudflareinsights.com/beacon.min.js/vcd15cbe7772f49c399c6a5babf22c1241717689176015" integrity="sha512-ZpsOmlRQV6y907TI0dKBHq9Md29nnaEIPlkf84rnaERnq6zvWvPUqr2ft8M1aS28oN72PdrCzSjY4U6VaAw1EQ==" data-cf-beacon='{"rayId":"91f246a68e5fba56","version":"2025.1.0","serverTiming":{"name":{"cfExtPri":true,"cfL4":true,"cfSpeedBrain":true,"cfCacheStatus":true}},"token":"3ca157e612a14eccbb30cf6db6691c29","b":1}' crossorigin="anonymous"></script>
+
+@yield('js')

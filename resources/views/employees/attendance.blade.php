@@ -9,7 +9,15 @@
                 <div class="card-header d-flex justify-content-between align-items-center">
                     <h3>Attendance Sheet</h3>
                 </div>
+
                 <div class="card-body">
+                    @if(session('success'))
+                        <div class="alert alert-success">{{ session('success') }}</div>
+                    @endif
+                    @if(session('error'))
+                        <div class="alert alert-danger">{{ session('error') }}</div>
+                    @endif
+
                     <table id="attendanceTable" class="table table-bordered">
                         <thead>
                             <tr>
@@ -46,11 +54,17 @@
             </div>
         </div>
     </div>
+@endsection
+
 
 @section('script')
+
+<script src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js"></script>
 <script>
+    
     $(document).ready(function() {
         $('#attendanceTable').DataTable();
+
     });
 </script>
 @endsection

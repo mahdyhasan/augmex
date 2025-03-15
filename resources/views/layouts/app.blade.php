@@ -1,30 +1,34 @@
 <!DOCTYPE html>
 <html lang="en">
-@include('layouts.partials.head')
-<body>
-<!-- Start wrapper -->
-<div id="wrapper">
 
-    @include('layouts.partials.sidebar')
+    @include('layouts.partials.head')
 
-    @include('layouts.partials.header')
+    <body>
 
-    @yield('content')
+        <!-- Main Wrapper -->
+        <div class="main-wrapper">
 
-</div><!--End wrapper-->
+            <div class="preloader">
+                <span class="loader"></span>
+            </div>
 
-<!--Start Back To Top Button-->
-<a href="javaScript:void(0);" class="back-to-top"><i class="fa fa-angle-double-up"></i></a>
-<!--End Back To Top Button-->
+            @include('layouts.partials.header')
 
-@include('layouts.partials.footer')
+            @include('layouts.partials.sidebar')
 
-<div class="modal fade" id="darkmodal">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content border-dark"></div>
-    </div>
-</div>
+            <!-- Page Wrapper -->
+            <div class="page-wrapper">
+                <div class="content">
+                    @yield('content')
+                </div>
+            </div>
+            <!-- /Page Wrapper -->
 
-@include('layouts.partials.script')
-</body>
+        </div>
+        <!-- /Main Wrapper -->
+
+        @include('layouts.partials.script')
+
+    </body>
+
 </html>

@@ -59,5 +59,8 @@
     <!-- Main CSS -->
     <link rel="stylesheet" href="{{ asset('public/assets/css/style.css') }}">
 
+    <link rel="stylesheet" href="https://cdn.datatables.net/2.2.2/css/dataTables.dataTables.css">
+
+
     @yield('css')
 </head>

@@ -49,39 +49,10 @@
                                     Remember Me
                                 </label>
                             </div>
-                            <!-- <div class="text-end">
-                                <a href="forgot-password.html" class="text-primary fw-medium link-hover">Forgot Password?</a>
-                            </div> -->
                         </div>
                         <div class="mb-3">
                             <button type="submit" class="btn btn-primary w-100">Sign In</button>
                         </div>
-                        <!-- <div class="mb-3">
-                            <h6>New on our platform?<a href="register.html" class="text-purple link-hover"> Create an account</a></h6>
-                        </div>
-                        <div class="form-set-login or-text mb-3">
-                            <h4>OR</h4>
-                        </div>
-                        <div class="d-flex align-items-center justify-content-center flex-wrap mb-3">
-                            <div class="text-center me-2 flex-fill">
-                                <a href="javascript:void(0);"
-                                   class="br-10 p-2 px-4 btn bg-pending  d-flex align-items-center justify-content-center">
-                                    <img class="img-fluid m-1" src="{{ asset('public/assets/img/icons/facebook-logo.svg') }}" alt="Facebook">
-                                </a>
-                            </div>
-                            <div class="text-center me-2 flex-fill">
-                                <a href="javascript:void(0);"
-                                   class="br-10 p-2 px-4 btn bg-white d-flex align-items-center justify-content-center">
-                                    <img class="img-fluid  m-1" src="{{ asset('public/assets/img/icons/google-logo.svg') }}" alt="Facebook">
-                                </a>
-                            </div>
-                            <div class="text-center flex-fill">
-                                <a href="javascript:void(0);"
-                                   class="bg-dark br-10 p-2 px-4 btn btn-dark d-flex align-items-center justify-content-center">
-                                    <img class="img-fluid  m-1" src="{{ asset('public/assets/img/icons/apple-logo.svg') }}" alt="Apple">
-                                </a>
-                            </div>
-                        </div> -->
                         <div class="text-center">
                             <p class="fw-medium text-gray">Copyright &copy; {{ date('Y') }} - {{ config('app.name', 'Augmex') }}</p>
                         </div>

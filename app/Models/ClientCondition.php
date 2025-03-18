@@ -8,10 +8,13 @@ use Illuminate\Database\Eloquent\Model;
 class ClientCondition extends Model
 {
     use HasFactory;
-    protected $fillable = ['client_id', 'rate', 'rate_type', 'invoice_type'];
+    protected $fillable = ['client_id', 'rate','currency', 'rate_type', 'invoice_type'];
     
-    public function clients()
+    public function client()
     {
         return $this->hasMany(Client::class);
     }
+
+
+
 }

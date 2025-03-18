@@ -49,22 +49,22 @@ class User extends Authenticatable
      */
     public function isSuperAdmin()
     {
-        return optional($this->userType)->role_name === 'superAdmin';
+        return $this->user_type_id == 1; // SuperAdmin
     }
 
     public function isHR()
     {
-        return optional($this->userType)->role_name === 'hr';
+        return $this->user_type_id == 3; // HR
     }
 
     public function isAccountant()
     {
-        return optional($this->userType)->role_name === 'accountant';
+        return $this->user_type_id == 2; // Accounts
     }
 
-    public function isEmployee()
+    public function isUser()
     {
-        return optional($this->userType)->role_name === 'user';
+        return $this->user_type_id == 4; // Normal User
     }
 
 }

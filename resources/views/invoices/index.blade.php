@@ -1,29 +1,50 @@
 @extends('layouts.app')
 
-@section('title', 'Employees')
+@section('title', 'Invoices')
 
 @section('content')
-    <div class="content-wrapper">
-        <div class="container-fluid">
-            <div class="card">
-                <div class="card-header d-flex justify-content-between align-items-center">
-                    <h3>Employees</h3>
-                    <a href="" class="btn btn-primary">Add Employee</a>
-                </div>
-                <div class="card-body">
+<div class="content-wrapper">
+    <div class="container-fluid">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h3>Invoices</h3>
+                <a href="{{ route('invoices.generate') }}" class="btn btn-primary">
+                   <i class="ti ti-square-rounded-plus me-2"></i> Generate Invoice
+                </a>
+            </div>
+            <div class="card-body">
+                @if(session('success'))
+                    <div class="alert alert-success">{{ session('success') }}</div>
+                @endif
 
-                </div>
+                <table class="table table-bordered">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Client</th>
+                            <th>Invoice Date</th>
+                            <th>Total Amount</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach($invoices as $invoice)
+                            <tr>
+                                <td>{{ $invoice->id }}</td>
+                                <td>{{ $invoice->client->company }}</td>
+                                <td>{{ $invoice->invoice_date }}</td>
+                                <td>{{ number_format($invoice->total_amount, 2) }}</td>
+                                <td>
+                                    <a href="{{ route('invoices.edit', $invoice->id) }}" class="btn btn-warning btn-sm">Edit</a>
+                                    <a href="{{ route('invoices.view', $invoice->id) }}" class="btn btn-info btn-sm">View</a>
+                                </td>
+                            </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+
             </div>
         </div>
     </div>
-@endsection
-
-@section('script')
-<script src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js"></script>
-    <script src="https://cdn.datatables.net/1.11.5/js/dataTables.bootstrap5.min.js"></script>
-    <script>
-        $(document).ready(function() {
-            $('#employeeTable').DataTable();
-        });
-    </script>
+</div>
 @endsection

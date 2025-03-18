@@ -46,60 +46,66 @@
                                 <li class="menu-title">
                                     <span>Main</span>
                                 </li>
+                                
+                                <!-- Super Admin Access -->
+                                @if(auth()->user()->isSuperAdmin())
                                 <li class="submenu">
                                     <a href="javascript:void(0);">
-                                        <i class="ti ti-layout-2"></i><span>Dashboard</span><span class="menu-arrow"></span>
+                                        <i class="ti ti-brand-airtable"></i><span>Super Admin</span>
+                                        <span class="menu-arrow"></span>
                                     </a>
                                     <ul>
-                                        <li><a href="{{ route('dashboard') }}">Acounts Dashboard</a></li>
-                                        <li><a href="leads-dashboard.html">HRM Dashboard</a></li>
-                                        <li><a href="project-dashboard.html">Employee Dashboard</a></li>
-                                        <li class="submenu">
-                                            <a href="#"> <i class="ti ti-user-star"></i><span>Super Admin</span>
-                                                <span class="menu-arrow"></span> </a>
-                                            <ul>
-                                                <li><a href="dashboard.html">Dashboard</a></li>
-                                                <li><a href="company.html">Companies</a></li>
-                                                <li><a href="subscription.html">Subscriptions</a></li>
-                                                <li><a href="packages.html">Packages</a></li>
-                                                <li><a href="domain.html">Domain</a></li>
-                                                <li><a href="purchase-transaction.html">Purchase Transaction</a></li>
-                                            </ul>
-                                        </li>
+                                        <li><a href="{{ route('clients.index') }}">Clients</a></li>
+                                        <li><a href="{{ route('sales.summary') }}">Sales Summary</a></li>
+                                        <li><a href="{{ route('accounts.incomeStatement') }}">Profit & Loss</a></li>
                                     </ul>
                                 </li>
+                                @endif
+
+                                <!-- Accounts Access -->
+                                @if(auth()->user()->isSuperAdmin() || auth()->user()->isAccountant())
                                 <li class="submenu">
-                                    <a href="javascript:void(0);"><i class="ti ti-brand-airtable"></i><span>Accounts</span>
-                                        <span class="menu-arrow"></span></a>
+                                    <a href="javascript:void(0);">
+                                        <i class="ti ti-brand-airtable"></i><span>Accounts</span>
+                                        <span class="menu-arrow"></span>
+                                    </a>
                                     <ul>
                                         <li><a href="{{ route('expenses.index') }}">All Expenses</a></li>
-                                        <li><a href="calendar.html">Calendar</a></li>
-                                        <li><a href="email.html">Email</a></li>
-                                        <li><a href="todo.html">To Do</a></li>
-                                        <li><a href="notes.html">Notes</a></li>
-                                        <li><a href="file-manager.html">File Manager</a></li>
-                                        <li><a href="social-feed.html">Social Feed</a></li>
-                                        <li><a href="kanban-view.html">Kanban</a></li>
-                                        <li><a href="invoice.html">Invoices</a></li>
+                                        <li><a href="{{ route('bank_accounts.index') }}">Bank Account</a></li>
+                                        <li><a href="{{ route('fixed_assets.index') }}">Fixed Assets</a></li>
+                                        <li><a href="{{ route('liabilities.index') }}">Liabilities</a></li>
+                                        <li><a href="{{ route('tax_payments.index') }}">Tax Payment</a></li>
+                                        <li><a href="{{ route('petty_cash.index') }}">Petty Cash</a></li>
+                                        <li><a href="{{ route('transactions.index') }}">Transactions</a></li>
+                                        <hr>
+                                        <li><a href="{{ route('invoices.index') }}">Invoices</a></li>
+                                        <li><a href="{{ route('client_payments.index') }}">Client Payments</a></li>
                                     </ul>
                                 </li>
+                                @endif
+
+                                <!-- HR Access -->
+                                @if(auth()->user()->isSuperAdmin() || auth()->user()->isHR())
                                 <li class="submenu">
-                                    <a href="javascript:void(0);"><i class="ti ti-brand-airtable"></i><span>HRM</span>
-                                        <span class="menu-arrow"></span></a>
+                                    <a href="javascript:void(0);">
+                                        <i class="ti ti-brand-airtable"></i><span>HRM</span>
+                                        <span class="menu-arrow"></span>
+                                    </a>
                                     <ul>
-                                        <li><a href="chat.html">Chat</a></li>
-                                        <li><a href="calendar.html">Calendar</a></li>
-                                        <li><a href="email.html">Email</a></li>
-                                        <li><a href="todo.html">To Do</a></li>
-                                        <li><a href="notes.html">Notes</a></li>
-                                        <li><a href="file-manager.html">File Manager</a></li>
-                                        <li><a href="social-feed.html">Social Feed</a></li>
-                                        <li><a href="kanban-view.html">Kanban</a></li>
-                                        <li><a href="invoice.html">Invoices</a></li>
+                                        <li><a href="{{ route('employees.index') }}">Employees</a></li>
+                                        <li><a href="{{ route('payrolls.index') }}">Payroll</a></li>
+                                        <li><a href="{{ route('attendance.index') }}">Attendance Sheet</a></li>
+                                        <hr>
+                                        <li><a href="{{ route('sales_report.index') }}">Sales Report</a></li>
                                     </ul>
                                 </li>
+                                @endif
+
+                                <!-- Clock In (Available to All Users) -->
                                 <li>
-                                    <button><a href="{{ route('attendance.clockIn') }}">Clock In</a></button>
+                                    <button class="btn btn-primary btn-sm">
+                                        <a href="{{ route('attendance.clockIn') }}" class="text-white">Clock In</a>
+                                    </button>
                                 </li>
                             </ul>
                         </div>
@@ -107,6 +113,7 @@
                 </div>
             </li>
             <!-- /Horizontal Single -->
+
 
             <!-- Nav List -->
             <li class="nav-item nav-list">
@@ -142,7 +149,7 @@
                     <div class="profilename">
                         <a class="dropdown-item" href="{{ route('dashboard') }}"> <i class="ti ti-layout-2"></i> Dashboard </a>
                         <a class="dropdown-item" href="{{ route('attendance.index') }}"> <i class="ti ti-arrows-horizontal"></i> Attendance Sheet </a>
-                        <a class="dropdown-item" href="{{ route('employee.profile') }}"> <i class="ti ti-user-pin"></i> My Profile </a>
+                        <a class="dropdown-item" href="{{ route('employees.profile') }}"> <i class="ti ti-user-pin"></i> My Profile </a>
                         <a class="dropdown-item" href=""> <i class="ti ti-money"></i> Commission </a>
                         <hr>
                         <a class="dropdown-item" href="{{ route('logout') }}" onclick="event.preventDefault(); document.getElementById('logout-form').submit();"> <i class="ti ti-lock"></i> Logout </a>

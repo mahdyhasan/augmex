@@ -67,25 +67,7 @@ let themesettings = `
                                 </div>
                             </div>
 
-                            <div class="col-4">
-                                <div class="theme-layout mb-3">
-                                    <input type="radio" name="LayoutTheme" id="without-headerLayout" value="without-header" >
-                                    <label for="without-headerLayout">
-                                        <span class="d-block mb-2 layout-img">
-                                            <img src="public/assets/img/theme/without-header.svg" alt="img">
-                                        </span>                                    
-                                        <span class="layout-type">Without Header</span>
-                                    </label>
-                                </div>
-                            </div>
-                           <div class="col-4">
-                                <a href="layout-rtl.html" class="theme-layout mb-3">
-                                    <span class="d-block mb-2 layout-img">
-                                        <img src="public/assets/img/theme/rtl.svg" alt="img">
-                                    </span>                                    
-                                    <span class="layout-type">RTL</span>
-                                </a>
-                            </div>
+                            
                             <div class="col-4">
                                 <div class="theme-layout mb-3">
                                     <input type="radio" name="LayoutTheme" id="detachedLayout" value="detached" >

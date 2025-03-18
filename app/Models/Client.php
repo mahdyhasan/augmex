@@ -14,4 +14,10 @@ class Client extends Model
     {
         return $this->hasMany(Invoice::class);
     }
+
+    public function clientConditions()
+    {
+        return $this->hasMany(ClientCondition::class);
+    }
+
 }

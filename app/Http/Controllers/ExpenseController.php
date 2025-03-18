@@ -10,9 +10,9 @@ use App\Models\Attendance;
 use App\Models\BankAccount;
 use App\Models\Client;
 use App\Models\ClientCondition;
+use App\Models\ClientPayment;
 use App\Models\DepreciationRecord;
 use App\Models\Employee;
-use App\Models\EmployeeDetails;
 use App\Models\Expense;
 use App\Models\ExpenseCategory;
 use App\Models\FixedAsset;
@@ -24,14 +24,19 @@ use App\Models\TaxPayment;
 use App\Models\Transaction;
 use App\Models\User;
 
-
 class ExpenseController extends Controller
 {
-
-    public function listAllExpenses(Request $request)
+    
+    public function __construct()
     {
-
+        $this->middleware('superadmin');
+    }
+    
+    // List all expenses
+    public function expensesIndex(Request $request)
+    {
         $categories = ExpenseCategory::all();
+
         // Ensure only authorized users can access
         if (!Auth::user()->isSuperAdmin() && !Auth::user()->isHR() && !Auth::user()->isAccountant()) {
             return abort(403, 'Unauthorized Access');
@@ -50,20 +55,19 @@ class ExpenseController extends Controller
         return view('expenses.index', compact('expenses', 'startDate', 'endDate', 'categories'));
     }
 
-    public function recordNewExpense (Request $request)
+    // Store a new expense
+    public function expensesStore(Request $request)
     {
-        // Ensure only authorized users can store expenses
         if (!Auth::user()->isSuperAdmin() && !Auth::user()->isHR() && !Auth::user()->isAccountant()) {
             return abort(403, 'Unauthorized Access');
         }
 
-        // Validate the input
         $request->validate([
             'expense_date' => 'required|date',
             'category_id' => 'required|exists:expense_categories,id',
             'description' => 'nullable|string|max:255',
             'amount' => 'required|numeric|min:0',
-            'receipt' => 'nullable|image|max:800', 
+            'receipt' => 'nullable|image|max:800',
         ]);
 
         // Handle file upload
@@ -71,11 +75,7 @@ class ExpenseController extends Controller
         if ($request->hasFile('receipt')) {
             $file = $request->file('receipt');
             $filename = time() . '_' . $file->getClientOriginalName();
-        
-            // Store the file in the public/assets/receipts directory
             $path = $file->move(public_path('assets/receipts'), $filename);
-        
-            // Check if the file was uploaded successfully
             if ($path) {
                 $receiptPath = $filename;
             }
@@ -90,8 +90,50 @@ class ExpenseController extends Controller
             'receipt' => $receiptPath,
         ]);
 
-        return redirect()->back()->with('success', 'Expense recorded successfully.');
+        return redirect()->route('expenses.index')->with('success', 'Expense recorded successfully.');
     }
+
+    // Edit expense record
+    public function expensesEdit($id)
+    {
+        $expense = Expense::findOrFail($id);
+        $categories = ExpenseCategory::all();
+        return view('expenses.edit', compact('expense', 'categories'));
+    }
+
+    // Update expense record
+    public function expensesUpdate(Request $request, $id)
+    {
+        $request->validate([
+            'expense_date' => 'required|date',
+            'category_id' => 'required|exists:expense_categories,id',
+            'description' => 'nullable|string|max:255',
+            'amount' => 'required|numeric|min:0',
+            'receipt' => 'nullable|image|max:800',
+        ]);
+
+        $expense = Expense::findOrFail($id);
+
+        // Handle file upload
+        if ($request->hasFile('receipt')) {
+            $file = $request->file('receipt');
+            $filename = time() . '_' . $file->getClientOriginalName();
+            $file->move(public_path('assets/receipts'), $filename);
+            $expense->receipt = $filename;
+        }
+
+        $expense->update($request->except(['receipt']));
+
+        return redirect()->route('expenses.index')->with('success', 'Expense updated successfully.');
+    }
+
+    // Delete expense record
+    public function expensesDestroy($id)
+    {
+        Expense::findOrFail($id)->delete();
+        return redirect()->route('expenses.index')->with('success', 'Expense deleted successfully.');
+    }
+
 
 
 }

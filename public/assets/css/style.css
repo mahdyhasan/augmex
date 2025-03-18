@@ -34032,7 +34032,7 @@ td .badge-pill {
   border: 0;
   margin-bottom: 0;
 }
-
+/* 
 .preloader {
   position: fixed;
   top: 0;
@@ -34071,7 +34071,7 @@ td .badge-pill {
   width: 8px;
   height: 64px;
   animation: rotate 1.2s linear infinite alternate-reverse;
-}
+} */
 
 @keyframes rotate {
   100% {

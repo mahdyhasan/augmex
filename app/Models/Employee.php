@@ -23,7 +23,6 @@ class Employee extends Model
         'date_of_birth', 
         'gender', 
         'married', 
-        'nationality', 
         'nid_number', 
         'address_line_1', 
         'address_line_2', 
@@ -36,7 +35,8 @@ class Employee extends Model
         'emergency_contact_phone', 
         'resume_cv', 
         'notes',
-        'login_time'
+        'login_time',
+        'stage_name'
     ];
 
     public function attendances()

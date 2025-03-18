@@ -51,12 +51,6 @@
                                     </select>
                                 </div>
 
-                                <!-- Nationality -->
-                                <div class="form-group">
-                                    <label>Nationality</label>
-                                    <input type="text" name="nationality" class="form-control" value="{{ $employee->nationality ?? '' }}">
-                                </div>
-
                                 <!-- NID Number -->
                                 <div class="form-group">
                                     <label>NID Number</label>
@@ -93,7 +87,10 @@
                                 <!-- Country -->
                                 <div class="form-group">
                                     <label>Country</label>
-                                    <input type="text" name="country" class="form-control" value="{{ $employee->country ?? '' }}">
+                                    <select class="form-control" id="country" name="country">
+                                        <option value="Bangladesh" {{ $employee->country == 'Bangladesh' ? 'selected' : '' }}>Bangladesh</option>
+                                        <option value="Other" {{ $employee->country == 'Other' ? 'selected' : '' }}>Other</option>
+                                    </select>
                                 </div>
                             </div>
 

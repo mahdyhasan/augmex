@@ -46,6 +46,7 @@ class EmployeeController extends Controller
         $request->validate([
             'user_id' => 'nullable|exists:users,id',
             'client_id' => 'nullable|exists:clients,id',
+            'stage_name' => 'nullable|string',
             'department' => 'nullable|string',
             'position' => 'nullable|string',
             'salary_amount' => 'nullable|numeric',
@@ -68,6 +69,7 @@ class EmployeeController extends Controller
     {
         $request->validate([
             'client_id' => 'nullable|exists:clients,id',
+            'stage_name' => 'nullable|string',
             'department' => 'nullable|string',
             'position' => 'nullable|string',
             'salary_amount' => 'nullable|numeric',
@@ -140,7 +142,6 @@ class EmployeeController extends Controller
             'date_of_birth' => 'nullable|date',
             'gender' => 'nullable|string|in:Male,Female,Other',
             'married' => 'nullable|string',
-            'nationality' => 'nullable|string',
             'nid_number' => 'nullable|string',
             'address_line_1' => 'nullable|string',
             'address_line_2' => 'nullable|string',

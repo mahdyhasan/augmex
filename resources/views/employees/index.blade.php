@@ -76,15 +76,25 @@
                 </select>
             </div>
 
-            <!-- Client Selection -->
-            <div class="mb-3">
-                <label for="client_id" class="form-label">Select Client</label>
-                <select class="form-select" id="client_id" name="client_id">
-                    <option value="">Select a Client</option>
-                    @foreach($clients as $client)
-                        <option value="{{ $client->id }}">{{ $client->company }}</option>
-                    @endforeach
-                </select>
+            <!-- Client Selection with Stage Name -->
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label for="client_id" class="form-label">Select Client</label>
+                        <select class="form-select" id="client_id" name="client_id">
+                            <option value="">Select a Client</option>
+                            @foreach($clients as $client)
+                                <option value="{{ $client->id }}">{{ $client->company }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label for="stage_name" class="form-label">Stage Name</label>
+                        <input type="text" class="form-control" id="stage_name" name="stage_name">
+                    </div>
+                </div>
             </div>
 
             <!-- Employee Details -->

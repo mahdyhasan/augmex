@@ -4,7 +4,6 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Carbon\Carbon;
 use Auth;
-use Yajra\DataTables\Facades\DataTables;
 
 use App\Models\Account;
 use App\Models\Attendance;

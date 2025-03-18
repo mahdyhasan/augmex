@@ -126,8 +126,6 @@ class HomeController extends Controller
      public function salesSummaryDillon(Request $request)
      {
 
-      
-
          // Fetch all clients for dropdown
          $clients = Client::all();
          $date = $request->input('date') ?? now()->toDateString(); // Default to today's date

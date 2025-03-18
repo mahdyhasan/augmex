@@ -42,7 +42,7 @@
         <div class="mb-3">
                 @foreach($attendance as $record)
             <p>
-                <strong>{{ $record->employee->user->name ?? 'N/A' }}</strong> -
+                <strong>{{ $record->employee->stage_name ?? 'N/A' }}</strong> -
                 @if($record->check_in && $record->check_out)
                     {{ \Carbon\Carbon::parse($record->check_in)->format('h:i A') }} to 
                     {{ \Carbon\Carbon::parse($record->check_out)->format('h:i A') }} 
@@ -65,7 +65,7 @@
         <div>
             @foreach($sales as $sale)
                 <p>
-                    <strong>{{ $sale->employee->user->name ?? 'N/A' }}</strong> - 
+                    <strong>{{ $sale->employee->stage_name ?? 'N/A' }}</strong> - 
                     {{ $sale->sales_qty }} case(s) - 
                     ${{ number_format($sale->sales_amount, 2) }}
                 </p>

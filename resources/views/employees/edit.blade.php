@@ -71,6 +71,10 @@
                                         @endforeach
                                     </select>
                                 </div>
+                                <div class="mb-3">
+                                    <label for="stage_name" class="form-label">Stage Name</label>
+                                    <input type="text" class="form-control" id="stage_name" name="stage_name" value="{{ $employee->stage_name }}" >
+                                </div>
 
 
                                 <!-- Login Time -->
@@ -83,12 +87,6 @@
                                 <div class="mb-3">
                                     <label for="date_of_hire" class="form-label">Date of Hire</label>
                                     <input type="date" class="form-control" id="date_of_hire" name="date_of_hire" value="{{ $employee->date_of_hire }}" >
-                                </div>
-
-                                <!-- Date of Termination -->
-                                <div class="mb-3">
-                                    <label for="date_of_termination" class="form-label">Date of Termination</label>
-                                    <input type="date" class="form-control" id="date_of_termination" name="date_of_termination" value="{{ $employee->date_of_termination }}">
                                 </div>
                             </div>
 
@@ -133,8 +131,12 @@
 
                                 <div class="mb-3">
                                     <label for="country" class="form-label">Country</label>
-                                    <input type="text" class="form-control" id="country" name="country" value="{{ $employee->country }}">
+                                    <select class="form-control" id="country" name="country">
+                                        <option value="Bangladesh" {{ $employee->country == 'Bangladesh' ? 'selected' : '' }}>Bangladesh</option>
+                                        <option value="Other" {{ $employee->country == 'Other' ? 'selected' : '' }}>Other</option>
+                                    </select>
                                 </div>
+
 
                                 <!-- Resume/CV Upload -->
                                 <div class="mb-3">
@@ -148,15 +150,22 @@
                                 <!-- Notes -->
                                 <div class="mb-3">
                                     <label for="notes" class="form-label">Notes</label>
-                                    <textarea class="form-control" id="notes" name="notes" rows="3">{{ $employee->notes }}</textarea>
+                                    <textarea class="form-control" id="notes" name="notes" rows="1">{{ $employee->notes }}</textarea>
                                 </div>
-                            </div>
+
+                                <!-- Date of Termination -->
+                                <div class="mb-3">
+                                    <label for="date_of_termination" class="form-label text-danger">Date of Termination</label>
+                                    <input type="date" class="form-control" id="date_of_termination" name="date_of_termination" value="{{ $employee->date_of_termination }}">
+                                </div>
+                            </div><!-- Right column end -->
                         </div>
 
-                        <!-- Buttons -->
-                        <div class="d-flex justify-content-end">
-                            <button type="submit" class="btn btn-primary">Update Employee</button>
-                        </div>
+                                <!-- Buttons -->
+                                <div class="d-flex justify-content-end">
+                                    <button type="submit" class="btn btn-primary">Update Employee</button>
+                                </div>
+
                     </form>
                 </div>
             </div>

@@ -140,7 +140,7 @@
                 <a href="javascript:void(0);" class="nav-link userset" data-bs-toggle="dropdown">
                     <span class="user-info">
                         <span class="user-letter">
-                            <img src="{{ asset('public/assets/img/profiles/avatar-20.jpg') }}" alt="Profile">
+                            <img src="{{ asset('public/assets/img/profiles/tcl.png') }}" alt="Profile">
                         </span>
                         <span class="badge badge-success rounded-pill"></span>
                     </span>

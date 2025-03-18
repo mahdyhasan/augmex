@@ -10,7 +10,6 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Session;
 use Illuminate\Validation\ValidationException;
-use Yajra\DataTables\Facades\DataTables;
 
 class SettingController extends Controller
 {

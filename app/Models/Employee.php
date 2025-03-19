@@ -10,16 +10,16 @@ class Employee extends Model
     use HasFactory;
 
     protected $fillable = [
-        'name', 
-        'email', 
-        'phone', 
-        'position', 
+        'stage_name', 
         'department', 
-        'salary_type', 
-        'salary_amount', 
-        'date_of_termination', 
-        'user_id', 
         'client_id', 
+        'position', 
+        'salary_amount', 
+        'salary_type', 
+        'login_time', 
+        'user_id', 
+        'date_of_hire', 
+        'date_of_termination', 
         'date_of_birth', 
         'gender', 
         'married', 
@@ -29,15 +29,13 @@ class Employee extends Model
         'city', 
         'postal_code', 
         'country', 
-        'date_of_hire', 
         'emergency_contact_name', 
         'emergency_contact_relationship', 
         'emergency_contact_phone', 
         'resume_cv', 
-        'notes',
-        'login_time',
-        'stage_name'
+        'notes'
     ];
+    
 
     public function attendances()
     {

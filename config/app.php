@@ -156,34 +156,39 @@ return [
     */
 
     'providers' => ServiceProvider::defaultProviders()->merge([
-        /*
-         * Package Service Providers...
-         */
-
-        /*
-         * Application Service Providers...
-         */
-        App\Providers\AppServiceProvider::class,
-        App\Providers\AuthServiceProvider::class,
-        // App\Providers\BroadcastServiceProvider::class,
-        App\Providers\EventServiceProvider::class,
-        App\Providers\RouteServiceProvider::class,
-    ])->toArray(),
+    /*
+     * Package Service Providers...
+     */
+    Yajra\DataTables\DataTablesServiceProvider::class,
+    Maatwebsite\Excel\ExcelServiceProvider::class,
+    Barryvdh\DomPDF\ServiceProvider::class,
 
     /*
-    |--------------------------------------------------------------------------
-    | Class Aliases
-    |--------------------------------------------------------------------------
-    |
-    | This array of class aliases will be registered when this application
-    | is started. However, feel free to register as many as you wish as
-    | the aliases are "lazy" loaded so they don't hinder performance.
-    |
-    */
+     * Application Service Providers...
+     */
+    App\Providers\AppServiceProvider::class,
+    App\Providers\AuthServiceProvider::class,
+    // App\Providers\BroadcastServiceProvider::class,
+    App\Providers\EventServiceProvider::class,
+    App\Providers\RouteServiceProvider::class,
+])->toArray(),
 
-    'aliases' => Facade::defaultAliases()->merge([
-        // 'Example' => App\Facades\Example::class,
+/*
+|--------------------------------------------------------------------------
+| Class Aliases
+|--------------------------------------------------------------------------
+|
+| This array of class aliases will be registered when this application
+| is started. However, feel free to register as many as you wish as
+| the aliases are "lazy" loaded so they don't hinder performance.
+|
+*/
 
-    ])->toArray(),
+'aliases' => Facade::defaultAliases()->merge([
+    'DataTables' => Yajra\DataTables\Facades\DataTables::class,
+    'Excel' => Maatwebsite\Excel\Facades\Excel::class,
+    'PDF' => Barryvdh\DomPDF\Facade\Pdf::class,
+])->toArray(),
+
 
 ];

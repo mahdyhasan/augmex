@@ -71,9 +71,15 @@
                 <select class="form-select" id="user_id" name="user_id">
                     <option value="">Select a User</option>
                     @foreach($users as $user)
-                        <option value="{{ $user->id }}">{{ $user->name }} ({{ $user->email }}) - {{ $user->phone }}</option>
+                        <option value="{{ $user->id }}" 
+                            @if(old('user_id') == $user->id) selected @endif>
+                            {{ $user->name }} ({{ $user->email }}) - {{ $user->phone }}
+                        </option>
                     @endforeach
                 </select>
+                @error('user_id')
+                    <div class="text-danger">{{ $message }}</div>
+                @enderror
             </div>
 
             <!-- Client Selection with Stage Name -->

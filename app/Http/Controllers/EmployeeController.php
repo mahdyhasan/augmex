@@ -44,7 +44,11 @@ class EmployeeController extends Controller
     public function store(Request $request)
     {
         $request->validate([
-            'user_id' => 'nullable|exists:users,id',
+            'user_id' => [
+                'nullable', 
+                'exists:users,id', 
+                'unique:employees,user_id' 
+            ],
             'client_id' => 'nullable|exists:clients,id',
             'stage_name' => 'nullable|string',
             'department' => 'nullable|string',
@@ -56,58 +60,94 @@ class EmployeeController extends Controller
         ]);
 
         Employee::create($request->only([
-            'user_id', 'client_id', 'department', 'position', 
+            'user_id', 'client_id', 'stage_name', 'department', 'position', 
             'salary_amount', 'salary_type', 'date_of_hire', 'login_time'
         ]));
 
         return redirect()->route('employees.index')->with('success', 'Employee added successfully.');
     }
 
-    
+
     
     public function update(Request $request, $id)
     {
-        $request->validate([
-            'client_id' => 'nullable|exists:clients,id',
-            'stage_name' => 'nullable|string',
-            'department' => 'nullable|string',
-            'position' => 'nullable|string',
-            'salary_amount' => 'nullable|numeric',
-            'salary_type' => 'nullable|string|in:monthly,hourly',
-            'date_of_hire' => 'nullable|date',
-            'date_of_termination' => 'nullable|date',
-            'emergency_contact_name' => 'nullable|string',
-            'emergency_contact_relationship' => 'nullable|string',
-            'emergency_contact_phone' => 'nullable|string',
-            'address_line_1' => 'nullable|string',
-            'address_line_2' => 'nullable|string',
-            'city' => 'nullable|string',
-            'postal_code' => 'nullable|string',
-            'country' => 'nullable|string',
-            'resume_cv' => 'nullable|file|mimes:pdf,doc,docx|max:2048',
-            'notes' => 'nullable|string',
-            'login_time' => 'nullable|date_format:H:i',
-        ]);
-    
-        $employee = Employee::findOrFail($id);
-        
-        // Handle resume file upload
-        if ($request->hasFile('resume_cv')) {
-            $file = $request->file('resume_cv');
-            $filename = time() . '_' . $file->getClientOriginalName();
+
+        try {
+            \DB::beginTransaction();
+
+            $employee = Employee::findOrFail($id);
             
-            // Store the file in Laravel storage
-            $file->storeAs('public/resumes', $filename);  
-    
-            // Save the new resume file name to the employee record
-            $employee->resume_cv = $filename;
+            // Handle resume file upload
+            if ($request->hasFile('resume_cv')) {
+                $file = $request->file('resume_cv');
+                $filename = time() . '_' . $file->getClientOriginalName();
+                $file->storeAs('public/resumes', $filename);
+
+                if ($employee->resume_cv) {
+                    $oldFilePath = storage_path('app/public/resumes/' . $employee->resume_cv);
+                    if (file_exists($oldFilePath)) {
+                        unlink($oldFilePath);
+                    }
+                }
+
+                $employee->resume_cv = $filename;
+            }
+
+            // Update user-related fields if they exist
+            if ($employee->user && ($request->filled('name') || $request->filled('phone'))) {
+                $employee->user->update([
+                    'name' => $request->input('name'),
+                    'phone' => $request->input('phone')
+                ]);
+            }
+
+            // Update all fields from the request
+            $employee->stage_name = $request->stage_name;
+            $employee->client_id = $request->client_id;
+            $employee->department = $request->department;
+            $employee->position = $request->position;
+            $employee->salary_amount = $request->salary_amount;
+            $employee->salary_type = $request->salary_type;
+            $employee->login_time = $request->login_time;
+            $employee->date_of_hire = $request->date_of_hire;
+            $employee->date_of_termination = $request->date_of_termination;
+            $employee->gender = $request->gender;
+            $employee->married = $request->married;
+            $employee->address_line_1 = $request->address_line_1;
+            $employee->address_line_2 = $request->address_line_2;
+            $employee->city = $request->city;
+            $employee->postal_code = $request->postal_code;
+            $employee->country = $request->country;
+            $employee->emergency_contact_name = $request->emergency_contact_name;
+            $employee->emergency_contact_relationship = $request->emergency_contact_relationship;
+            $employee->emergency_contact_phone = $request->emergency_contact_phone;
+            $employee->notes = $request->notes;
+            $employee->date_of_birth = $request->date_of_birth;
+            $employee->nid_number = $request->nid_number;
+
+            $employee->save();
+
+            \DB::commit();
+
+            return redirect()
+                ->route('employees.index')
+                ->with('success', 'Employee updated successfully.');
+
+        } catch (\Exception $e) {
+            \DB::rollBack();
+            \Log::error('Employee Update Error:', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return redirect()
+                ->back()
+                ->withInput()
+                ->with('error', 'Failed to update employee. Please try again.');
         }
+    }
+
     
-        // Update other fields
-        $employee->update($request->except('resume_cv'));
-    
-        return redirect()->route('employees.index')->with('success', 'Employee updated successfully.');
-    }  
 
     
     
@@ -180,7 +220,7 @@ class EmployeeController extends Controller
     }    
 
 
-
+    // SALES REPORT FOR TEAM AND INDIVIDUAL
     public function salesReport(Request $request)
     {
         // Fetch all employees and clients for dropdowns

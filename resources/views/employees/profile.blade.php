@@ -119,7 +119,7 @@
                                     <label>Resume/CV (PDF/DOC)</label>
                                     <input type="file" name="resume_cv" class="form-control">
                                     @if($employee->resume_cv)
-                                        <a href="{{ asset('storage/app/public/resumes/' . $employee->resume_cv) }}" target="_blank" class="mt-2 d-block">View Uploaded Resume</a>
+                                        <a href="{{ asset('storage/resumes/' . $employee->resume_cv) }}" target="_blank" class="mt-2 d-block">View Uploaded Resume</a>
                                     @endif
                                 </div>
 

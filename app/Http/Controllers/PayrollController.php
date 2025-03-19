@@ -4,8 +4,10 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Carbon\Carbon;
 use Auth;
-use Maatwebsite\Excel\Facades\Excel;
-use Barryvdh\DomPDF\Facade\Pdf;
+
+use DataTables;
+use Excel;
+use PDF; 
 
 use App\Models\Account;
 use App\Models\Attendance;

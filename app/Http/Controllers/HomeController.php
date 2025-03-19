@@ -122,34 +122,49 @@ class HomeController extends Controller
     }
 
 
-
-     public function salesSummaryDillon(Request $request)
-     {
-
-         // Fetch all clients for dropdown
-         $clients = Client::all();
-         $date = $request->input('date') ?? now()->toDateString(); // Default to today's date
-         $clientId = $request->input('client_id');
-     
-         // Fetch employees who belong to the selected client
-         $employees = Employee::with('user')
-             ->where('client_id', $clientId)
-             ->get();
-     
-         // Fetch attendance records of those employees on the selected date
-         $attendance = Attendance::whereIn('employee_id', $employees->pluck('id'))
-             ->whereDate('date', $date)
-             ->with('employee.user')
-             ->get();
-     
-         // Fetch sales records of those employees who have a check-in time
-         $sales = EmployeeSales::whereIn('employee_id', $attendance->pluck('employee_id'))
-             ->whereDate('date', $date)
-             ->with(['employee.user'])
-             ->get();
-     
-         return view('sales_summary', compact('clients', 'employees', 'attendance', 'sales', 'date', 'clientId'));
-     }
+    // SALES SUMMARY FOR DILLON
+    public function salesSummaryDillon(Request $request)
+    {
+        // Fetch all clients for dropdown
+        $clients = Client::all();
+    
+        // Default to today's date if no date is provided
+        $startDate = $request->input('start_date', now()->toDateString());
+        $endDate = $request->input('end_date', now()->toDateString());
+        $clientId = $request->input('client_id');
+    
+        // Ensure absentEmployees is always initialized
+        $absentEmployees = collect();
+    
+        // If a client is selected, fetch employees for that client
+        $employees = Employee::with('user')
+            ->where('client_id', $clientId)
+            ->get();
+    
+        // Fetch attendance records for the selected date range
+        $attendance = Attendance::whereIn('employee_id', $employees->pluck('id'))
+            ->whereBetween('date', [$startDate, $endDate])
+            ->with('employee.user')
+            ->get();
+    
+        // Fetch sales records for employees who have a check-in time
+        $sales = EmployeeSales::whereIn('employee_id', $attendance->pluck('employee_id'))
+            ->whereBetween('date', [$startDate, $endDate])
+            ->with(['employee.user'])
+            ->get();
+    
+        // Compute absent employees
+        if ($clientId) {
+            // Get employees who are NOT in attendance
+            $presentEmployeeIds = $attendance->pluck('employee_id')->unique();
+            $absentEmployees = $employees->whereNotIn('id', $presentEmployeeIds);
+        }
+    
+        return view('sales_summary', compact(
+            'clients', 'employees', 'attendance', 'sales', 'absentEmployees', 'startDate', 'endDate', 'clientId'
+        ));
+    }
+    
      
 
 

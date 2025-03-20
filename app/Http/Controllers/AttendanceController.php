@@ -8,6 +8,7 @@ use Auth;
 
 use App\Models\Account;
 use App\Models\Attendance;
+use App\Models\AttendanceStatus;
 use App\Models\BankAccount;
 use App\Models\Client;
 use App\Models\ClientCondition;
@@ -29,24 +30,29 @@ use App\Models\User;
 
 class AttendanceController extends Controller
 {
-    public function index()
+       public function index()
     {
         if (Auth::user()->isSuperAdmin()) {
-            $attendances = Attendance::with('employee.user')->orderBy('date', 'desc')->get();
+            $attendances = Attendance::with(['employee.user', 'status'])
+                ->orderBy('date', 'desc')
+                ->get();
             $employees = Employee::with('user', 'sales')->get();
         } else {
-            $attendances = Attendance::with('employee.user')
+            $attendances = Attendance::with(['employee.user', 'status'])
                 ->whereHas('employee', function ($query) {
                     $query->where('user_id', Auth::id());
                 })
                 ->orderBy('date', 'desc')
                 ->get();
-            $employees = Employee::where('user_id', Auth::id())->with('user', 'sales')->get();
+            $employees = Employee::where('user_id', Auth::id())
+                ->with('user', 'sales')
+                ->get();
         }
-
-        return view('attendances.index', compact('attendances', 'employees'));
+        
+        $attendanceStatuses = AttendanceStatus::all();
+    
+        return view('attendances.index', compact('attendances', 'employees', 'attendanceStatuses'));
     }
-
 
     public function clockIn() {
 
@@ -93,8 +99,8 @@ class AttendanceController extends Controller
             'employee_id' => $employee->id,
             'date' => $today->toDateString(),
             'check_in' => $actualCheckInTime->toTimeString(),
-            'status' => 'Present',
-            'isLate' => $isLate, // Store whether the employee was late
+            'status_id' => 1,
+            'isLate' => $isLate, 
             'created_at' => now(),
             'updated_at' => now()
         ]);
@@ -102,6 +108,69 @@ class AttendanceController extends Controller
         return redirect()->back()->with('success', 'Logged in successfully.');
     }
 
+
+
+    // public function logOut(Request $request)
+    // {
+    //     $user = Auth::user();
+    //     $employee = Employee::where('user_id', $user->id)->first();
+
+    //     if (!$employee) {
+    //         return redirect()->back()->with('error', 'Employee record not found.');
+    //     }
+
+    //     $today = Carbon::today()->toDateString();
+
+    //     // Validate sales data
+    //     // $request->validate([
+    //     //     'sales_qty' => 'required|integer|min:0',
+    //     //     'sales_amount' => 'required|numeric|min:0'
+    //     // ]);
+
+    //     // Check if sales entry exists for the employee on the same day
+    //     $existingSales = EmployeeSales::where('employee_id', $employee->id)
+    //         ->where('date', $today)
+    //         ->first();
+
+    //     if ($existingSales) {
+    //         // Update existing sales record
+    //         $existingSales->update([
+    //             'sales_qty' => $request->sales_qty,
+    //             'sales_amount' => $request->sales_amount
+    //         ]);
+    //     } else {
+    //         // Create a new sales record if none exists
+    //         EmployeeSales::create([
+    //             'client_id' => $employee->client_id,
+    //             'employee_id' => $employee->id,
+    //             'date' => $today,
+    //             'sales_qty' => $request->sales_qty,
+    //             'sales_amount' => $request->sales_amount
+    //         ]);
+    //     }
+
+    //     // Update attendance check-out
+    //     $existingAttendance = Attendance::where('employee_id', $employee->id)
+    //         ->where('date', $today)
+    //         ->first();
+
+    //     if ($existingAttendance) {
+    //         $existingAttendance->update([
+    //             'check_out' => Carbon::now()->setTimezone('Asia/Dhaka')->toTimeString()
+    //         ]);
+    //     } else {
+    //         Attendance::create([
+    //             'employee_id' => $employee->id,
+    //             'date' => $today,
+    //             'check_out' => Carbon::now()->setTimezone('Asia/Dhaka')->toTimeString(),
+    //             'status' => 'Absent',
+    //             'updated_at' => now()
+    //         ]);
+    //     }
+
+    //     // Auth::logout();
+    //     return redirect()->back()->with('success', 'Logged Out successfully.');
+    // }
 
     public function logOut(Request $request)
     {
@@ -113,14 +182,31 @@ class AttendanceController extends Controller
         }
 
         $today = Carbon::today()->toDateString();
+        $now = Carbon::now()->setTimezone('Asia/Dhaka')->toTimeString();
 
-        // Validate sales data
-        $request->validate([
-            'sales_qty' => 'required|integer|min:0',
-            'sales_amount' => 'required|numeric|min:0'
-        ]);
+        // Check if attendance entry exists for today
+        $existingAttendance = Attendance::where('employee_id', $employee->id)
+            ->where('date', $today)
+            ->first();
 
-        // Check if sales entry exists for the employee on the same day
+        if ($existingAttendance) {
+            // Update check_out time
+            $existingAttendance->update([
+                'check_out' => $now,
+            ]);
+        } else {
+            // Create a new attendance entry with check_in and check_out set to the same time
+            Attendance::create([
+                'employee_id' => $employee->id,
+                'date' => $today,
+                'check_in' => $now,
+                'check_out' => $now,
+                'status_id' => 1, // Default status
+                'isLate' => 1, // Default to late
+            ]);
+        }
+
+        // Handle sales data
         $existingSales = EmployeeSales::where('employee_id', $employee->id)
             ->where('date', $today)
             ->first();
@@ -142,31 +228,39 @@ class AttendanceController extends Controller
             ]);
         }
 
-        // Update attendance check-out
-        $existingAttendance = Attendance::where('employee_id', $employee->id)
-            ->where('date', $today)
-            ->first();
-
-        if ($existingAttendance) {
-            $existingAttendance->update([
-                'check_out' => Carbon::now()->setTimezone('Asia/Dhaka')->toTimeString()
-            ]);
-        } else {
-            Attendance::create([
-                'employee_id' => $employee->id,
-                'date' => $today,
-                'check_out' => Carbon::now()->setTimezone('Asia/Dhaka')->toTimeString(),
-                'status' => 'Absent',
-                'updated_at' => now()
-            ]);
-        }
-
-        Auth::logout();
-        return redirect('/login')->with('success', 'Logged out successfully. Sales entry recorded.');
+        return redirect()->back()->with('success', 'Logged out successfully.');
     }
 
 
 
+
+    public function store(Request $request)
+    {
+        
+
+        // Check if an attendance entry already exists for the same employee on the same day
+        $existingAttendance = Attendance::where('employee_id', $request->employee_id)
+            ->where('date', $request->date)
+            ->first();
+
+        if ($existingAttendance) {
+            return redirect()->back()->with('error', 'Attendance entry already exists for this employee on the selected date.');
+        }
+
+        // Create a new attendance entry
+        Attendance::create([
+            'employee_id' => $request->employee_id,
+            'date' => $request->date,
+            'check_in' => $request->check_in,
+            'check_out' => $request->check_out,
+            'status_id' => $request->status,
+            'isLate' => $request->isLate ?? 2,
+        ]);
+
+        return redirect()->route('attendance.index')->with('success', 'Attendance added successfully.');
+    }
+    
+    
 
     public function edit($id)
     {
@@ -177,46 +271,23 @@ class AttendanceController extends Controller
 
     public function update(Request $request, $id)
     {
-        $request->validate([
-            'check_in' => 'nullable|date_format:H:i:s',
-            'check_out' => 'nullable|date_format:H:i:s|after_or_equal:check_in',
-            'status' => 'required|in:Present,Absent,Late',
-        ]);
-    
         $attendance = Attendance::findOrFail($id);
         $attendance->update([
-            'check_in' => $request->check_in,
-            'check_out' => $request->check_out,
-            'status' => $request->status,
+           'check_in' => $request->check_in,
+           'check_out' => $request->check_out,
+            'status_id' => $request->status,
+            'isLate' => $request->isLate,
         ]);
-    
-        return redirect()->route('attendances.index')->with('success', 'Attendance updated successfully!');
+
+
+    return redirect()->route('attendance.index')->with('success', 'Attendance updated successfully!');
+        
     }
     
 
 
 
-    public function store(Request $request)
-    {
-        $request->validate([
-            'employee_id' => 'required|exists:employees,id',
-            'date' => 'required|date',
-            'check_in' => 'nullable|date_format:H:i:s',
-            'check_out' => 'nullable|date_format:H:i:s|after_or_equal:check_in',
-            'status' => 'required|in:Present,Absent,Late,Weekend,Holiday',
-        ]);
-    
-        Attendance::create([
-            'employee_id' => $request->employee_id,
-            'date' => $request->date,
-            'check_in' => $request->check_in,
-            'check_out' => $request->check_out,
-            'status' => $request->status,
-        ]);
-    
-        return redirect()->route('attendance.index')->with('success', 'Attendance added successfully!');
-    }
-    
+
 
     
 }

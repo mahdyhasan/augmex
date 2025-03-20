@@ -57,70 +57,144 @@ class HomeController extends Controller
      }
      
      // SuperAdmin Dashboard
-     private function superAdminDashboard()
-     {
-        
-         $totalEmployees = Employee::count();
-         $totalClients = Client::count();
-         $totalTransactions = Transaction::count();
-         $totalInvoices = Invoice::count();
-         $totalEarnings = Transaction::where('type', 'Deposit')->sum('amount');
-         $totalExpenses = Expense::sum('amount');
-         $bankBalance = BankAccount::sum('balance');
-     
-         $monthlyEarnings = Transaction::selectRaw('MONTH(created_at) as month, SUM(amount) as total')
-             ->where('type', 'Deposit')
-             ->groupBy('month')
-             ->orderBy('month', 'ASC')
-             ->pluck('total', 'month')->toArray();
-     
-         $monthlyExpenses = Expense::selectRaw('MONTH(expense_date) as month, SUM(amount) as total')
-             ->groupBy('month')
-             ->orderBy('month', 'ASC')
-             ->pluck('total', 'month')->toArray();
-     
-         $depositCount = Transaction::where('type', 'Deposit')->count();
-         $withdrawalCount = Transaction::where('type', 'Withdrawal')->count();
-         $invoiceCount = Invoice::count();
-     
-         $recentTransactions = Transaction::latest()->take(5)->get();
-         $recentInvoices = Invoice::with('client')->latest()->take(5)->get();
-     
-         return view('dashboard', compact(
-             'totalEmployees', 'totalClients', 'totalTransactions', 'totalInvoices',
-             'totalEarnings', 'totalExpenses', 'bankBalance', 'monthlyEarnings',
-             'monthlyExpenses', 'depositCount', 'withdrawalCount', 'invoiceCount',
-             'recentTransactions', 'recentInvoices'
-         ));
-     }
-     
-     // User Dashboard
-     private function userDashboard()
-     {
-        $user = Auth::user();
-        $employee = Employee::where('user_id', $user->id)->first();
+     public function superAdminDashboard(Request $request = null)
+{
+    // If no request is passed, use the current request
+    $request = $request ?? request();
 
-        if (!$employee) {
-            return redirect()->route('home')->with('error', 'Employee record not found.');
-        }
+    // Default date range (e.g., last 30 days)
+    $startDate = $request->input('start_date', Carbon::now()->subDays(30)->toDateString());
+    $endDate = $request->input('end_date', Carbon::now()->toDateString());
 
-        if (!$user->isUser()) {
-            return redirect()->route('home')->with('error', 'Access denied.');
-        }
-
-        // Fetch attendance details
-        $totalPresent = Attendance::where('employee_id', $employee->id)->where('status', 'Present')->count();
-        $totalAbsent = Attendance::where('employee_id', $employee->id)->where('status', 'Absent')->count();
-        $totalLate = Attendance::where('employee_id', $employee->id)->where('isLate', 1)->count();
-        $todayAttendance = Attendance::where('employee_id', $employee->id)->where('date', Carbon::today()->toDateString())->first();
-
-        // Fetch sales data if applicable
-        $totalSales = EmployeeSales::where('employee_id', $employee->id)->sum('sales_amount'); 
-        $totalSalesQty = EmployeeSales::where('employee_id', $employee->id)->sum('sales_qty'); 
-
-        return view('dashboard_user', compact('user', 'employee', 'totalPresent', 'totalAbsent', 'totalLate', 'todayAttendance', 'totalSales', 'totalSalesQty'));
+    // Validate date range
+    if ($startDate > $endDate) {
+        return redirect()->back()->with('error', 'Invalid date range.');
     }
 
+    // General Statistics
+    $totalEmployees = Employee::count();
+    $totalClients = Client::count();
+    $totalTransactions = Transaction::count();
+    $totalInvoices = Invoice::count();
+    $totalEarnings = Transaction::where('type', 'Deposit')->sum('amount');
+    $totalExpenses = Expense::sum('amount');
+    $bankBalance = BankAccount::sum('balance');
+
+    // Monthly Earnings and Expenses
+    $monthlyEarnings = Transaction::selectRaw('MONTH(created_at) as month, SUM(amount) as total')
+        ->where('type', 'Deposit')
+        ->groupBy('month')
+        ->orderBy('month', 'ASC')
+        ->pluck('total', 'month')->toArray();
+
+    $monthlyExpenses = Expense::selectRaw('MONTH(expense_date) as month, SUM(amount) as total')
+        ->groupBy('month')
+        ->orderBy('month', 'ASC')
+        ->pluck('total', 'month')->toArray();
+
+    // Transaction and Invoice Counts
+    $depositCount = Transaction::where('type', 'Deposit')->count();
+    $withdrawalCount = Transaction::where('type', 'Withdrawal')->count();
+    $invoiceCount = Invoice::count();
+
+    // Recent Transactions and Invoices
+    $recentTransactions = Transaction::latest()->take(5)->get();
+    $recentInvoices = Invoice::with('client')->latest()->take(5)->get();
+
+    // Attendance Summary
+    $attendanceSummary = Attendance::whereBetween('date', [$startDate, $endDate])
+        ->selectRaw('
+            COUNT(CASE WHEN status_id = 1 THEN 1 END) as total_present,
+            COUNT(CASE WHEN status_id = 2 THEN 1 END) as total_absent,
+            COUNT(CASE WHEN isLate = 1 THEN 1 END) as total_late,
+            COUNT(*) as total_attendance
+        ')
+        ->first();
+
+    // Expense Summary
+    $expenseSummary = [
+        'totalExpenses' => Expense::whereBetween('expense_date', [$startDate, $endDate])
+            ->sum('amount'),
+        'expensesByCategory' => Expense::selectRaw('category_id, SUM(amount) as total')
+            ->whereBetween('expense_date', [$startDate, $endDate])
+            ->groupBy('category_id')
+            ->with('expenseCategory')
+            ->get(),
+    ];
+
+    // Transactions and Invoices for Date Range
+    $filteredTransactions = Transaction::whereBetween('created_at', [$startDate, $endDate])
+        ->latest()
+        ->get();
+
+    $filteredInvoices = Invoice::whereBetween('invoice_date', [$startDate, $endDate])
+        ->with('client')
+        ->latest()
+        ->get();
+
+    return view('dashboard', compact(
+        'totalEmployees', 'totalClients', 'totalTransactions', 'totalInvoices',
+        'totalEarnings', 'totalExpenses', 'bankBalance', 'monthlyEarnings',
+        'monthlyExpenses', 'depositCount', 'withdrawalCount', 'invoiceCount',
+        'recentTransactions', 'recentInvoices', 'attendanceSummary', 'expenseSummary',
+        'filteredTransactions', 'filteredInvoices', 'startDate', 'endDate'
+    ));
+}
+
+
+
+
+
+
+     // User Dashboard
+   private function userDashboard()
+{
+    $user = Auth::user();
+    $employee = Employee::where('user_id', $user->id)->first();
+
+    if (!$employee) {
+        return redirect()->route('home')->with('error', 'Employee record not found.');
+    }
+
+    if (!$user->isUser()) {
+        return redirect()->route('home')->with('error', 'Access denied.');
+    }
+
+    // Fetch attendance details
+    $totalPresent = Attendance::where('employee_id', $employee->id)
+        ->where('status_id', 1) // Assuming 1 is the ID for "Present"
+        ->count();
+
+    $totalAbsent = Attendance::where('employee_id', $employee->id)
+        ->where('status_id', 2) // Assuming 2 is the ID for "Absent"
+        ->count();
+
+    $totalLate = Attendance::where('employee_id', $employee->id)
+        ->where('isLate', 1)
+        ->count();
+
+    $todayAttendance = Attendance::where('employee_id', $employee->id)
+        ->where('date', Carbon::today()->toDateString())
+        ->first();
+
+    // Fetch sales data if applicable
+    $totalSales = EmployeeSales::where('employee_id', $employee->id)
+        ->sum('sales_amount');
+
+    $totalSalesQty = EmployeeSales::where('employee_id', $employee->id)
+        ->sum('sales_qty');
+
+    return view('dashboard_user', compact(
+        'user',
+        'employee',
+        'totalPresent',
+        'totalAbsent',
+        'totalLate',
+        'todayAttendance',
+        'totalSales',
+        'totalSalesQty'
+    ));
+}
 
     // SALES SUMMARY FOR DILLON
     public function salesSummaryDillon(Request $request)

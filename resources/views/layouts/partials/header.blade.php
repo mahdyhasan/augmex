@@ -58,6 +58,8 @@
                                         <li><a href="{{ route('clients.index') }}">Clients</a></li>
                                         <li><a href="{{ route('sales.summary') }}">Sales Summary</a></li>
                                         <li><a href="{{ route('accounts.incomeStatement') }}">Profit & Loss</a></li>
+                                        <hr>
+                                             <li><a href="{{ route('user.index') }}">User Management</a></li>
                                     </ul>
                                 </li>
                                 @endif
@@ -100,6 +102,23 @@
                                     </ul>
                                 </li>
                                 @endif
+
+                                
+                                <!-- Employee Section (Only for Employees) -->
+                                @if(auth()->user()->isSuperAdmin() || auth()->user()->isHR() || auth()->user()->isAccountant() || auth()->user()->isUser())
+                                <li class="submenu">
+                                    <a href="javascript:void(0);">
+                                        <i class="ti ti-user"></i><span>Agent</span>
+                                        <span class="menu-arrow"></span>
+                                    </a>
+                                    <ul>
+                                        <li><a href="{{ route('attendance.index') }}">Attendance</a></li>
+                                        <li><a href="{{ route('sales.summary') }}">Sales Report</a></li>
+                                        <li><a href="">Commission</a></li>
+                                    </ul>
+                                </li>
+                                @endif
+
 
                                 <!-- Clock In (Available to All Users) -->
                                 <li>
@@ -150,7 +169,7 @@
                         <a class="dropdown-item" href="{{ route('dashboard') }}"> <i class="ti ti-layout-2"></i> Dashboard </a>
                         <a class="dropdown-item" href="{{ route('attendance.index') }}"> <i class="ti ti-arrows-horizontal"></i> Attendance Sheet </a>
                         <a class="dropdown-item" href="{{ route('employees.profile') }}"> <i class="ti ti-user-pin"></i> My Profile </a>
-                        <a class="dropdown-item" href=""> <i class="ti ti-money"></i> Commission </a>
+                        <a class="dropdown-item" href="{{ route('user.passwordChange') }}"> <i class="ti ti-unlock"></i> Change Password </a>
                         <hr>
                         <a class="dropdown-item" href="{{ route('logout') }}" onclick="event.preventDefault(); document.getElementById('logout-form').submit();"> <i class="ti ti-lock"></i> Logout </a>
                     </div>
@@ -166,7 +185,7 @@
         <a href="javascript:void(0);" class="nav-link dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false"><i class="fa fa-ellipsis-v"></i></a>
         <div class="dropdown-menu">
             <a class="dropdown-item" href="{{ route('dashboard') }}"> <i class="ti ti-layout-2"></i> Dashboard </a>
-            <a class="dropdown-item" href="{{ route('user.profile') }}"> <i class="ti ti-user-pin"></i> My Profile </a>
+            <a class="dropdown-item" href="{{ route('employees.profile') }}"> <i class="ti ti-user-pin"></i> My Profile </a>
             <a class="dropdown-item" href="{{ route('logout') }}" onclick="event.preventDefault(); document.getElementById('logout-form').submit();"> <i class="ti ti-lock"></i> Logout </a>
         </div>
     </div>

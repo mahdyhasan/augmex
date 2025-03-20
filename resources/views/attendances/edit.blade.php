@@ -44,14 +44,20 @@
                     </div>
 
                     <div class="form-group">
-                        <label for="status">Status</label>
+                        <label for="isLate">Is Late?</label>
+                        <select name="isLate" class="form-control">
+                            <option value="0" {{ $attendance->isLate == 0 ? 'selected' : '' }}>On Time</option>
+                            <option value="1" {{ $attendance->isLate == 1 ? 'selected' : '' }}>Late</option>
+                        </select>
+                    </div>
+                                        
+                    <div class="form-group">
+                        <label for="status_id">Status</label>
                         <select name="status" class="form-control">
-                            <option value="Present" {{ $attendance->status == 'Present' ? 'selected' : '' }}>Present</option>
-                            <option value="Absent" {{ $attendance->status == 'Absent' ? 'selected' : '' }}>Absent</option>
-                            <option value="Late" {{ $attendance->status == 'Late' ? 'selected' : '' }}>Late</option>
-                            <option value="Late" {{ $attendance->status == 'Late' ? 'selected' : '' }}>Late</option>
-                            <option value="Weekend" {{ $attendance->status == 'Weekend' ? 'selected' : '' }}>Weekend</option>
-                            <option value="Holiday" {{ $attendance->status == 'Holiday' ? 'selected' : '' }}>Holiday</option>
+                            <option value="1" {{ $attendance->status_id == 1 ? 'selected' : '' }}>Present</option>
+                            <option value="2" {{ $attendance->status_id == 2 ? 'selected' : '' }}>Absent</option>
+                            <option value="3" {{ $attendance->status_id == 3 ? 'selected' : '' }}>Weekend</option>
+                            <option value="4" {{ $attendance->status_id == 4 ? 'selected' : '' }}>Holiday</option>
                         </select>
                     </div>
 

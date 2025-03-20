@@ -66,6 +66,27 @@
     .table tbody tr:hover {
         background-color: #f8f9fa;
     }
+    .date-range-filter {
+        display: flex;
+        gap: 10px;
+        margin-bottom: 20px;
+    }
+    .date-range-filter input {
+        padding: 8px;
+        border: 1px solid #e9ecef;
+        border-radius: 5px;
+    }
+    .date-range-filter button {
+        padding: 8px 15px;
+        background: #007bff;
+        color: #fff;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+    }
+    .date-range-filter button:hover {
+        background: #0056b3;
+    }
 </style>
 
 <div class="content-wrapper">
@@ -78,10 +99,21 @@
             </div>
         </div>
 
+        <!-- Date Range Filter -->
+        <div class="date-range-filter">
+            <form action="{{ route('dashboard') }}" method="GET">
+                <input type="date" name="start_date" value="{{ $startDate }}">
+                <input type="date" name="end_date" value="{{ $endDate }}">
+                <button type="submit">Apply Filter</button>
+            </form>
+        </div>
+
+
+
         <!-- Stats Cards -->
         <div class="row mb-4">
             <!-- Total Employees -->
-            <div class="col-xl-3 col-sm-6 mb-4">
+            <div class="col-xl-4 col-sm-6 mb-4">
                 <div class="dashboard-card">
                     <i class="ti ti-users"></i>
                     <h5 class="card-title">Total Employees</h5>
@@ -90,7 +122,7 @@
             </div>
 
             <!-- Total Clients -->
-            <div class="col-xl-3 col-sm-6 mb-4">
+            <div class="col-xl-4 col-sm-6 mb-4">
                 <div class="dashboard-card">
                     <i class="ti ti-building"></i>
                     <h5 class="card-title">Total Clients</h5>
@@ -99,16 +131,38 @@
             </div>
 
             <!-- Total Transactions -->
-            <div class="col-xl-3 col-sm-6 mb-4">
+            <div class="col-xl-4 col-sm-6 mb-4">
                 <div class="dashboard-card">
                     <i class="ti ti-credit-card"></i>
                     <h5 class="card-title">Total Transactions</h5>
                     <h2 class="card-value">{{ $totalTransactions }}</h2>
                 </div>
             </div>
+        </div>
 
+
+
+        <!-- Additional Stats Cards -->
+        <div class="row mb-4">
+            <!-- Total Expenses -->
+            <div class="col-xl-4 col-sm-6 mb-4">
+                <div class="dashboard-card">
+                    <i class="ti ti-cash"></i>
+                    <h5 class="card-title">Total Expenses</h5>
+                    <h2 class="card-value">{{ number_format($totalExpenses, 2) }} Tk</h2>
+                </div>
+            </div>
+
+            <!-- Bank Balance -->
+            <div class="col-xl-4 col-sm-6 mb-4">
+                <div class="dashboard-card">
+                    <i class="ti ti-pig-money"></i>
+                    <h5 class="card-title">Bank Balance</h5>
+                    <h2 class="card-value">{{ number_format($bankBalance, 2) }} Tk</h2>
+                </div>
+            </div>
             <!-- Total Earnings -->
-            <div class="col-xl-3 col-sm-6 mb-4">
+            <div class="col-xl-4 col-sm-6 mb-4">
                 <div class="dashboard-card">
                     <i class="ti ti-wallet"></i>
                     <h5 class="card-title">Total Earnings</h5>
@@ -226,6 +280,65 @@
                                 <tr>
                                     <td>{{ date('F', mktime(0, 0, 0, $month, 1)) }}</td>
                                     <td>{{ number_format($expenses, 2) }}</td>
+                                </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+       <!-- Attendance Summary Table -->
+        <div class="row">
+            <div class="col-md-12 mb-4">
+                <div class="card">
+                    <div class="card-header">
+                        <h5>Attendance Summary ({{ $startDate }} to {{ $endDate }})</h5>
+                    </div>
+                    <div class="card-body">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>Total Present</th>
+                                    <th>Total Absent</th>
+                                    <th>Total Late</th>
+                                    <th>Total Attendance Records</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>{{ $attendanceSummary->total_present }}</td>
+                                    <td>{{ $attendanceSummary->total_absent }}</td>
+                                    <td>{{ $attendanceSummary->total_late }}</td>
+                                    <td>{{ $attendanceSummary->total_attendance }}</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+            <!-- Expense Summary -->
+            <div class="col-md-6 mb-4">
+                <div class="card">
+                    <div class="card-header">
+                        <h5>Expense Summary</h5>
+                    </div>
+                    <div class="card-body">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>Category</th>
+                                    <th>Amount (Tk)</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach($expenseSummary['expensesByCategory'] as $expense)
+                                <tr>
+                                    <td>{{ $expense->expenseCategory->name }}</td>
+                                    <td>{{ number_format($expense->total, 2) }}</td>
                                 </tr>
                                 @endforeach
                             </tbody>

@@ -5,6 +5,11 @@ use Illuminate\Http\Request;
 use Carbon\Carbon;
 use Auth;
 
+use DataTables;
+use Excel;
+use PDF; 
+
+
 use App\Models\Account;
 use App\Models\Attendance;
 use App\Models\BankAccount;
@@ -73,15 +78,15 @@ class AccountController extends Controller
 
     public function fixedAssetsStore(Request $request)
     {
-        $request->validate([
-            'name' => 'required|string|max:255',
-            'purchase_date' => 'required|date',
-            'cost' => 'required|numeric|min:0',
-            'useful_life' => 'required|integer|min:1',
-            'depreciation_rate' => 'required|numeric|min:0|max:100',
-            'depreciation_year' => 'required|integer',
-            'depreciation_amount' => 'required|numeric|min:0',
-        ]);
+        // $request->validate([
+        //     'name' => 'required|string|max:255',
+        //     'purchase_date' => 'required|date',
+        //     'cost' => 'required|numeric|min:0',
+        //     'useful_life' => 'required|integer|min:1',
+        //     'depreciation_rate' => 'required|numeric|min:0|max:100',
+        //     'depreciation_year' => 'required|integer',
+        //     'depreciation_amount' => 'required|numeric|min:0',
+        // ]);
 
         // Create Fixed Asset
         $fixedAsset = FixedAsset::create($request->only(['name', 'purchase_date', 'cost', 'useful_life', 'depreciation_rate']));
@@ -106,12 +111,12 @@ class AccountController extends Controller
     // Fixed Assets Update
     public function fixedAssetsUpdate(Request $request, $id)
     {
-        $request->validate([
-            'name' => 'required|string|max:255',
-            'purchase_date' => 'required|date',
-            'cost' => 'required|numeric|min:0',
-            'depreciation_rate' => 'required|numeric|min:0|max:100',
-        ]);
+        // $request->validate([
+        //     'name' => 'required|string|max:255',
+        //     'purchase_date' => 'required|date',
+        //     'cost' => 'required|numeric|min:0',
+        //     'depreciation_rate' => 'required|numeric|min:0|max:100',
+        // ]);
 
         $fixedAsset = FixedAsset::findOrFail($id);
         $fixedAsset->update($request->all());
@@ -133,10 +138,10 @@ class AccountController extends Controller
     // Store new depreciation record
     public function depreciationRecordsStore(Request $request, $asset_id)
     {
-        $request->validate([
-            'year' => 'required|integer',
-            'depreciation_amount' => 'required|numeric|min:0',
-        ]);
+        // $request->validate([
+        //     'year' => 'required|integer',
+        //     'depreciation_amount' => 'required|numeric|min:0',
+        // ]);
 
         DepreciationRecord::create([
             'asset_id' => $asset_id,
@@ -157,10 +162,10 @@ class AccountController extends Controller
     // Update depreciation record
     public function depreciationRecordsUpdate(Request $request, $id)
     {
-        $request->validate([
-            'year' => 'required|integer',
-            'depreciation_amount' => 'required|numeric|min:0',
-        ]);
+        // $request->validate([
+        //     'year' => 'required|integer',
+        //     'depreciation_amount' => 'required|numeric|min:0',
+        // ]);
 
         $depreciationRecord = DepreciationRecord::findOrFail($id);
         $depreciationRecord->update($request->all());
@@ -191,11 +196,11 @@ class AccountController extends Controller
         // Store a new petty cash record
         public function pettyCashStore(Request $request)
         {
-            $request->validate([
-                'date' => 'required|date',
-                'amount' => 'required|numeric|min:0',
-                'description' => 'required|string|max:255',
-            ]);
+            // $request->validate([
+            //     'date' => 'required|date',
+            //     'amount' => 'required|numeric|min:0',
+            //     'description' => 'required|string|max:255',
+            // ]);
 
             PettyCash::create($request->all());
 
@@ -212,11 +217,11 @@ class AccountController extends Controller
         // Update petty cash record
         public function pettyCashUpdate(Request $request, $id)
         {
-            $request->validate([
-                'date' => 'required|date',
-                'amount' => 'required|numeric|min:0',
-                'description' => 'required|string|max:255',
-            ]);
+            // $request->validate([
+            //     'date' => 'required|date',
+            //     'amount' => 'required|numeric|min:0',
+            //     'description' => 'required|string|max:255',
+            // ]);
 
             $pettyCash = PettyCash::findOrFail($id);
             $pettyCash->update($request->all());
@@ -243,14 +248,14 @@ class AccountController extends Controller
         // Store a new liability record
         public function liabilitiesStore(Request $request)
         {
-            $request->validate([
-                'account_id' => 'required|exists:accounts,id',
-                'amount' => 'required|numeric|min:0',
-                'interest_rate' => 'nullable|numeric|min:0|max:100',
-                'start_date' => 'required|date',
-                'due_date' => 'required|date|after_or_equal:start_date',
-                'status' => 'required|string|max:50',
-            ]);
+            // $request->validate([
+            //     'account_id' => 'required|exists:accounts,id',
+            //     'amount' => 'required|numeric|min:0',
+            //     'interest_rate' => 'nullable|numeric|min:0|max:100',
+            //     'start_date' => 'required|date',
+            //     'due_date' => 'required|date|after_or_equal:start_date',
+            //     'status' => 'required|string|max:50',
+            // ]);
 
             Liability::create($request->all());
 
@@ -268,14 +273,14 @@ class AccountController extends Controller
         // Update liability record
         public function liabilitiesUpdate(Request $request, $id)
         {
-            $request->validate([
-                'account_id' => 'required|exists:accounts,id',
-                'amount' => 'required|numeric|min:0',
-                'interest_rate' => 'nullable|numeric|min:0|max:100',
-                'start_date' => 'required|date',
-                'due_date' => 'required|date|after_or_equal:start_date',
-                'status' => 'required|string|max:50',
-            ]);
+            // $request->validate([
+            //     'account_id' => 'required|exists:accounts,id',
+            //     'amount' => 'required|numeric|min:0',
+            //     'interest_rate' => 'nullable|numeric|min:0|max:100',
+            //     'start_date' => 'required|date',
+            //     'due_date' => 'required|date|after_or_equal:start_date',
+            //     'status' => 'required|string|max:50',
+            // ]);
 
             $liability = Liability::findOrFail($id);
             $liability->update($request->all());
@@ -303,14 +308,14 @@ class AccountController extends Controller
         // Store a new transaction record
         public function transactionsStore(Request $request)
         {
-            $request->validate([
-                'account_id' => 'required|exists:accounts,id',
-                'type' => 'required|in:Deposit,Withdrawal',
-                'amount' => 'required|numeric|min:0',
-                'reference' => 'nullable|string|max:255',
-                'transaction_date' => 'required|date',
-                'description' => 'nullable|string|max:255',
-            ]);
+            // $request->validate([
+            //     'account_id' => 'required|exists:accounts,id',
+            //     'type' => 'required|in:Deposit,Withdrawal',
+            //     'amount' => 'required|numeric|min:0',
+            //     'reference' => 'nullable|string|max:255',
+            //     'transaction_date' => 'required|date',
+            //     'description' => 'nullable|string|max:255',
+            // ]);
 
             Transaction::create($request->all());
 
@@ -328,14 +333,14 @@ class AccountController extends Controller
         // Update transaction record
         public function transactionsUpdate(Request $request, $id)
         {
-            $request->validate([
-                'account_id' => 'required|exists:accounts,id',
-                'type' => 'required|in:Deposit,Withdrawal',
-                'amount' => 'required|numeric|min:0',
-                'reference' => 'nullable|string|max:255',
-                'transaction_date' => 'required|date',
-                'description' => 'nullable|string|max:255',
-            ]);
+            // $request->validate([
+            //     'account_id' => 'required|exists:accounts,id',
+            //     'type' => 'required|in:Deposit,Withdrawal',
+            //     'amount' => 'required|numeric|min:0',
+            //     'reference' => 'nullable|string|max:255',
+            //     'transaction_date' => 'required|date',
+            //     'description' => 'nullable|string|max:255',
+            // ]);
 
             $transaction = Transaction::findOrFail($id);
             $transaction->update($request->all());
@@ -362,11 +367,11 @@ class AccountController extends Controller
     // Store a new tax payment
     public function taxPaymentsStore(Request $request)
     {
-        $request->validate([
-            'type' => 'required|string|max:50',
-            'amount' => 'required|numeric|min:0',
-            'payment_date' => 'required|date',
-        ]);
+        // $request->validate([
+        //     'type' => 'required|string|max:50',
+        //     'amount' => 'required|numeric|min:0',
+        //     'payment_date' => 'required|date',
+        // ]);
 
         TaxPayment::create($request->all());
 
@@ -383,11 +388,11 @@ class AccountController extends Controller
     // Update tax payment record
     public function taxPaymentsUpdate(Request $request, $id)
     {
-        $request->validate([
-            'type' => 'required|string|max:50',
-            'amount' => 'required|numeric|min:0',
-            'payment_date' => 'required|date',
-        ]);
+        // $request->validate([
+        //     'type' => 'required|string|max:50',
+        //     'amount' => 'required|numeric|min:0',
+        //     'payment_date' => 'required|date',
+        // ]);
 
         $taxPayment = TaxPayment::findOrFail($id);
         $taxPayment->update($request->all());

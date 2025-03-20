@@ -5,6 +5,10 @@ use Illuminate\Http\Request;
 use Carbon\Carbon;
 use Auth;
 
+use DataTables;
+use Excel;
+use PDF; 
+
 use App\Models\Account;
 use App\Models\Attendance;
 use App\Models\BankAccount;
@@ -43,15 +47,15 @@ class ClientController extends Controller
     public function store(Request $request)
     {
         // Validation and storing a new client
-        $request->validate([
-            'company_name' => 'required',
-            'country' => 'required',
-            'kdm' => 'required',
-            'status' => 'required',
-            'rate' => 'required',
-            'rate_type' => 'required',
-            'invoice_type' => 'required',
-        ]);
+        // $request->validate([
+        //     'company_name' => 'required',
+        //     'country' => 'required',
+        //     'kdm' => 'required',
+        //     'status' => 'required',
+        //     'rate' => 'required',
+        //     'rate_type' => 'required',
+        //     'invoice_type' => 'required',
+        // ]);
 
         $client = new Client();
         $client->company = $request->company_name;
@@ -84,15 +88,15 @@ class ClientController extends Controller
     public function update(Request $request, $id)
     {
         // Validate the incoming request
-        $request->validate([
-            'company_name' => 'required',
-            'country' => 'required',
-            'kdm' => 'required',
-            'rate' => 'required',
-            'rate_type' => 'required',
-            'invoice_type' => 'required',
-            'currency' => 'required',
-        ]);
+        // $request->validate([
+        //     'company_name' => 'required',
+        //     'country' => 'required',
+        //     'kdm' => 'required',
+        //     'rate' => 'required',
+        //     'rate_type' => 'required',
+        //     'invoice_type' => 'required',
+        //     'currency' => 'required',
+        // ]);
     
         // Find the client
         $client = Client::findOrFail($id);
@@ -145,12 +149,12 @@ class ClientController extends Controller
     // Store a new client payment
     public function clientPaymentsStore(Request $request)
     {
-        $request->validate([
-            'invoice_id' => 'required|exists:invoices,id',
-            'amount' => 'required|numeric|min:0',
-            'payment_date' => 'required|date',
-            'method' => 'required|string|max:50',
-        ]);
+        // $request->validate([
+        //     'invoice_id' => 'required|exists:invoices,id',
+        //     'amount' => 'required|numeric|min:0',
+        //     'payment_date' => 'required|date',
+        //     'method' => 'required|string|max:50',
+        // ]);
 
         ClientPayment::create($request->all());
 
@@ -168,12 +172,12 @@ class ClientController extends Controller
     // Update client payment record
     public function clientPaymentsUpdate(Request $request, $id)
     {
-        $request->validate([
-            'invoice_id' => 'required|exists:invoices,id',
-            'amount' => 'required|numeric|min:0',
-            'payment_date' => 'required|date',
-            'method' => 'required|string|max:50',
-        ]);
+        // $request->validate([
+        //     'invoice_id' => 'required|exists:invoices,id',
+        //     'amount' => 'required|numeric|min:0',
+        //     'payment_date' => 'required|date',
+        //     'method' => 'required|string|max:50',
+        // ]);
 
         $clientPayment = ClientPayment::findOrFail($id);
         $clientPayment->update($request->all());

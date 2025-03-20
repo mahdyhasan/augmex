@@ -5,6 +5,10 @@ use Illuminate\Http\Request;
 use Carbon\Carbon;
 use Auth;
 
+use DataTables;
+use Excel;
+use PDF; 
+
 use App\Models\Account;
 use App\Models\Attendance;
 use App\Models\BankAccount;
@@ -52,11 +56,11 @@ class InvoiceController extends Controller
         // Generate invoice based on user input
         public function generateInvoice(Request $request)
         {
-            $request->validate([
-                'client_id' => 'required|exists:clients,id',
-                'start_date' => 'required|date',
-                'end_date' => 'required|date|after_or_equal:start_date',
-            ]);
+            // $request->validate([
+            //     'client_id' => 'required|exists:clients,id',
+            //     'start_date' => 'required|date',
+            //     'end_date' => 'required|date|after_or_equal:start_date',
+            // ]);
         
             $client = Client::findOrFail($request->client_id);
             $clientCondition = ClientCondition::where('client_id', $client->id)->first();
@@ -138,17 +142,17 @@ class InvoiceController extends Controller
 
         public function invoicesUpdate(Request $request, $id)
         {
-            $request->validate([
-                'client_id' => 'required|exists:clients,id',
-                'invoice_date' => 'required|date',
-                'total_amount' => 'required|numeric|min:0',
-                'items.*.days_worked' => 'required|integer|min:0',
-                'items.*.hours_worked' => 'required|numeric|min:0',
-                'items.*.rate' => 'required|numeric|min:0',
-                'items.*.deductions' => 'nullable|numeric|min:0',
-                'items.*.commission' => 'nullable|numeric|min:0',
-                'items.*.amount' => 'required|numeric|min:0',
-            ]);
+            // $request->validate([
+            //     'client_id' => 'required|exists:clients,id',
+            //     'invoice_date' => 'required|date',
+            //     'total_amount' => 'required|numeric|min:0',
+            //     'items.*.days_worked' => 'required|integer|min:0',
+            //     'items.*.hours_worked' => 'required|numeric|min:0',
+            //     'items.*.rate' => 'required|numeric|min:0',
+            //     'items.*.deductions' => 'nullable|numeric|min:0',
+            //     'items.*.commission' => 'nullable|numeric|min:0',
+            //     'items.*.amount' => 'required|numeric|min:0',
+            // ]);
 
             $invoice = Invoice::findOrFail($id);
             $invoice->update([

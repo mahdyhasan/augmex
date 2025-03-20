@@ -1,4 +1,4 @@
-@extends('layouts.invoice')
+@extends('layouts.pdf')
 
 @section('content')
 <h2>Salary Sheet for {{ $month->format('F Y') }}</h2>

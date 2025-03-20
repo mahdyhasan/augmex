@@ -5,6 +5,9 @@ use Illuminate\Http\Request;
 use Carbon\Carbon;
 use Auth;
 
+use DataTables;
+use Excel;
+use PDF; 
 
 use App\Models\Account;
 use App\Models\Attendance;

@@ -13,6 +13,7 @@ use App\Http\Controllers\EmployeeController;
 use App\Http\Controllers\ExpenseController;
 use App\Http\Controllers\InvoiceController;
 use App\Http\Controllers\PayrollController;
+use App\Http\Controllers\TransactionController;
 
 
 /*
@@ -34,11 +35,7 @@ Auth::routes(['register' => false]);
 Route::group(['middleware' => 'auth'], function () {
 
     Route::get('/', [HomeController::class, 'index'])->name('dashboard');
-
-    Route::get('/user/profile', function () {
-        return view('user.profile');
-    })->name('user.profile');
-
+    
     Route::get('/company', function () {
         return view('company');
     })->name('company');
@@ -207,6 +204,15 @@ Route::group(['middleware' => 'auth'], function () {
 
 
 
+Route::middleware(['auth'])->group(function () {
+    Route::get('/user', [SettingController::class, 'index'])->name('user.index');
+    Route::get('/user/create', [SettingController::class, 'create'])->name('user.create');
+    Route::post('/user', [SettingController::class, 'store'])->name('user.store');
+    Route::get('/user/{id}/edit', [SettingController::class, 'edit'])->name('user.edit');
+    Route::put('/user/{id}', [SettingController::class, 'update'])->name('user.update');
+    Route::get('/user/password-change', [SettingController::class, 'passwordChange'])->name('user.passwordChange');
+    Route::post('/user/update-password', [SettingController::class, 'updatePassword'])->name('user.updatePassword');
+});
 
 
 

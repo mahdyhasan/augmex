@@ -5,6 +5,10 @@ use Illuminate\Http\Request;
 use Carbon\Carbon;
 use Auth;
 
+use DataTables;
+use Excel;
+use PDF; 
+
 use App\Models\Account;
 use App\Models\Attendance;
 use App\Models\BankAccount;
@@ -62,13 +66,13 @@ class ExpenseController extends Controller
             return abort(403, 'Unauthorized Access');
         }
 
-        $request->validate([
-            'expense_date' => 'required|date',
-            'category_id' => 'required|exists:expense_categories,id',
-            'description' => 'nullable|string|max:255',
-            'amount' => 'required|numeric|min:0',
-            'receipt' => 'nullable|image|max:800',
-        ]);
+        // $request->validate([
+        //     'expense_date' => 'required|date',
+        //     'category_id' => 'required|exists:expense_categories,id',
+        //     'description' => 'nullable|string|max:255',
+        //     'amount' => 'required|numeric|min:0',
+        //     'receipt' => 'nullable|image|max:800',
+        // ]);
 
         // Handle file upload
         $receiptPath = null;
@@ -104,13 +108,13 @@ class ExpenseController extends Controller
     // Update expense record
     public function expensesUpdate(Request $request, $id)
     {
-        $request->validate([
-            'expense_date' => 'required|date',
-            'category_id' => 'required|exists:expense_categories,id',
-            'description' => 'nullable|string|max:255',
-            'amount' => 'required|numeric|min:0',
-            'receipt' => 'nullable|image|max:800',
-        ]);
+        // $request->validate([
+        //     'expense_date' => 'required|date',
+        //     'category_id' => 'required|exists:expense_categories,id',
+        //     'description' => 'nullable|string|max:255',
+        //     'amount' => 'required|numeric|min:0',
+        //     'receipt' => 'nullable|image|max:800',
+        // ]);
 
         $expense = Expense::findOrFail($id);
 

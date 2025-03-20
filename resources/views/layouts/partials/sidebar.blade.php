@@ -11,90 +11,92 @@
         </div>
     </div>
 
-    <div class="sidebar-inner slimscroll">
-        <div id="sidebar-menu" class="sidebar-menu">
-            <ul>
-                <li>
-                    <h6 class="submenu-hdr">Main Menu</h6>
+            <div class="sidebar-inner slimscroll">
+                <div id="sidebar-menu" class="sidebar-menu">
                     <ul>
-
-
-                        <!-- Super Admin Access -->
-                        @if(auth()->user()->isSuperAdmin())
-                        <li class="submenu">
-                            <a href="javascript:void(0);">
-                                <i class="ti ti-settings"></i><span>Super Admin</span>
-                                <span class="menu-arrow"></span>
-                            </a>
-                            <ul>
-                                <li><a href="{{ route('clients.index') }}">Clients</a></li>
-                            </ul>
-                        </li>
-                        @endif
-
-                        <!-- Accounts Access -->
-                        @if(auth()->user()->isSuperAdmin() || auth()->user()->isAccountant())
-                        <li class="submenu">
-                            <a href="javascript:void(0);">
-                                <i class="ti ti-wallet"></i><span>Accounts</span>
-                                <span class="menu-arrow"></span>
-                            </a>
-                            <ul>
-                                <li><a href="{{ route('expenses.index') }}">All Expenses</a></li>
-                                <li><a href="{{ route('bank_accounts.index') }}">Bank Account</a></li>
-                                <li><a href="{{ route('fixed_assets.index') }}">Fixed Assets</a></li>
-                                <li><a href="{{ route('liabilities.index') }}">Liabilities</a></li>
-                                <li><a href="{{ route('tax_payments.index') }}">Tax Payment</a></li>
-                                <li><a href="{{ route('petty_cash.index') }}">Petty Cash</a></li>
-                                <li><a href="{{ route('transactions.index') }}">Transactions</a></li>
-                                <hr>
-                                <li><a href="{{ route('invoices.index') }}">Invoices</a></li>
-                                <li><a href="{{ route('client_payments.index') }}">Client Payments</a></li>
-                            </ul>
-                        </li>
-                        @endif
-
-                        <!-- HR Access -->
-                        @if(auth()->user()->isSuperAdmin() || auth()->user()->isHR())
-                        <li class="submenu">
-                            <a href="javascript:void(0);">
-                                <i class="ti ti-users"></i><span>HRM</span>
-                                <span class="menu-arrow"></span>
-                            </a>
-                            <ul>
-                                <li><a href="{{ route('employees.index') }}">Employees</a></li>
-                                <li><a href="{{ route('payrolls.index') }}">Payroll</a></li>
-                                <li><a href="{{ route('attendance.index') }}">Attendance Sheet</a></li>
-                                <hr>
-                                <li><a href="{{ route('sales_report.index') }}">Sales Report</a></li>
-                            </ul>
-                        </li>
-                        @endif
-
-                        <!-- Employee Section (Only for Employees) -->
-                        @if(auth()->user()->isSuperAdmin() || auth()->user()->isHR() || auth()->user()->isAccountant() || auth()->user()->isUser())
-                        <li class="submenu">
-                            <a href="javascript:void(0);">
-                                <i class="ti ti-user"></i><span>Employee</span>
-                                <span class="menu-arrow"></span>
-                            </a>
-                            <ul>
-                                <li><a href="{{ route('attendance.index') }}">Attendance</a></li>
-                                <li><a href="{{ route('sales_report.index') }}">Commission</a></li>
-                            </ul>
-                        </li>
-                        @endif
-
-                        <!-- Clock In (Available to All Users) -->
-                        <li>
-                            <button class="btn btn-primary btn-sm w-100">
-                                <a href="{{ route('attendance.clockIn') }}" class="text-white text-decoration-none">Clock In</a>
-                            </button>
-                        </li>
-                        
-                    </ul>
-                </li>
-            </ul>
+            <li>
+                <h6 class="submenu-hdr">Main Menu</h6>
+                <ul>
+                    <!-- Super Admin Access -->
+                    @if(auth()->user()->isSuperAdmin())
+                    <li class="submenu">
+                        <a href="javascript:void(0);">
+                            <i class="ti ti-settings"></i><span>Super Admin</span>
+                            <span class="menu-arrow"></span>
+                        </a>
+                        <ul>
+                            <li><a href="{{ route('clients.index') }}">Clients</a></li>
+                            <li><a href="{{ route('sales.summary') }}">Sales Summary</a></li>
+                            <li><a href="{{ route('accounts.incomeStatement') }}">Profit & Loss</a></li>
+                            <hr>
+                            <li><a href="{{ route('user.index') }}">User Management</a></li>
+                        </ul>
+                    </li>
+                    @endif
+        
+                    <!-- Accounts Access -->
+                    @if(auth()->user()->isSuperAdmin() || auth()->user()->isAccountant())
+                    <li class="submenu">
+                        <a href="javascript:void(0);">
+                            <i class="ti ti-wallet"></i><span>Accounts</span>
+                            <span class="menu-arrow"></span>
+                        </a>
+                        <ul>
+                            <li><a href="{{ route('expenses.index') }}">All Expenses</a></li>
+                            <li><a href="{{ route('bank_accounts.index') }}">Bank Account</a></li>
+                            <li><a href="{{ route('fixed_assets.index') }}">Fixed Assets</a></li>
+                            <li><a href="{{ route('liabilities.index') }}">Liabilities</a></li>
+                            <li><a href="{{ route('tax_payments.index') }}">Tax Payment</a></li>
+                            <li><a href="{{ route('petty_cash.index') }}">Petty Cash</a></li>
+                            <li><a href="{{ route('transactions.index') }}">Transactions</a></li>
+                            <hr>
+                            <li><a href="{{ route('invoices.index') }}">Invoices</a></li>
+                            <li><a href="{{ route('client_payments.index') }}">Client Payments</a></li>
+                        </ul>
+                    </li>
+                    @endif
+        
+                    <!-- HR Access -->
+                    @if(auth()->user()->isSuperAdmin() || auth()->user()->isHR())
+                    <li class="submenu">
+                        <a href="javascript:void(0);">
+                            <i class="ti ti-users"></i><span>HRM</span>
+                            <span class="menu-arrow"></span>
+                        </a>
+                        <ul>
+                            <li><a href="{{ route('employees.index') }}">Employees</a></li>
+                            <li><a href="{{ route('payrolls.index') }}">Payroll</a></li>
+                            <li><a href="{{ route('attendance.index') }}">Attendance Sheet</a></li>
+                            <hr>
+                            <li><a href="{{ route('sales_report.index') }}">Sales Report</a></li>
+                        </ul>
+                    </li>
+                    @endif
+        
+                    <!-- Employee Section (Only for Employees) -->
+                    @if(auth()->user()->isSuperAdmin() || auth()->user()->isHR() || auth()->user()->isAccountant() || auth()->user()->isUser())
+                    <li class="submenu">
+                        <a href="javascript:void(0);">
+                            <i class="ti ti-user"></i><span>Agent</span>
+                            <span class="menu-arrow"></span>
+                        </a>
+                        <ul>
+                            <li><a href="{{ route('attendance.index') }}">Attendance</a></li>
+                            <li><a href="{{ route('sales.summary') }}">Sales Report</a></li>
+                            <li><a href="">Commission</a></li>
+                        </ul>
+                    </li>
+                    @endif
+        
+                    <!-- Clock In (Available to All Users) -->
+                    <li>
+                        <button class="btn btn-primary btn-sm w-100">
+                            <a href="{{ route('attendance.clockIn') }}" class="text-white text-decoration-none">Clock In</a>
+                        </button>
+                    </li>
+                </ul>
+            </li>
+        </ul>
         </div>
     </div>
 </div>

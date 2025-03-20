@@ -1,0 +1,57 @@
+/* Make sure the page takes full height */
+html, body {
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Main content should push the footer to the bottom when content is short */
+.main-wrapper {
+    flex: 1;
+}
+
+/* Footer Styles */
+.footer {
+    background-color: #ffffff; /* White background */
+    padding: 15px 0;
+    box-shadow: 0 -3px 15px rgba(0, 0, 0, 0.08); /* Shadow to separate it from content */
+    text-align: center;
+    border-top: 1px solid #dee2e6;
+    width: 100%;
+    margin-top: auto; /* Pushes footer to bottom when needed */
+}
+
+/* Footer Content */
+.footer-content {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 0 20px;
+}
+
+/* Footer Text */
+.footer-text {
+    margin: 0;
+    font-size: 14px;
+    color: #6c757d;
+    font-weight: 500;
+}
+
+/* Divider Style */
+.footer-divider {
+    margin: 0 10px;
+    color: #6c757d;
+}
+
+/* Footer Link */
+.footer-link {
+    color: #007bff;
+    text-decoration: none;
+    font-weight: 600;
+}
+
+.footer-link:hover {
+    color: #0056b3;
+    text-decoration: underline;
+}

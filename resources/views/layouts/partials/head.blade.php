@@ -61,6 +61,7 @@
 
     <link rel="stylesheet" href="https://cdn.datatables.net/2.2.2/css/dataTables.dataTables.css">
 
+    <link rel="stylesheet" href="{{ asset('public/assets/css/custom.css') }}">
 
     @yield('css')
 </head>

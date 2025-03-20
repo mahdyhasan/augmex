@@ -81,13 +81,14 @@
                         </div>
                     </div>
                 </form>
+                <hr>
 
                 <!-- Sales Report Table -->
                 @if(session('success'))
                     <div class="alert alert-success mt-4">{{ session('success') }}</div>
                 @endif
 
-                <table class="table table-bordered mt-4">
+                <table id = "salesReportTable" class="table table-bordered mt-4">
                     <thead>
                         <tr>
                             <th>Date</th>
@@ -126,7 +127,26 @@
 
 @endsection
 
-@section('script')
-<!-- Bootstrap JS for Offcanvas -->
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+@section('css')
+<!-- DataTables CSS -->
+<link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.11.5/css/dataTables.bootstrap5.min.css">
+@endsection
+
+@section('js')
+<!-- jQuery -->
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<!-- DataTables JS -->
+<script src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/1.11.5/js/dataTables.bootstrap5.min.js"></script>
+<script>
+    $(document).ready(function() {
+        $('#salesReportTable').DataTable({
+            "paging": true,
+            "searching": true,
+            "ordering": true,
+            "info": true,
+            "responsive": true
+        });
+    });
+</script>
 @endsection

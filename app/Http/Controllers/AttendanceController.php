@@ -30,30 +30,49 @@ use App\Models\User;
 
 class AttendanceController extends Controller
 {
-       public function index()
+    public function index(Request $request)
     {
+        // Get filter parameters from the request
+        $date = $request->input('date');
+        $employeeName = $request->input('employee_name');
+    
+        // Base query for attendances
+        $attendancesQuery = Attendance::with(['employee.user', 'status'])
+            ->orderBy('date', 'desc');
+    
+        // Apply filters if provided
+        if ($date) {
+            $attendancesQuery->where('date', $date);
+        }
+        if ($employeeName) {
+            $attendancesQuery->whereHas('employee.user', function ($query) use ($employeeName) {
+                $query->where('name', 'like', '%' . $employeeName . '%');
+            });
+        }
+    
+        // Fetch attendances based on user role
         if (Auth::user()->isSuperAdmin()) {
-            $attendances = Attendance::with(['employee.user', 'status'])
-                ->orderBy('date', 'desc')
-                ->get();
+            $attendances = $attendancesQuery->get();
             $employees = Employee::with('user', 'sales')->get();
         } else {
-            $attendances = Attendance::with(['employee.user', 'status'])
+            $attendances = $attendancesQuery
                 ->whereHas('employee', function ($query) {
                     $query->where('user_id', Auth::id());
                 })
-                ->orderBy('date', 'desc')
                 ->get();
             $employees = Employee::where('user_id', Auth::id())
                 ->with('user', 'sales')
                 ->get();
         }
-        
+    
         $attendanceStatuses = AttendanceStatus::all();
     
-        return view('attendances.index', compact('attendances', 'employees', 'attendanceStatuses'));
+        return view('attendances.index', compact('attendances', 'employees', 'attendanceStatuses', 'date', 'employeeName'));
     }
 
+
+
+    
     public function clockIn() {
 
         return view('attendances.clockIn');

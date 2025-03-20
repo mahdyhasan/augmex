@@ -23,9 +23,11 @@
                 </div>
             </div>
             <!-- /Page Wrapper -->
-
         </div>
         <!-- /Main Wrapper -->
+
+        <!-- Footer -->
+        @include('layouts.partials.footer')
 
         @include('layouts.partials.script')
 

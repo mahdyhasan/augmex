@@ -204,15 +204,15 @@ Route::group(['middleware' => 'auth'], function () {
 
 
 
-Route::middleware(['auth'])->group(function () {
-    Route::get('/user', [SettingController::class, 'index'])->name('user.index');
-    Route::get('/user/create', [SettingController::class, 'create'])->name('user.create');
-    Route::post('/user', [SettingController::class, 'store'])->name('user.store');
-    Route::get('/user/{id}/edit', [SettingController::class, 'edit'])->name('user.edit');
-    Route::put('/user/{id}', [SettingController::class, 'update'])->name('user.update');
-    Route::get('/user/password-change', [SettingController::class, 'passwordChange'])->name('user.passwordChange');
-    Route::post('/user/update-password', [SettingController::class, 'updatePassword'])->name('user.updatePassword');
-});
+    Route::prefix('user')->middleware(['auth'])->group(function () {
+        Route::get('/', [SettingController::class, 'index'])->name('user.index');
+        Route::get('/create', [SettingController::class, 'create'])->name('user.create');
+        Route::post('/', [SettingController::class, 'store'])->name('user.store');
+        Route::get('/{id}/edit', [SettingController::class, 'edit'])->name('user.edit');
+        Route::put('/{id}', [SettingController::class, 'update'])->name('user.update');
+        Route::get('/password-change', [SettingController::class, 'passwordChange'])->name('user.passwordChange');
+        Route::post('/update-password', [SettingController::class, 'updatePassword'])->name('user.updatePassword');
+    });
 
 
 

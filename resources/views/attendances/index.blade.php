@@ -25,6 +25,25 @@
                         <div class="alert alert-danger">{{ session('error') }}</div>
                     @endif
 
+                    <!-- Filter Form -->
+                    <form id="filterForm" method="GET" action="{{ route('attendance.index') }}" class="mb-4">
+                        <div class="row">
+                            <div class="col-md-4">
+                                <label for="date">Date</label>
+                                <input type="date" name="date" id="date" class="form-control" value="{{ request('date') }}">
+                            </div>
+                            <div class="col-md-4">
+                                <label for="employee_name">Employee Name</label>
+                                <input type="text" name="employee_name" id="employee_name" class="form-control" value="{{ request('employee_name') }}" placeholder="Search by name">
+                            </div>
+                            <div class="col-md-4 d-flex align-items-end">
+                                <button type="submit" class="btn btn-primary me-2">Filter</button>
+                                <a href="{{ route('attendance.index') }}" class="btn btn-secondary">Reset</a>
+                            </div>
+                        </div>
+                    </form>
+
+                    <!-- Attendance Table -->
                     <table id="attendanceTable" class="table table-striped">
                         <thead>
                             <tr>
@@ -116,9 +135,8 @@
                     <label for="isLate">Is Late?</label>
                     <select name="isLate" class="form-control" required>
                         <option value="">Select On Time Status</option>
-                            <option value="0">On Time</option>
-                            <option value="1">Late</option>
-                            
+                        <option value="0">On Time</option>
+                        <option value="1">Late</option>
                     </select>
                 </div>
 
@@ -154,12 +172,18 @@
 <script src="https://cdn.datatables.net/1.11.5/js/dataTables.bootstrap5.min.js"></script>
 <script>
     $(document).ready(function() {
+        // Initialize DataTable
         $('#attendanceTable').DataTable({
             "paging": true,
             "searching": true,
             "ordering": true,
             "info": true,
             "responsive": true
+        });
+
+        // Submit filter form on change
+        $('#date, #employee_name').on('change', function() {
+            $('#filterForm').submit();
         });
     });
 </script>

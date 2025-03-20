@@ -82,7 +82,7 @@
                         </a>
                         <ul>
                             <li><a href="{{ route('attendance.index') }}">Attendance</a></li>
-                            <li><a href="{{ route('sales.summary') }}">Sales Report</a></li>
+                            <li><a href="{{ route('sales_report.index') }}">Sales Report</a></li>
                             <li><a href="">Commission</a></li>
                         </ul>
                     </li>

@@ -56,7 +56,8 @@
                                     </a>
                                     <ul>
                                         <li><a href="{{ route('clients.index') }}">Clients</a></li>
-                                        <li><a href="{{ route('sales.summary') }}">Sales Summary</a></li>
+                                        <li><a href="{{ route('sales.summary') }}">Dillon Report</a></li>
+                                        <li><a href="{{ route('sales_report.index') }}">Sales Report</a></li>
                                         <li><a href="{{ route('accounts.incomeStatement') }}">Profit & Loss</a></li>
                                         <hr>
                                              <li><a href="{{ route('user.index') }}">User Management</a></li>
@@ -113,7 +114,7 @@
                                     </a>
                                     <ul>
                                         <li><a href="{{ route('attendance.index') }}">Attendance</a></li>
-                                        <li><a href="{{ route('sales.summary') }}">Sales Report</a></li>
+                                        <li><a href="{{ route('sales_report.index') }}">Sales Report</a></li>
                                         <li><a href="">Commission</a></li>
                                     </ul>
                                 </li>

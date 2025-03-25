@@ -38,7 +38,7 @@
                     @endphp
                     <div class="mb-3">
                         <label for="currency" class="form-label">Currency</label>
-                        <input type="text" class="form-control" id="currency" name="currency" value="{{ $currency }}" readonly>
+                        <input type="text" class="form-control" id="currency" name="currency" value="{{ $currency }}" >
                     </div>
 
                     <!-- Invoice Items -->
@@ -79,8 +79,9 @@
                         <input type="number" class="form-control" id="total_amount" name="total_amount" value="{{ $invoice->total_amount }}" step="0.01" required>
                     </div>
 
+                    <a href="{{ route('invoices.index') }}" class="btn btn-dark">Cancel</a>
                     <button type="submit" class="btn btn-primary">Update Invoice</button>
-                    <a href="{{ route('invoices.index') }}" class="btn btn-secondary">Cancel</a>
+
                 </form>
             </div>
         </div>
@@ -90,19 +91,38 @@
 
 @endsection
 
-@section('script')
+@section('js')
 <script>
-    // Auto-calculate total amount on field change
-    document.querySelectorAll('.amount-field, .rate-field, .deduction-field, .commission-field').forEach(field => {
-        field.addEventListener('input', updateTotal);
+document.addEventListener('DOMContentLoaded', function () {
+    // Attach listeners to all relevant fields
+    document.querySelectorAll('.rate-field, .deduction-field, .commission-field, input[name^="items"][name$="[hours_worked]"]').forEach(field => {
+        field.addEventListener('input', recalculateAmounts);
     });
 
-    function updateTotal() {
+    function recalculateAmounts() {
         let total = 0;
-        document.querySelectorAll('.amount-field').forEach(field => {
-            total += parseFloat(field.value) || 0;
+
+        document.querySelectorAll('tbody tr').forEach(row => {
+            const hours = parseFloat(row.querySelector('input[name^="items"][name$="[hours_worked]"]').value) || 0;
+            const rate = parseFloat(row.querySelector('.rate-field').value) || 0;
+            const deductions = parseFloat(row.querySelector('.deduction-field').value) || 0;
+            const commission = parseFloat(row.querySelector('.commission-field').value) || 0;
+
+            const calculatedAmount = ((hours * rate) - deductions + commission).toFixed(2);
+
+            const amountField = row.querySelector('.amount-field');
+            amountField.value = calculatedAmount;
+
+            total += parseFloat(calculatedAmount);
         });
+
         document.getElementById('total_amount').value = total.toFixed(2);
     }
+
+    // Trigger initial calculation in case values are prefilled
+    recalculateAmounts();
+});
+
+    
 </script>
 @endsection

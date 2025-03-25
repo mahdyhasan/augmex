@@ -37,4 +37,17 @@ class LoginController extends Controller
         $this->middleware('guest')->except('logout');
         $this->middleware('auth')->only('logout');
     }
+
+
+
+    /**
+     * Override the default login field (email) to phone.
+     */
+    public function username()
+    {
+        return 'phone'; // 
+    }    
+    
+    
+    
 }

@@ -28,20 +28,32 @@
                     <!-- Filter Form -->
                     <form id="filterForm" method="GET" action="{{ route('attendance.index') }}" class="mb-4">
                         <div class="row">
-                            <div class="col-md-4">
-                                <label for="date">Date</label>
-                                <input type="date" name="date" id="date" class="form-control" value="{{ request('date') }}">
+                            <div class="col-md-3">
+                                <label for="start_date">Start Date</label>
+                                <input type="date" name="start_date" id="start_date" class="form-control" value="{{ request('start_date') }}">
                             </div>
-                            <div class="col-md-4">
-                                <label for="employee_name">Employee Name</label>
-                                <input type="text" name="employee_name" id="employee_name" class="form-control" value="{{ request('employee_name') }}" placeholder="Search by name">
+                            <div class="col-md-3">
+                                <label for="end_date">End Date</label>
+                                <input type="date" name="end_date" id="end_date" class="form-control" value="{{ request('end_date') }}">
                             </div>
-                            <div class="col-md-4 d-flex align-items-end">
+                            <div class="col-md-3">
+                                <label for="employee_name">Employee</label>
+                                <select name="employee_name" id="employee_name" class="form-control">
+                                    <option value="">-- Select Employee --</option>
+                                    @foreach($employees as $employee)
+                                        <option value="{{ $employee->user->name }}" {{ request('employee_name') == $employee->user->name ? 'selected' : '' }}>
+                                            {{ $employee->user->name }}
+                                        </option>
+                                    @endforeach
+                                </select>
+                            </div>
+                            <div class="col-md-3 d-flex align-items-end">
                                 <button type="submit" class="btn btn-primary me-2">Filter</button>
-                                <a href="{{ route('attendance.index') }}" class="btn btn-secondary">Reset</a>
+                                <a href="{{ route('attendance.index') }}" class="btn btn-dark">Reset</a>
                             </div>
                         </div>
                     </form>
+
 
                     <!-- Attendance Table -->
                     <table id="attendanceTable" class="table table-striped">

@@ -41,7 +41,7 @@
 
                             <!-- New Password -->
                             <div class="form-group mb-3">
-                                <label for="new_password" class="form-label">New Password</label>
+                                <label for="new_password" class="form-label">New Password (min 6 characters)</label>
                                 <input type="password" name="new_password" class="form-control @error('new_password') is-invalid @enderror" required>
                                 @error('new_password')
                                     <span class="text-danger small">{{ $message }}</span>

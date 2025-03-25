@@ -21,6 +21,7 @@
                     <thead>
                         <tr>
                             <th>ID</th>
+                            <th>Invoice No</th>
                             <th>Client</th>
                             <th>Invoice Date</th>
                             <th>Total Amount</th>
@@ -31,6 +32,7 @@
                         @foreach($invoices as $invoice)
                             <tr>
                                 <td>{{ $invoice->id }}</td>
+                                <td>{{ $invoice->invoice_no }}</td>
                                 <td>{{ $invoice->client->company }}</td>
                                 <td>{{ $invoice->invoice_date }}</td>
                                 <td>{{ number_format($invoice->total_amount, 2) }}</td>

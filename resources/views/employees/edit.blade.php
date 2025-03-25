@@ -50,18 +50,18 @@
                                 </div>
 
                                 <div class="mb-3">
-                                    <label for="email" class="form-label">Email (Locked)</label>
+                                    <label for="email" class="form-label">Email</label>
                                     <input 
                                         type="email" 
                                         class="form-control" 
                                         id="email" 
                                         value="{{ $employee->user?->email ?? '' }}" 
-                                        readonly
+                                        
                                     >
                                 </div>
 
                                 <div class="mb-3">
-                                    <label for="phone" class="form-label">Phone</label>
+                                    <label for="phone" class="form-label">Phone (locked)</label>
                                     <input 
                                         type="text" 
                                         name="phone" 
@@ -69,6 +69,7 @@
                                         id="phone"
                                         value="{{ old('phone', $employee->user?->phone) }}"
                                         placeholder="Enter phone number"
+                                        readonly
                                     >
                                     @error('phone')
                                         <div class="text-danger">{{ $message }}</div>
@@ -87,7 +88,7 @@
                                         <option value="HR" {{ old('department', $employee->department) == 'HR' ? 'selected' : '' }}>HR</option>
                                         <option value="IT" {{ old('department', $employee->department) == 'IT' ? 'selected' : '' }}>IT</option>
                                         <option value="Finance" {{ old('department', $employee->department) == 'Finance' ? 'selected' : '' }}>Finance</option>
-                                        <option value="Marketing" {{ old('department', $employee->department) == 'Marketing' ? 'selected' : '' }}>Marketing</option>
+                                        <option value="Sales" {{ old('department', $employee->department) == 'Sales' ? 'selected' : '' }}>Sales</option>
                                         <option value="Operations" {{ old('department', $employee->department) == 'Operations' ? 'selected' : '' }}>Operations</option>
                                     </select>
                                     @error('department')
@@ -105,10 +106,10 @@
                                     >
                                         <option value="">Select Position</option>
                                         <option value="Manager" {{ old('position', $employee->position) == 'Manager' ? 'selected' : '' }}>Manager</option>
-                                        <option value="Developer" {{ old('position', $employee->position) == 'Developer' ? 'selected' : '' }}>Developer</option>
-                                        <option value="Designer" {{ old('position', $employee->position) == 'Designer' ? 'selected' : '' }}>Designer</option>
-                                        <option value="Analyst" {{ old('position', $employee->position) == 'Analyst' ? 'selected' : '' }}>Analyst</option>
-                                        <option value="Coordinator" {{ old('position', $employee->position) == 'Coordinator' ? 'selected' : '' }}>Coordinator</option>
+                                        <option value="Asst. Manager" {{ old('position', $employee->position) == 'Asst. Manager' ? 'selected' : '' }}>Asst. Manager</option>
+                                        <option value="Team Leader" {{ old('position', $employee->position) == 'Team Leader' ? 'selected' : '' }}>Team Leader</option>
+                                        <option value="Sr. Executive" {{ old('position', $employee->position) == 'Sr. Executive' ? 'selected' : '' }}>Sr. Executive</option>
+                                        <option value="Executive" {{ old('position', $employee->position) == 'Executive' ? 'selected' : '' }}>Executive</option>
                                     </select>
                                     @error('position')
                                         <div class="text-danger">{{ $message }}</div>

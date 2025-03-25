@@ -28,6 +28,8 @@ use App\Models\PettyCash;
 use App\Models\TaxPayment;
 use App\Models\Transaction;
 use App\Models\User;
+
+
 class EmployeeController extends Controller
 {
     
@@ -221,51 +223,6 @@ class EmployeeController extends Controller
 
         return redirect()->back()->with('success', 'Employee details updated successfully.');
     }    
-
-
-    // SALES REPORT FOR TEAM AND INDIVIDUAL
-    public function salesReport(Request $request)
-    {
-        // Fetch all employees and clients for dropdowns
-        $employees = Employee::with('user')->get();
-        $clients = Client::all();
-
-        // Initialize the query
-        $salesQuery = EmployeeSales::with(['employee.user', 'client']);
-
-        // Apply filters based on request inputs
-        if ($request->filled('start_date')) {
-            $salesQuery->where('date', '>=', $request->start_date);
-        }
-
-        if ($request->filled('end_date')) {
-            $salesQuery->where('date', '<=', $request->end_date);
-        }
-
-        if ($request->filled('employee_id')) {
-            $salesQuery->where('employee_id', $request->employee_id);
-        }
-
-        if ($request->filled('client_id')) {
-            $salesQuery->where('client_id', $request->client_id);
-        }
-
-        // Get the filtered results while ensuring valid employee and client relationships
-        $sales = $salesQuery
-            ->whereHas('employee') // Ensures employee exists
-            ->whereHas('client') // Ensures client exists
-            ->get();
-
-        // Fetch attendance data for the selected date range
-        $attendance = [];
-        if ($request->filled('start_date') && $request->filled('end_date')) {
-            $attendance = Attendance::whereBetween('date', [$request->start_date, $request->end_date])
-                ->with('employee.user')
-                ->get();
-        }
-
-        return view('sales_report.index', compact('sales', 'employees', 'clients', 'attendance'));
-    }
 
 
 

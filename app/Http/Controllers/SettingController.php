@@ -3,8 +3,6 @@
 namespace App\Http\Controllers;
 
 use DataTables;
-use Excel;
-use PDF; 
 
 use App\Models\User;
 use App\Models\UserType;
@@ -115,7 +113,7 @@ public function updatePassword(Request $request)
     // Validate the request
     $request->validate([
         'current_password' => 'required',
-        'new_password' => 'required|min:8|confirmed',
+        'new_password' => 'required|min:6|confirmed',
     ]);
 
     $user = Auth::user();

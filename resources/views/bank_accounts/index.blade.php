@@ -22,7 +22,7 @@
                         <thead>
                             <tr>
                                 <th>ID</th>
-                                <th>Name</th>
+                                <th>Bank Name</th>
                                 <th>Account Number</th>
                                 <th>Balance</th>
                                 <th>Currency</th>
@@ -33,7 +33,7 @@
                             @foreach($bankAccounts as $bankAccount)
                                 <tr>
                                     <td>{{ $bankAccount->id }}</td>
-                                    <td>{{ $bankAccount->name }}</td>
+                                    <td>{{ $bankAccount->bank_name }}</td>
                                     <td>{{ $bankAccount->account_number }}</td>
                                     <td>{{ $bankAccount->balance }}</td>
                                     <td>{{ $bankAccount->currency }}</td>
@@ -48,44 +48,62 @@
             </div>
         </div>
     </div>
-
-<!-- Offcanvas: Add Bank -->
-<div class="offcanvas offcanvas-end offcanvas-large" tabindex="-1" id="offcanvas_add_bank">
-    <div class="offcanvas-header border-bottom">
-        <h5 class="fw-semibold">Add New Bank Account</h5> 
-        <button type="button" class="btn-close" data-bs-dismiss="offcanvas"></button>
-    </div>
-    <div class="offcanvas-body">
-        <form action="{{ route('bank_accounts.store') }}" method="POST">
-            @csrf
-
-            <!-- Account Name -->
+    
+    <!-- Offcanvas: Add Bank -->
+    <div class="offcanvas offcanvas-end offcanvas-large" tabindex="-1" id="offcanvas_add_bank">
+        <div class="offcanvas-header border-bottom">
+            <h5 class="fw-semibold">Add New Bank Account</h5> 
+            <button type="button" class="btn-close" data-bs-dismiss="offcanvas"></button>
+        </div>
+        <div class="offcanvas-body">
+            <form action="{{ route('bank_accounts.store') }}" method="POST">
+                @csrf
+    
+            <!-- Bank Name -->
             <div class="mb-3">
-                <label for="name" class="form-label">Account Name</label>
-                <input type="text" class="form-control" id="name" name="name" required placeholder="Enter account name">
+                <label for="bank_name" class="form-label">Bank Name</label>
+                <input type="text" class="form-control" id="bank_name" name="bank_name" required placeholder="Enter bank name">
             </div>
-
+            
+            <!-- Branch -->
+            <div class="mb-3">
+                <label for="branch" class="form-label">Branch</label>
+                <input type="text" class="form-control" id="branch" name="branch" required placeholder="Enter branch name">
+            </div>
+            
             <!-- Account Number -->
             <div class="mb-3">
                 <label for="account_number" class="form-label">Account Number</label>
                 <input type="text" class="form-control" id="account_number" name="account_number" required placeholder="Enter account number">
             </div>
-
+            
+            <!-- Account Name -->
+            <div class="mb-3">
+                <label for="name" class="form-label">Account Holder's Name</label>
+                <input type="text" class="form-control" id="name" name="name" required placeholder="Enter account holder's name">
+            </div>
+            
+            <!-- Address -->
+            <div class="mb-3">
+                <label for="address" class="form-label">Address</label>
+                <textarea class="form-control" id="address" name="address" rows="3" required placeholder="Enter branch address"></textarea>
+            </div>
+            
             <!-- Balance -->
             <div class="mb-3">
                 <label for="balance" class="form-label">Balance</label>
                 <input type="number" class="form-control" id="balance" name="balance" step="0.01" required placeholder="Enter initial balance">
             </div>
-
+            
             <!-- Currency -->
             <div class="mb-3">
                 <label for="currency" class="form-label">Currency</label>
                 <select class="form-control" id="currency" name="currency" required>
+                    <option value="">Select currency</option>
                     <option value="USD">USD - US Dollar</option>
                     <option value="EUR">EUR - Euro</option>
                     <option value="GBP">GBP - British Pound</option>
                     <option value="BDT">BDT - Bangladeshi Taka</option>
-                    <option value="JPY">JPY - Japanese Yen</option>
                     <option value="AUD">AUD - Australian Dollar</option>
                 </select>
             </div>

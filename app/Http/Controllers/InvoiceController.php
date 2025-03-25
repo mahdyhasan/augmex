@@ -56,68 +56,80 @@ class InvoiceController extends Controller
         // Generate invoice based on user input
         public function generateInvoice(Request $request)
         {
-            // $request->validate([
-            //     'client_id' => 'required|exists:clients,id',
-            //     'start_date' => 'required|date',
-            //     'end_date' => 'required|date|after_or_equal:start_date',
-            // ]);
-        
             $client = Client::findOrFail($request->client_id);
             $clientCondition = ClientCondition::where('client_id', $client->id)->first();
             $employees = Employee::where('client_id', $client->id)->get();
-        
+
             $totalHours = 0;
             $totalAmount = 0;
             $invoiceItems = [];
-        
+
             foreach ($employees as $employee) {
-                $hoursWorked = Attendance::where('employee_id', $employee->id)
+                $attendances = Attendance::where('employee_id', $employee->id)
                     ->whereBetween('date', [$request->start_date, $request->end_date])
-                    ->get()
-                    ->sum(function ($attendance) {
-                        return (strtotime($attendance->check_out) - strtotime($attendance->check_in)) / 3600;
-                    });
-            
-                if ($hoursWorked > 0) {
+                    ->get();
+
+                $employeeHours = 0;
+                $workedDays = 0;
+
+                foreach ($attendances as $attendance) {
+                    if ($attendance->check_in && $attendance->check_out) {
+                        $seconds = strtotime($attendance->check_out) - strtotime($attendance->check_in);
+                        $hours = $seconds / 3600;
+
+                        // Cap at 8 hours
+                        $finalHours = ($hours >= 8) ? 8 : floor($hours * 2) / 2;
+
+                        $employeeHours += $finalHours;
+
+                        if ($finalHours > 0) {
+                            $workedDays++;
+                        }
+                    }
+                }
+
+                if ($employeeHours > 0) {
                     $rate = $clientCondition->rate ?? 0;
-                    $amount = $hoursWorked * $rate;
-                    $totalHours += $hoursWorked;
+                    $amount = $employeeHours * $rate;
+                    $totalHours += $employeeHours;
                     $totalAmount += $amount;
-            
-                    // Fetch employee name from users table
-                    $employeeName = $employee->user->name ?? 'Unknown Employee';
-            
+
                     $invoiceItems[] = [
-                        'employee_id' => $employee->id,
-                        'employee_name' => $employeeName, // ✅ Now fetched from `users` table
-                        'days_worked' => floor($hoursWorked / 8),
-                        'hours_worked' => $hoursWorked,
-                        'rate' => $rate,
-                        'deductions' => 0,
-                        'commission' => 0,
-                        'amount' => $amount,
+                        'employee_id'   => $employee->id,
+                        'employee_name' => $employee->stage_name ?? 'Unknown',
+                        'days_worked'   => $workedDays,
+                        'hours_worked'  => $employeeHours,
+                        'rate'          => $rate,
+                        'deductions'    => 0,
+                        'commission'    => 0,
+                        'amount'        => $amount,
                     ];
                 }
             }
-            
-            
+
+            // Generate a unique 6-digit invoice number
+            do {
+                $invoiceNumber = str_pad(mt_rand(1, 999999), 6, '0', STR_PAD_LEFT);
+            } while (Invoice::where('invoice_no', $invoiceNumber)->exists());
+
             // Save invoice first before inserting items
             $invoice = Invoice::create([
                 'client_id' => $client->id,
+                'invoice_no' => $invoiceNumber,
                 'invoice_date' => now(),
                 'work_start_date' => $request->start_date,
                 'work_end_date' => $request->end_date,
                 'total_amount' => $totalAmount,
-                'amount_in_words' => ucwords($this->convertNumberToWords($totalAmount)) . ' only',
             ]);
 
-            // Now `$invoice` exists, so we can insert invoice items
+            // Insert invoice items
             foreach ($invoiceItems as $item) {
                 $invoice->invoiceItems()->create($item);
-            }      
-        
+            }
+
             return redirect()->route('invoices.view', $invoice->id);
         }
+
         
         
         // Convert numbers to words (for invoice total)
@@ -140,50 +152,58 @@ class InvoiceController extends Controller
     
 
 
-        public function invoicesUpdate(Request $request, $id)
-        {
-            // $request->validate([
-            //     'client_id' => 'required|exists:clients,id',
-            //     'invoice_date' => 'required|date',
-            //     'total_amount' => 'required|numeric|min:0',
-            //     'items.*.days_worked' => 'required|integer|min:0',
-            //     'items.*.hours_worked' => 'required|numeric|min:0',
-            //     'items.*.rate' => 'required|numeric|min:0',
-            //     'items.*.deductions' => 'nullable|numeric|min:0',
-            //     'items.*.commission' => 'nullable|numeric|min:0',
-            //     'items.*.amount' => 'required|numeric|min:0',
-            // ]);
+public function invoicesUpdate(Request $request, $id)
+{
+    // Optional but recommended validation
+    // $request->validate([
+    //     'client_id' => 'required|exists:clients,id',
+    //     'invoice_date' => 'required|date',
+    //     'total_amount' => 'required|numeric|min:0',
+    //     'items.*.id' => 'required|exists:invoice_items,id',
+    //     'items.*.days_worked' => 'required|integer|min:0',
+    //     'items.*.hours_worked' => 'required|numeric|min:0',
+    //     'items.*.rate' => 'required|numeric|min:0',
+    //     'items.*.deductions' => 'nullable|numeric|min:0',
+    //     'items.*.commission' => 'nullable|numeric|min:0',
+    //     'items.*.amount' => 'required|numeric|min:0',
+    // ]);
 
-            $invoice = Invoice::findOrFail($id);
-            $invoice->update([
-                'client_id' => $request->client_id,
-                'invoice_date' => $request->invoice_date,
-                'total_amount' => $request->total_amount,
-            ]);
+    // Find and update invoice
+    $invoice = Invoice::findOrFail($id);
+    $invoice->update([
+        'client_id' => $request->client_id,
+        'invoice_date' => $request->invoice_date,
+        'total_amount' => $request->total_amount, // even though it's varchar, keeping it numeric
+    ]);
 
-            // Update each invoice item
-            foreach ($request->items as $index => $itemData) {
-                $invoiceItem = InvoiceItem::findOrFail($itemData['id']);
-                $invoiceItem->update([
-                    'days_worked' => $itemData['days_worked'],
-                    'hours_worked' => $itemData['hours_worked'],
-                    'rate' => $itemData['rate'],
-                    'deductions' => $itemData['deductions'] ?? 0,
-                    'commission' => $itemData['commission'] ?? 0,
-                    'amount' => $itemData['amount'],
-                ]);
-            }
+    // Update each invoice item
+    foreach ($request->items as $itemData) {
+        $invoiceItem = InvoiceItem::findOrFail($itemData['id']);
+        $invoiceItem->update([
+            'days_worked' => $itemData['days_worked'],
+            'hours_worked' => $itemData['hours_worked'],
+            'rate' => $itemData['rate'],
+            'deductions' => $itemData['deductions'] ?? 0,
+            'commission' => $itemData['commission'] ?? 0,
+            'amount' => $itemData['amount'],
+        ]);
+    }
 
-            return redirect()->route('invoices.index')->with('success', 'Invoice updated successfully.');
-        }
+    return redirect()->route('invoices.index')->with('success', 'Invoice updated successfully.');
+}
 
 
     
         // View the final invoice
         public function viewInvoice($id)
         {
-            $invoice = Invoice::with('client', 'invoiceItems')->findOrFail($id);
-            return view('invoices.invoice', compact('invoice'));
+             $invoice = Invoice::with(['client', 'invoiceItems'])->findOrFail($id);
+
+            $clientCondition = ClientCondition::where('client_id', $invoice->client_id)->first();
+            $currency = $clientCondition->currency ?? '$';
+        
+            return view('invoices.invoice', compact('invoice', 'currency'));
+    
         }
 
 

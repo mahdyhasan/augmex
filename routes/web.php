@@ -14,6 +14,7 @@ use App\Http\Controllers\ExpenseController;
 use App\Http\Controllers\InvoiceController;
 use App\Http\Controllers\PayrollController;
 use App\Http\Controllers\TransactionController;
+use App\Http\Controllers\ReportController;
 
 
 /*
@@ -36,12 +37,6 @@ Route::group(['middleware' => 'auth'], function () {
 
     Route::get('/', [HomeController::class, 'index'])->name('dashboard');
     
-    Route::get('/company', function () {
-        return view('company');
-    })->name('company');
-
-
-
 
    // Accounts
     
@@ -192,17 +187,6 @@ Route::group(['middleware' => 'auth'], function () {
     });
     
 
-    // Sales Report
-    Route::prefix('sales-report')->middleware(['auth'])->group(function () {
-        Route::get('/', [EmployeeController::class, 'salesReport'])->name('sales_report.index');
-    });
-
-    // Sales Summary for Divanj
-    Route::prefix('sales-summary')->middleware(['auth'])->group(function () {
-        Route::get('/', [HomeController::class, 'salesSummaryDillon'])->name('sales.summary');
-    });
-
-
 
     Route::prefix('user')->middleware(['auth'])->group(function () {
         Route::get('/', [SettingController::class, 'index'])->name('user.index');
@@ -213,6 +197,25 @@ Route::group(['middleware' => 'auth'], function () {
         Route::get('/password-change', [SettingController::class, 'passwordChange'])->name('user.passwordChange');
         Route::post('/update-password', [SettingController::class, 'updatePassword'])->name('user.updatePassword');
     });
+
+
+
+    Route::prefix('report')->middleware(['auth'])->group(function () {
+        // Sales Report
+        Route::get('/sales-report', [ReportController::class, 'salesReport'])->name('report.sales.report');
+        // Sales Summary for Dillon
+        Route::get('/sales-summary-dillon', [ReportController::class, 'salesSummaryDillon'])->name('sales.summary.dillon');
+        // Narrative Report
+        Route::get('/report/narrative-report', [ReportController::class, 'narrativeReport'])->name('report.narrative');
+        // Route::post('/report/narrative-report', [ReportController::class, 'narrativeReportForm'])->name('report.narrative');
+
+
+    });
+
+
+
+Route::get('/commission-for-dillon', [ReportController::class, 'commissionforDillon'])->name('commission.for.dillon');
+Route::post('/update-commission-dillon', [ReportController::class, 'updateCommissionForDillon'])->name('update.commission.dillon');
 
 
 

@@ -289,36 +289,7 @@
             </div>
         </div>
 
-       <!-- Attendance Summary Table -->
-        <div class="row">
-            <div class="col-md-12 mb-4">
-                <div class="card">
-                    <div class="card-header">
-                        <h5>Attendance Summary ({{ $startDate }} to {{ $endDate }})</h5>
-                    </div>
-                    <div class="card-body">
-                        <table class="table">
-                            <thead>
-                                <tr>
-                                    <th>Total Present</th>
-                                    <th>Total Absent</th>
-                                    <th>Total Late</th>
-                                    <th>Total Attendance Records</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td>{{ $attendanceSummary->total_present }}</td>
-                                    <td>{{ $attendanceSummary->total_absent }}</td>
-                                    <td>{{ $attendanceSummary->total_late }}</td>
-                                    <td>{{ $attendanceSummary->total_attendance }}</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-        </div>
+       
 
             <!-- Expense Summary -->
             <div class="col-md-6 mb-4">

@@ -43,7 +43,7 @@
             </div>
             <div class="card-body">
                 <!-- Filter Form -->
-                <form action="{{ route('sales_report.index') }}" method="GET">
+                <form action="{{ route('report.sales.report') }}" method="GET">
                     <div class="row">
                         <div class="col-md-3">
                             <label for="start_date">Start Date</label>
@@ -77,7 +77,7 @@
                         </div>
                         <div class="col-md-2">
                             <button type="submit" class="btn btn-primary mt-4">Filter</button>
-                            <a href="{{ route('sales_report.index') }}" class="btn btn-secondary mt-4">Reset</a>
+                            <a href="{{ route('report.sales.report') }}" class="btn btn-secondary mt-4">Reset</a>
                         </div>
                     </div>
                 </form>

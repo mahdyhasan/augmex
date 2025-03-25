@@ -14,22 +14,25 @@
                         </div>
                         <div class="mb-4">
                             <h4 class="mb-2 fs-20">Sign In</h4>
-                            <p>Access the {{ config('app.name', 'Augmex') }} panel using your email and passcode.</p>
+                            <p>Access the {{ config('app.name', 'Augmex') }} panel using your Phone No and Password.</p>
                         </div>
                         <div class="mb-3">
-                            <label class="col-form-label" for="email">Email Address</label>
+                            <label class="col-form-label" for="phone">Phone No</label>
                             <div class="position-relative">
-                                    <span class="input-icon-addon">
-                                        <i class="ti ti-mail"></i>
-                                    </span>
-                                <input type="email" class="form-control @error('email') is-invalid @enderror" id="email" name="email" placeholder="Email Address" value="{{ old('email') }}" required>
-                            </div>
-                            @error('password')
-                            <span class="invalid-feedback" role="alert">
-                                    <strong>{{ $message }}</strong>
+                                <span class="input-icon-addon">
+                                    <i class="ti ti-phone"></i>
                                 </span>
+                                <input type="text" class="form-control @error('phone') is-invalid @enderror"
+                                       id="phone" name="phone" placeholder="Enter your phone number"
+                                       value="{{ old('phone') }}" required autofocus>
+                            </div>
+                            @error('phone')
+                            <span class="invalid-feedback" role="alert">
+                                <strong>{{ $message }}</strong>
+                            </span>
                             @enderror
                         </div>
+
                         <div class="mb-3">
                             <label class="col-form-label" for="password">Password</label>
                             <div class="pass-group">

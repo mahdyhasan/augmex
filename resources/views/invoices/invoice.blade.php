@@ -1,93 +1,53 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Invoice #{{ $invoice->id }}</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            margin: 20px;
-            padding: 20px;
-        }
-        .invoice-container {
-            width: 100%;
-            max-width: 800px;
-            margin: auto;
-            border: 1px solid #ddd;
-            padding: 20px;
-        }
-        .header {
-            text-align: center;
-            margin-bottom: 20px;
-        }
-        .header h2 {
-            margin: 0;
-        }
-        .company-info, .client-info {
-            width: 100%;
-            display: flex;
-            justify-content: space-between;
-        }
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 20px;
-        }
-        table th, table td {
-            border: 1px solid #ddd;
-            padding: 10px;
-            text-align: left;
-        }
-        .total {
-            text-align: right;
-            font-weight: bold;
-        }
-        .bank-details {
-            margin-top: 20px;
-        }
-        .print-button {
-            margin-top: 20px;
-            text-align: center;
-        }
-        .print-button button {
-            padding: 10px 20px;
-            font-size: 16px;
-            cursor: pointer;
-        }
-    </style>
-</head>
-<body>
+@extends('layouts.app')
 
-<div class="invoice-container">
-    <div class="header">
-        <h2>INVOICE</h2>
-        <h4>Invoice No: {{ $invoice->id }}</h4>
-        <h5>Invoice Date: {{ $invoice->invoice_date }}</h5>
-        <h5>Work Date: {{ $invoice->work_start_date }} - {{ $invoice->work_end_date }}</h5>
-    </div>
+@section('title', 'Invoice #' . $invoice->id)
 
-    <div class="company-info">
-        <div>
-            <h5>Invoice To:</h5>
-            <p>{{ $invoice->client->company }}<br>{{ $invoice->client->country }}</p>
-        </div>
-        <div>
-            <h5>From:</h5>
-            <p>Tech Cloud Ltd.<br>H#379, R#06, Baridhara DOHS, Dhaka-1206, Bangladesh</p>
+@section('content')
+<div class="bg-white p-4 rounded shadow-sm" style="max-width: 900px; margin: auto;">
+    <!-- Logo + Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4 border-bottom pb-3">
+        <img src="{{ asset('public/assets/img/profiles/tcl.png') }}" alt="Logo" style="height: 60px;">
+        <div class="text-end">
+            <h2 class="fw-bold mb-1">INVOICE</h2>
+            <p class="mb-0">Invoice No: <strong>{{ $invoice->invoice_no }}</strong></p>
+            <p class="mb-0">Date: {{ \Carbon\Carbon::parse($invoice->invoice_date)->format('d M Y') }}</p>
+            <p class="mb-0">Work Date: {{ \Carbon\Carbon::parse($invoice->work_start_date)->format('d M Y') }} - {{ \Carbon\Carbon::parse($invoice->work_end_date)->format('d M Y') }}</p>
         </div>
     </div>
 
-    <table>
-        <thead>
+    <!-- To/From -->
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <h5 class="fw-bold">Invoice To:</h5>
+            <p>
+                {{ $invoice->client->company }}<br>
+                {{ $invoice->client->kdm }}<br>
+                {{ $invoice->client->address }}
+            </p>
+        </div>
+        <div class="col-md-6 text-end">
+            <h5 class="fw-bold">From:</h5>
+            <p>
+                Tech Cloud Ltd.<br>
+                H#379, R#06, Baridhara DOHS,<br>
+                 Dhaka-1206, Bangladesh<br>
+                Phone: +880-1711-708-848<br>
+                mahdy@techcloudltd.com
+            </p>
+        </div>
+    </div>
+
+    <!-- Table -->
+    <table class="table table-bordered text-center">
+        <thead class="table-light">
             <tr>
                 <th>Employee</th>
                 <th>Days</th>
                 <th>Hours</th>
-                <th>Rate</th>
+                <th>Rate ({{ $currency }})</th>
                 <th>Deductions</th>
                 <th>Commission</th>
-                <th>Amount (Tk)</th>
+                <th>Amount</th>
             </tr>
         </thead>
         <tbody>
@@ -104,30 +64,36 @@
             @endforeach
         </tbody>
         <tfoot>
-            <tr>
-                <th colspan="6" class="total">Total:</th>
-                <th>{{ number_format($invoice->total_amount, 2) }} Tk</th>
+            <tr class="fw-bold">
+                <td colspan="6" class="text-end">TOTAL ({{ $currency }}):</td>
+                <td>{{ number_format($invoice->total_amount, 2) }}</td>
             </tr>
         </tfoot>
     </table>
 
-    <p class="mt-4"><strong>In Words:</strong> {{ ucfirst($invoice->amount_in_words) }} Taka only</p>
+    <!-- In words -->
+    <!-- @if($invoice->amount_in_words)
+    <p><strong>In Words:</strong> {{ ucfirst($invoice->amount_in_words) }} only</p>
+    @endif -->
 
-    <div class="bank-details">
-        <h5>Bank Details</h5>
+    <!-- Bank Info -->
+    @php
+        $bank = \App\Models\BankAccount::first(); // Or use a preferred bank
+    @endphp
+    <div class="mt-4">
+        <h5 class="fw-bold">Bank Details</h5>
         <p>
-            Bank Name: Citibank<br>
-            Bank Address: 2 Park Street, Sydney NSW 2000<br>
-            Branch Code (BSB): 248024<br>
-            Account Number: 10009596<br>
-            Beneficiary: Tech Cloud Ltd
+            Bank Name: {{ $bank->bank_name }}<br>
+            Branch: {{ $bank->branch }}<br>
+            Account Number: {{ $bank->account_number }}<br>
+            Bank Address: {{ $bank->address }}<br>
+            Beneficiary Name: {{ $bank->name }}
         </p>
     </div>
 
-    <div class="print-button">
-        <button onclick="window.print()">Print Invoice</button>
+    <!-- Print -->
+    <div class="text-center mt-4">
+        <button onclick="window.print()" class="btn btn-primary"><i class="fas fa-print"></i> Print Invoice</button>
     </div>
 </div>
-
-</body>
-</html>
+@endsection

@@ -56,11 +56,21 @@
                                     </a>
                                     <ul>
                                         <li><a href="{{ route('clients.index') }}">Clients</a></li>
-                                        <li><a href="{{ route('sales.summary') }}">Dillon Report</a></li>
-                                        <li><a href="{{ route('sales_report.index') }}">Sales Report</a></li>
+                                        <li><a href="{{ route('report.sales.report') }}">Sales Report</a></li>
+                                        <li><a href="{{ route('report.narrative') }}">Narrative Report</a></li>
                                         <li><a href="{{ route('accounts.incomeStatement') }}">Profit & Loss</a></li>
                                         <hr>
-                                             <li><a href="{{ route('user.index') }}">User Management</a></li>
+                                        <li class="submenu">
+                                            <a href="javascript:void(0);">
+                                                <span>Dillon</span>
+                                                <span class="menu-arrow"></span>
+                                            </a>
+                                            <ul>
+                                                <li><a href="{{ route('sales.summary.dillon') }}">Sales Summary</a></li>
+                                                <li><a href="{{ route('commission.for.dillon') }}">Commission</a></li>
+                                            </ul>
+                                        </li>
+                                        <li><a href="{{ route('user.index') }}">User Management</a></li>
                                     </ul>
                                 </li>
                                 @endif
@@ -99,7 +109,7 @@
                                         <li><a href="{{ route('payrolls.index') }}">Payroll</a></li>
                                         <li><a href="{{ route('attendance.index') }}">Attendance Sheet</a></li>
                                         <hr>
-                                        <li><a href="{{ route('sales_report.index') }}">Sales Report</a></li>
+                                        <li><a href="{{ route('report.sales.report') }}">Sales Report</a></li>
                                     </ul>
                                 </li>
                                 @endif
@@ -114,7 +124,7 @@
                                     </a>
                                     <ul>
                                         <li><a href="{{ route('attendance.index') }}">Attendance</a></li>
-                                        <li><a href="{{ route('sales_report.index') }}">Sales Report</a></li>
+                                        <li><a href="{{ route('report.sales.report') }}">Sales Report</a></li>
                                         <li><a href="">Commission</a></li>
                                     </ul>
                                 </li>

@@ -69,11 +69,11 @@
                     <input type="email" class="form-control" id="email" name="email" required>
                 </div>
                 <div class="mb-3">
-                    <label for="phone" class="form-label">Phone</label>
+                    <label for="phone" class="form-label">Phone (this is username)</label>
                     <input type="text" class="form-control" id="phone" name="phone" required>
                 </div>
                 <div class="mb-3">
-                    <label for="password" class="form-label">Password</label>
+                    <label for="password" class="form-label">Password (min 6 characters)</label>
                     <input type="password" class="form-control" id="password" name="password" required>
                 </div>
                 <div class="mb-3">

@@ -33,17 +33,24 @@ class AttendanceController extends Controller
     public function index(Request $request)
     {
         // Get filter parameters from the request
-        $date = $request->input('date');
+        $startDate = $request->input('start_date');
+        $endDate = $request->input('end_date');
         $employeeName = $request->input('employee_name');
     
         // Base query for attendances
         $attendancesQuery = Attendance::with(['employee.user', 'status'])
             ->orderBy('date', 'desc');
     
-        // Apply filters if provided
-        if ($date) {
-            $attendancesQuery->where('date', $date);
+        // Apply date range filter if provided
+        if ($startDate && $endDate) {
+            $attendancesQuery->whereBetween('date', [$startDate, $endDate]);
+        } elseif ($startDate) {
+            $attendancesQuery->where('date', '>=', $startDate);
+        } elseif ($endDate) {
+            $attendancesQuery->where('date', '<=', $endDate);
         }
+    
+        // Apply employee name filter if provided
         if ($employeeName) {
             $attendancesQuery->whereHas('employee.user', function ($query) use ($employeeName) {
                 $query->where('name', 'like', '%' . $employeeName . '%');
@@ -66,10 +73,11 @@ class AttendanceController extends Controller
         }
     
         $attendanceStatuses = AttendanceStatus::all();
+        $employeeList = Employee::all();
     
-        return view('attendances.index', compact('attendances', 'employees', 'attendanceStatuses', 'date', 'employeeName'));
+        return view('attendances.index', compact('attendances', 'employees', 'attendanceStatuses', 'startDate', 'endDate', 'employeeName', 'employeeList'));
     }
-
+    
 
 
     

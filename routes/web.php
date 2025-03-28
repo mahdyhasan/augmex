@@ -13,8 +13,8 @@ use App\Http\Controllers\EmployeeController;
 use App\Http\Controllers\ExpenseController;
 use App\Http\Controllers\InvoiceController;
 use App\Http\Controllers\PayrollController;
-use App\Http\Controllers\TransactionController;
 use App\Http\Controllers\ReportController;
+use App\Http\Controllers\DivanjController;
 
 
 /*
@@ -98,14 +98,6 @@ Route::group(['middleware' => 'auth'], function () {
         Route::delete('/{id}', [AccountController::class, 'liabilitiesDestroy'])->name('liabilities.destroy');
     });
     
-    //TRANSACTIONS
-    Route::prefix('accounts/transactions')->middleware(['auth'])->group(function () {
-        Route::get('/', [AccountController::class, 'transactionsIndex'])->name('transactions.index');
-        Route::post('/', [AccountController::class, 'transactionsStore'])->name('transactions.store');
-        Route::get('/{id}/edit', [AccountController::class, 'transactionsEdit'])->name('transactions.edit');
-        Route::put('/{id}', [AccountController::class, 'transactionsUpdate'])->name('transactions.update');
-        Route::delete('/{id}', [AccountController::class, 'transactionsDestroy'])->name('transactions.destroy');
-    });
     
     //Tax Payments
     Route::prefix('accounts/tax-payments')->middleware(['auth'])->group(function () {
@@ -158,6 +150,7 @@ Route::group(['middleware' => 'auth'], function () {
         Route::get('/{id}/edit', [AttendanceController::class, 'edit'])->name('attendance.edit'); 
         Route::put('/{id}', [AttendanceController::class, 'update'])->name('attendance.update');
         Route::post('/', [AttendanceController::class, 'store'])->name('attendance.store');
+        Route::post('/late-summary', [AttendanceController::class, 'lateSummary'])->name('attendance.late.summary');
     });
     
     
@@ -198,29 +191,30 @@ Route::group(['middleware' => 'auth'], function () {
         Route::post('/update-password', [SettingController::class, 'updatePassword'])->name('user.updatePassword');
     });
 
+    //DEPRICATED
+    Route::get('/commission-for-dillon', [ReportController::class, 'commissionforDillon'])->name('commission.for.dillon');
+    Route::post('/update-commission-dillon', [ReportController::class, 'updateCommissionForDillon'])->name('update.commission.dillon');
 
 
-    Route::prefix('report')->middleware(['auth'])->group(function () {
-        // Sales Report
-        Route::get('/sales-report', [ReportController::class, 'salesReport'])->name('report.sales.report');
-        // Sales Summary for Dillon
-        Route::get('/sales-summary-dillon', [ReportController::class, 'salesSummaryDillon'])->name('sales.summary.dillon');
-        // Narrative Report
-        Route::get('/report/narrative-report', [ReportController::class, 'narrativeReport'])->name('report.narrative');
-        // Route::post('/report/narrative-report', [ReportController::class, 'narrativeReportForm'])->name('report.narrative');
+    Route::prefix('divanj')->middleware(['auth'])->group(function () {
+
+        Route::get('/commissions', [DivanjController::class, 'showCommissionListDivanj'])->name('divanj.commission.index');
+        Route::post('/commissions/generate', [DivanjController::class, 'generateCommissionDivanj'])->name('divanj.commission.generate');
+        Route::get('/commissions/{id}/view', [DivanjController::class, 'viewCommissionDivanj'])->name('divanj.commission.view');
+        Route::get('/commissions/{id}/edit', [DivanjController::class, 'editCommissionDivanj'])->name('divanj.commission.edit');
+        Route::put('/commissions/update/{id}', [DivanjController::class, 'updateCommissionDivanj'])->name('divanj.commission.update');
+        Route::get('/sales-summary', [DivanjController::class, 'salesSummaryDivanj'])->name('divanj.sales.summary');
+        Route::get('/narrative-report', [DivanjController::class, 'narrativeReport'])->name('divanj.narrative.report');
+        Route::get('/sales-report', [DivanjController::class, 'salesReport'])->name('divanj.sales.report');
+        Route::post('/sales-report', [DivanjController::class, 'importSalesDivanj'])->name('divanj.sales.import');
+
 
 
     });
 
 
 
-Route::get('/commission-for-dillon', [ReportController::class, 'commissionforDillon'])->name('commission.for.dillon');
-Route::post('/update-commission-dillon', [ReportController::class, 'updateCommissionForDillon'])->name('update.commission.dillon');
+   
 
-
-
-
-
-
-});
+    });
 

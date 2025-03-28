@@ -5,7 +5,7 @@
 @section('content')
 <div class="content-wrapper">
     <div class="container-fluid">
-        <div class="card">
+        <div class="card col-md-4">
             <div class="card-header">
                 <h3>Generate Invoice</h3>
             </div>

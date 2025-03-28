@@ -26,7 +26,7 @@ use App\Models\Liability;
 use App\Models\Payroll;
 use App\Models\PettyCash;
 use App\Models\TaxPayment;
-use App\Models\Transaction;
+
 use App\Models\User;
 
 class AccountController extends Controller
@@ -297,65 +297,6 @@ class AccountController extends Controller
 
 
 
-        // List all transactions
-        public function transactionsIndex()
-        {
-            $transactions = Transaction::with('account')->orderBy('transaction_date', 'desc')->get();
-            $accounts = Account::all(); // Fetch accounts for dropdown selection
-            return view('transactions.index', compact('transactions', 'accounts'));
-        }
-
-        // Store a new transaction record
-        public function transactionsStore(Request $request)
-        {
-            // $request->validate([
-            //     'account_id' => 'required|exists:accounts,id',
-            //     'type' => 'required|in:Deposit,Withdrawal',
-            //     'amount' => 'required|numeric|min:0',
-            //     'reference' => 'nullable|string|max:255',
-            //     'transaction_date' => 'required|date',
-            //     'description' => 'nullable|string|max:255',
-            // ]);
-
-            Transaction::create($request->all());
-
-            return redirect()->route('transactions.index')->with('success', 'Transaction recorded successfully.');
-        }
-
-        // Edit transaction record
-        public function transactionsEdit($id)
-        {
-            $transaction = Transaction::findOrFail($id);
-            $accounts = Account::all();
-            return view('transactions.edit', compact('transaction', 'accounts'));
-        }
-
-        // Update transaction record
-        public function transactionsUpdate(Request $request, $id)
-        {
-            // $request->validate([
-            //     'account_id' => 'required|exists:accounts,id',
-            //     'type' => 'required|in:Deposit,Withdrawal',
-            //     'amount' => 'required|numeric|min:0',
-            //     'reference' => 'nullable|string|max:255',
-            //     'transaction_date' => 'required|date',
-            //     'description' => 'nullable|string|max:255',
-            // ]);
-
-            $transaction = Transaction::findOrFail($id);
-            $transaction->update($request->all());
-
-            return redirect()->route('transactions.index')->with('success', 'Transaction updated successfully.');
-        }
-
-        // Delete transaction record
-        public function transactionsDestroy($id)
-        {
-            Transaction::findOrFail($id)->delete();
-            return redirect()->route('transactions.index')->with('success', 'Transaction deleted successfully.');
-        }
-
-
 
     // List all tax payments
     public function taxPaymentsIndex()
@@ -408,40 +349,6 @@ class AccountController extends Controller
     }
 
 
-
-
-    public function incomeStatement(Request $request)
-    {
-        // Default to the current month if no date range is selected
-        $startDate = $request->input('start_date', Carbon::now()->startOfMonth()->toDateString());
-        $endDate = $request->input('end_date', Carbon::now()->endOfMonth()->toDateString());
-    
-        // Fetch revenue within the date range
-        $revenues = Transaction::where('type', 'Deposit')
-            ->whereBetween('transaction_date', [$startDate, $endDate])
-            ->sum('amount');
-    
-        // Fetch expenses within the date range
-        $expenses = Expense::with('expenseCategory')
-            ->whereBetween('expense_date', [$startDate, $endDate])
-            ->get()
-            ->groupBy('expenseCategory.name')
-            ->map(function ($items) {
-                return [
-                    'category' => $items->first()->expenseCategory->name ?? 'Uncategorized',
-                    'total_amount' => $items->sum('amount')
-                ];
-            });
-    
-        // Calculate total expenses
-        $totalExpenses = $expenses->sum('total_amount');
-    
-        // Calculate net income
-        $netIncome = $revenues - $totalExpenses;
-    
-        return view('accounts.incomeStatement', compact('startDate', 'endDate', 'revenues', 'expenses', 'totalExpenses', 'netIncome'));
-    }
-    
 
 
 

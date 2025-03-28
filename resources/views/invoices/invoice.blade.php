@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', 'Invoice #' . $invoice->id)
+@section('title', 'Invoice #' . $invoice->invoice_no)
 
 @section('content')
 <div class="bg-white p-4 rounded shadow-sm" style="max-width: 900px; margin: auto;">
@@ -30,7 +30,7 @@
             <p>
                 Tech Cloud Ltd.<br>
                 H#379, R#06, Baridhara DOHS,<br>
-                 Dhaka-1206, Bangladesh<br>
+                Dhaka-1206, Bangladesh<br>
                 Phone: +880-1711-708-848<br>
                 mahdy@techcloudltd.com
             </p>
@@ -55,7 +55,7 @@
                 <tr>
                     <td>{{ $item->employee_name }}</td>
                     <td>{{ $item->days_worked }}</td>
-                    <td>{{ $item->hours_worked }}</td>
+                    <td>{{ $item->hours_worked, 2 }}</td>
                     <td>{{ number_format($item->rate, 2) }}</td>
                     <td>{{ number_format($item->deductions, 2) }}</td>
                     <td>{{ number_format($item->commission, 2) }}</td>

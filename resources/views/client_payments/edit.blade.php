@@ -5,7 +5,7 @@
 @section('content')
 <div class="content-wrapper">
     <div class="container-fluid">
-        <div class="card">
+        <div class="card col-md-4">
             <div class="card-header">
                 <h3>Edit Client Payment</h3>
             </div>
@@ -16,14 +16,18 @@
 
                     <!-- Invoice Selection -->
                     <div class="mb-3">
-                        <label for="invoice_id" class="form-label">Invoice</label>
+                        <!-- <label for="invoice_id" class="form-label">Invoice</label>
                         <select class="form-control" id="invoice_id" name="invoice_id" required>
                             @foreach($invoices as $invoice)
                                 <option value="{{ $invoice->id }}" {{ $clientPayment->invoice_id == $invoice->id ? 'selected' : '' }}>
-                                    Invoice #{{ $invoice->id }}
+                                    Invoice #{{ $invoice->id }} - {{$invoice->invoice_no}}
                                 </option>
                             @endforeach
-                        </select>
+                        </select> -->
+                        <label class="form-label">Invoice</label>
+                        <div class="form-control-plaintext">
+                            Invoice #{{ $clientPayment->invoice->id }} - {{ $clientPayment->invoice->invoice_no }}
+                        </div>
                     </div>
 
                     <!-- Amount -->

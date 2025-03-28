@@ -14,31 +14,33 @@
                     @csrf
                     @method('PUT')
 
-                    <!-- Invoice Date -->
-                    <div class="mb-3">
-                        <label for="invoice_date" class="form-label">Invoice Date</label>
-                        <input type="date" class="form-control" id="invoice_date" name="invoice_date" value="{{ $invoice->invoice_date }}" required>
-                    </div>
+                    <div class="row">
+                        <!-- Invoice Date Column -->
+                        <div class="col-md-4 mb-3">
+                            <label for="invoice_date" class="form-label">Invoice Date</label>
+                            <input type="date" class="form-control" id="invoice_date" name="invoice_date" value="{{ $invoice->invoice_date }}" required>
+                        </div>
 
-                    <!-- Client Selection -->
-                    <div class="mb-3">
-                        <label for="client_id" class="form-label">Client</label>
-                        <select class="form-control" id="client_id" name="client_id" required>
-                            @foreach($clients as $client)
-                                <option value="{{ $client->id }}" {{ $invoice->client_id == $client->id ? 'selected' : '' }}>
-                                    {{ $client->company }}
-                                </option>
-                            @endforeach
-                        </select>
-                    </div>
+                        <!-- Client Selection Column -->
+                        <div class="col-md-4 mb-3">
+                            <label for="client_id" class="form-label">Client</label>
+                            <select class="form-control" id="client_id" name="client_id" required>
+                                @foreach($clients as $client)
+                                    <option value="{{ $client->id }}" {{ $invoice->client_id == $client->id ? 'selected' : '' }}>
+                                        {{ $client->company }}
+                                    </option>
+                                @endforeach
+                            </select>
+                        </div>
 
-                    <!-- Currency (Fetched from ClientConditions) -->
-                    @php
-                        $currency = $invoice->client->clientConditions->first()->currency ?? 'N/A';
-                    @endphp
-                    <div class="mb-3">
-                        <label for="currency" class="form-label">Currency</label>
-                        <input type="text" class="form-control" id="currency" name="currency" value="{{ $currency }}" >
+                        <!-- Currency Column -->
+                        @php
+                            $currency = $invoice->client->clientConditions->first()->currency ?? 'N/A';
+                        @endphp
+                        <div class="col-md-4 mb-3">
+                            <label for="currency" class="form-label">Currency</label>
+                            <input type="text" class="form-control" id="currency" name="currency" value="{{ $currency }}" >
+                        </div>
                     </div>
 
                     <!-- Invoice Items -->
@@ -62,12 +64,12 @@
                                     <input type="hidden" name="items[{{ $index }}][id]" value="{{ $item->id }}">
                                     <input type="text" class="form-control" value="{{ $item->employee_name }}" readonly>
                                 </td>
-                                <td><input type="number" class="form-control" name="items[{{ $index }}][days_worked]" value="{{ $item->days_worked }}" required></td>
-                                <td><input type="number" class="form-control" name="items[{{ $index }}][hours_worked]" value="{{ $item->hours_worked }}" required></td>
-                                <td><input type="number" class="form-control rate-field" name="items[{{ $index }}][rate]" value="{{ $item->rate }}" step="0.01" required></td>
+                                <td><input type="number" class="form-control" name="items[{{ $index }}][days_worked]" value="{{ $item->days_worked }}" ></td>
+                                <td><input type="number" class="form-control" name="items[{{ $index }}][hours_worked]" value="{{ $item->hours_worked }}" step="0.01" ></td>
+                                <td><input type="number" class="form-control rate-field" name="items[{{ $index }}][rate]" value="{{ $item->rate }}" step="0.01" ></td>
                                 <td><input type="number" class="form-control deduction-field" name="items[{{ $index }}][deductions]" value="{{ $item->deductions }}" step="0.01"></td>
                                 <td><input type="number" class="form-control commission-field" name="items[{{ $index }}][commission]" value="{{ $item->commission }}" step="0.01"></td>
-                                <td><input type="number" class="form-control amount-field" name="items[{{ $index }}][amount]" value="{{ $item->amount }}" step="0.01" required></td>
+                                <td><input type="number" class="form-control amount-field" name="items[{{ $index }}][amount]" value="{{ $item->amount }}" step="0.01" ></td>
                             </tr>
                             @endforeach
                         </tbody>

@@ -6,7 +6,11 @@ use Carbon\Carbon;
 use Auth;
 use Carbon\CarbonPeriod;
 use DateTimeZone;
+use DB;
 
+use DataTables;
+use Excel;
+use PDF; 
 
 use App\Models\Account;
 use App\Models\Attendance;
@@ -16,6 +20,8 @@ use App\Models\BankAccount;
 use App\Models\Client;
 use App\Models\ClientCondition;
 use App\Models\ClientPayment;
+use App\Models\DivanjSale;
+use App\Models\DivanjCommission;
 use App\Models\DepreciationRecord;
 use App\Models\Employee;
 use App\Models\EmployeeSales;
@@ -28,9 +34,12 @@ use App\Models\Liability;
 use App\Models\Payroll;
 use App\Models\PettyCash;
 use App\Models\TaxPayment;
-use App\Models\Transaction;
+
 use App\Models\User;
 use App\Models\UserType;
+
+use App\Imports\DivanjSalesImport;
+
 
 class HomeController extends Controller
 {
@@ -79,15 +88,14 @@ class HomeController extends Controller
     // General Statistics
     $totalEmployees = Employee::count();
     $totalClients = Client::count();
-    $totalTransactions = Transaction::count();
+    $totalTransactions = ClientPayment::count();
     $totalInvoices = Invoice::count();
-    $totalEarnings = Transaction::where('type', 'Deposit')->sum('amount');
     $totalExpenses = Expense::sum('amount');
     $bankBalance = BankAccount::sum('balance');
+    $totalEarnings = ClientPayment::sum('amount');
 
     // Monthly Earnings and Expenses
-    $monthlyEarnings = Transaction::selectRaw('MONTH(transaction_date) as month, SUM(amount) as total')
-        ->where('type', 'Deposit')
+    $monthlyEarnings = ClientPayment::selectRaw('MONTH(payment_date) as month, SUM(amount) as total')
         ->groupBy('month')
         ->orderBy('month', 'ASC')
         ->pluck('total', 'month')->toArray();
@@ -97,13 +105,13 @@ class HomeController extends Controller
         ->orderBy('month', 'ASC')
         ->pluck('total', 'month')->toArray();
 
-    // Transaction and Invoice Counts
-    $depositCount = Transaction::where('type', 'Deposit')->count();
-    $withdrawalCount = Transaction::where('type', 'Withdrawal')->count();
+    // Expenses and Invoice Counts
+    $depositCount = ClientPayment::count();
+    $withdrawalCount = Expense::count();
     $invoiceCount = Invoice::count();
 
-    // Recent Transactions and Invoices
-    $recentTransactions = Transaction::latest()->take(5)->get();
+    // Recent Expenses and Invoices
+    $recentTransactions = ClientPayment::latest()->take(5)->get();
     $recentInvoices = Invoice::with('client')->latest()->take(5)->get();
 
     
@@ -120,7 +128,7 @@ class HomeController extends Controller
     ];
 
     // Transactions and Invoices for Date Range
-    $filteredTransactions = Transaction::whereBetween('transaction_date', [$startDate, $endDate])
+    $filteredTransactions = ClientPayment::whereBetween('payment_date', [$startDate, $endDate])
         ->latest()
         ->get();
 
@@ -140,124 +148,139 @@ class HomeController extends Controller
 
 
 
-private function userDashboard()
-{
-    $user = Auth::user();
-    $employee = Employee::where('user_id', $user->id)->first();
+    private function userDashboard()
+    {
+        $user = Auth::user();
+        $employee = Employee::where('user_id', $user->id)->first();
 
-    if (!$employee) {
-        return redirect()->route('home')->with('error', 'Employee record not found.');
-    }
+        if (!$employee || !$user->isUser()) {
+            return redirect()->route('home')->with('error', 'Access denied or employee record not found.');
+        }
 
-    if (!$user->isUser()) {
-        return redirect()->route('home')->with('error', 'Access denied.');
-    }
+        // Define date ranges
+        $now = Carbon::now();
+        $currentMonthStart = $now->copy()->startOfMonth();
+        $currentMonthEnd = $now->copy()->endOfMonth();
+        $currentWeekStart = $now->copy()->startOfWeek();
+        $currentWeekEnd = $now->copy()->endOfWeek();
+        $lastWeekStart = $now->copy()->subWeek()->startOfWeek();
+        $lastWeekEnd = $now->copy()->subWeek()->endOfWeek();
 
-    // Date Ranges
-    $currentMonthStart = Carbon::now()->startOfMonth();
-    $currentMonthEnd = Carbon::now()->endOfMonth();
-
-    $currentWeekStart = Carbon::now()->startOfWeek();
-    $currentWeekEnd = Carbon::now()->endOfWeek();
-
-    $lastWeekStart = Carbon::now()->subWeek()->startOfWeek();
-    $lastWeekEnd = Carbon::now()->subWeek()->endOfWeek();
-
-    // Attendance Summary (Current Month)
-    $currentMonthAttendance = [
-        'present' => Attendance::where('employee_id', $employee->id)
-            ->whereBetween('date', [$currentMonthStart, $currentMonthEnd])
-            ->where('status_id', 1) // Present
-            ->count(),
-        'absent' => Attendance::where('employee_id', $employee->id)
-            ->whereBetween('date', [$currentMonthStart, $currentMonthEnd])
-            ->where('status_id', 2) // Absent
-            ->count(),
-        'late' => Attendance::where('employee_id', $employee->id)
-            ->whereBetween('date', [$currentMonthStart, $currentMonthEnd])
-            ->where('isLate', 1)
-            ->count(),
-    ];
-
-    // Daily Login Times (for potential use in reports)
-    $dailyLogins = Attendance::where('employee_id', $employee->id)
-        ->whereBetween('date', [$currentMonthStart, $currentMonthEnd])
-        ->pluck('check_in', 'date');
-
-    // Current Week Sales
-    $currentWeekSales = [
-        'total_qty' => EmployeeSales::where('employee_id', $employee->id)
-            ->whereBetween('date', [$currentWeekStart, $currentWeekEnd])
-            ->sum('sales_qty'),
-        'total_amount' => EmployeeSales::where('employee_id', $employee->id)
-            ->whereBetween('date', [$currentWeekStart, $currentWeekEnd])
-            ->sum('sales_amount'),
-    ];
-
-    // Last Week Sales
-    $lastWeekSales = [
-        'total_qty' => EmployeeSales::where('employee_id', $employee->id)
-            ->whereBetween('date', [$lastWeekStart, $lastWeekEnd])
-            ->sum('sales_qty'),
-        'total_amount' => EmployeeSales::where('employee_id', $employee->id)
-            ->whereBetween('date', [$lastWeekStart, $lastWeekEnd])
-            ->sum('sales_amount'),
-    ];
-
-    // Sales Trend (Current Month)
-    $salesTrendData = [];
-    $salesTrendQty = [];
-    $salesTrendLabels = [];
-    $currentDate = Carbon::now()->startOfMonth();
-
-    while ($currentDate <= Carbon::now()->endOfMonth()) {
-        $label = $currentDate->format('M d');
-
-        $salesAmount = EmployeeSales::where('employee_id', $employee->id)
-            ->whereDate('date', $currentDate)
-            ->sum('sales_amount');
-
-        $salesQty = EmployeeSales::where('employee_id', $employee->id)
-            ->whereDate('date', $currentDate)
-            ->sum('sales_qty');
-
-        $salesTrendLabels[] = $label;
-        $salesTrendData[] = round($salesAmount, 2);
-        $salesTrendQty[] = $salesQty;
-
-        $currentDate->addDay();
-    }
-    
-    // Daily Sales for the current month
-    $dailySales = [];
-    $currentDate = Carbon::now()->startOfMonth();
-    
-    while ($currentDate <= Carbon::now()->endOfMonth()) {
-        $dailySales[] = [
-            'date' => $currentDate->format('Y-m-d'),
-            'sales_qty' => EmployeeSales::where('employee_id', $employee->id)
-                ->whereDate('date', $currentDate)
-                ->sum('sales_qty'),
-            'sales_amount' => EmployeeSales::where('employee_id', $employee->id)
-                ->whereDate('date', $currentDate)
-                ->sum('sales_amount'),
+        // Attendance Summary (Current Month)
+        $currentMonthAttendance = [
+            'present' => Attendance::where('employee_id', $employee->id)
+                ->whereBetween('date', [$currentMonthStart, $currentMonthEnd])
+                ->where('status_id', 1)->count(),
+            'absent' => Attendance::where('employee_id', $employee->id)
+                ->whereBetween('date', [$currentMonthStart, $currentMonthEnd])
+                ->where('status_id', 2)->count(),
+            'late' => Attendance::where('employee_id', $employee->id)
+                ->whereBetween('date', [$currentMonthStart, $currentMonthEnd])
+                ->where('isLate', 1)->count(),
         ];
-        $currentDate->addDay();
+
+        // Daily logins (optional usage)
+        $dailyLogins = Attendance::where('employee_id', $employee->id)
+            ->whereBetween('date', [$currentMonthStart, $currentMonthEnd])
+            ->pluck('check_in', 'date');
+
+        // Sales This Week
+        $currentWeekSales = [
+            'total_qty' => DivanjSale::where('employee_id', $employee->id)
+                ->whereBetween('date', [$currentWeekStart, $currentWeekEnd])
+                ->sum('quantity'),
+            'total_amount' => DivanjSale::where('employee_id', $employee->id)
+                ->whereBetween('date', [$currentWeekStart, $currentWeekEnd])
+                ->sum('total'),
+        ];
+
+        // Sales Last Week
+        $lastWeekSales = [
+            'total_qty' => DivanjSale::where('employee_id', $employee->id)
+                ->whereBetween('date', [$lastWeekStart, $lastWeekEnd])
+                ->sum('quantity'),
+            'total_amount' => DivanjSale::where('employee_id', $employee->id)
+                ->whereBetween('date', [$lastWeekStart, $lastWeekEnd])
+                ->sum('total'),
+        ];
+
+        // Top Sales Day (this week, up to today)
+        $topPerformer = DivanjSale::whereBetween('date', [$currentWeekStart, $now])
+            ->selectRaw('employee_id, SUM(quantity) as total_qty')
+            ->groupBy('employee_id')
+            ->orderByDesc('total_qty')
+            ->with('employee') // eager load employee for stage_name
+            ->first();
+    
+        $topPerformerFormatted = $topPerformer && $topPerformer->employee
+            ? [
+                'name' => $topPerformer->employee->stage_name,
+                'quantity' => $topPerformer->total_qty,
+            ]
+            : null;
+            
+        // Calculate goal based on hiring duration
+        $hiredAt = Carbon::parse($employee->date_of_hire);
+        $weeksSinceHired = $hiredAt->diffInWeeks($now);
+        $goalCases = $weeksSinceHired >= 8 ? 25 : 15;
+
+        // Progress toward goal
+        $quantityThisWeek = DivanjSale::where('employee_id', $employee->id)
+            ->whereBetween('date', [$currentWeekStart, $now])
+            ->sum('quantity');
+
+        $progress = ($goalCases > 0) ? ($quantityThisWeek / $goalCases) * 100 : 0;
+
+        // Sales trend for chart
+        $salesTrendLabels = [];
+        $salesTrendData = [];
+        $salesTrendQty = [];
+        $dailySales = [];
+
+        $currentDate = $currentMonthStart->copy();
+        while ($currentDate <= $currentMonthEnd) {
+            $label = $currentDate->format('M d');
+
+            $dailyTotal = DivanjSale::where('employee_id', $employee->id)
+                ->whereDate('date', $currentDate)
+                ->sum('total');
+
+            $dailyQty = DivanjSale::where('employee_id', $employee->id)
+                ->whereDate('date', $currentDate)
+                ->sum('quantity');
+
+            $salesTrendLabels[] = $label;
+            $salesTrendData[] = round($dailyTotal, 2);
+            $salesTrendQty[] = $dailyQty;
+
+            $dailySales[] = [
+                'date' => $currentDate->format('Y-m-d'),
+                'sales_qty' => $dailyQty,
+                'sales_amount' => $dailyTotal,
+            ];
+
+            $currentDate->addDay();
+        }
+
+        return view('dashboards.user', compact(
+            'user',
+            'employee',
+            'currentMonthAttendance',
+            'currentWeekSales',
+            'lastWeekSales',
+            'salesTrendData',
+            'salesTrendQty',
+            'salesTrendLabels',
+            'dailyLogins',
+            'dailySales',
+            'topPerformerFormatted',
+            'goalCases',
+            'progress'
+        ));
     }
 
 
-    return view('dashboards.user', compact(
-        'user',
-        'employee',
-        'currentMonthAttendance',
-        'currentWeekSales',
-        'lastWeekSales',
-        'salesTrendData',
-        'salesTrendQty',
-        'salesTrendLabels',
-        'dailyLogins',
-        'dailySales'
-    ));
-}
+
+
 
 }

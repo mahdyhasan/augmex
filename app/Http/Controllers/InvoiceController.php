@@ -26,7 +26,7 @@ use App\Models\Liability;
 use App\Models\Payroll;
 use App\Models\PettyCash;
 use App\Models\TaxPayment;
-use App\Models\Transaction;
+
 use App\Models\User;
 
 
@@ -107,11 +107,10 @@ class InvoiceController extends Controller
                 }
             }
 
-            // Generate a unique 6-digit invoice number
-            do {
-                $invoiceNumber = str_pad(mt_rand(1, 999999), 6, '0', STR_PAD_LEFT);
-            } while (Invoice::where('invoice_no', $invoiceNumber)->exists());
+            // Improved invoice number generation with safety limit
+            $invoiceNumber = $this->generateUniqueInvoiceNumber();
 
+            
             // Save invoice first before inserting items
             $invoice = Invoice::create([
                 'client_id' => $client->id,
@@ -127,16 +126,36 @@ class InvoiceController extends Controller
                 $invoice->invoiceItems()->create($item);
             }
 
+
             return redirect()->route('invoices.view', $invoice->id);
         }
 
         
         
-        // Convert numbers to words (for invoice total)
-        private function convertNumberToWords($number)
+        protected function generateUniqueInvoiceNumber($maxAttempts = 100)
         {
-            $f = new \NumberFormatter("en", \NumberFormatter::SPELLOUT);
-            return $f->format($number);
+            $prefix = 'INV-' . date('Ymd') . '-';
+            $maxAttempts = 10;
+            $attempts = 0;
+
+            for ($attempt = 1; $attempt <= $maxAttempts; $attempt++) {
+                $randomNum = mt_rand(1, 9999);
+                $lastDigit = $randomNum % 10;
+                
+                // Adjust last digit to be 5-9 if it's 0-4
+                if ($lastDigit <= 4) {
+                    $randomNum += (5 - $lastDigit);
+                }
+                
+                $suffix = str_pad($randomNum, 4, '0', STR_PAD_LEFT);
+                $invoiceNumber = $prefix . $suffix;
+                
+                if (!Invoice::where('invoice_no', $invoiceNumber)->exists()) {
+                    return $invoiceNumber;
+                }
+            }
+            
+            throw new \RuntimeException("Failed to generate unique invoice number after {$maxAttempts} attempts");
         }
 
         

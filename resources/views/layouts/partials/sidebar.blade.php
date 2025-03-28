@@ -16,31 +16,45 @@
                     <ul>
             <li>
                 <h6 class="submenu-hdr">Main Menu</h6>
-                <ul>
+                    <ul>
                     <!-- Super Admin Access -->
                     @if(auth()->user()->isSuperAdmin())
                     <li class="submenu">
                         <a href="javascript:void(0);">
-                            <i class="ti ti-settings"></i><span>Super Admin</span>
+                            <i class="ti ti-brand-airtable"></i><span>Super Admin</span>
                             <span class="menu-arrow"></span>
                         </a>
                         <ul>
                             <li><a href="{{ route('clients.index') }}">Clients</a></li>
-                            <li><a href="{{ route('report.sales.report') }}">Sales Report</a></li>
-                            <li><a href="{{ route('report.narrative') }}">Narrative Report</a></li>
                             <li><a href="{{ route('accounts.incomeStatement') }}">Profit & Loss</a></li>
                             <hr>
-                            <li class="submenu">
-                                    <a href="javascript:void(0);">
-                                        <span>Dillon</span>
-                                        <span class="menu-arrow"></span>
-                                    </a>
-                                    <ul>
-                                        <li><a href="{{ route('sales.summary.dillon') }}">Sales Summary</a></li>
-                                        <li><a href="{{ route('commission.for.dillon') }}">Commission</a></li>
-                                    </ul>
-                                </li>
                             <li><a href="{{ route('user.index') }}">User Management</a></li>
+                        </ul>
+                    </li>
+                    @endif
+
+                        <!-- Client Menu -->
+                    
+                    @if(auth()->user()->isSuperAdmin())
+                    <li class="submenu">
+                        <a href="javascript:void(0);">
+                            <i class="ti ti-flag"></i><span>Client</span>
+                            <span class="menu-arrow"></span>
+                        </a>
+                        <ul>
+                            <li class="submenu">
+                                <a href="javascript:void(0);">
+                                    <span>Divanj</span>
+                                    <span class="menu-arrow"></span>
+                                </a>
+                                <ul>
+                                    <li><a href="{{ route('divanj.sales.summary') }}">Sales Summary</a></li>
+                                    <li><a href="{{ route('divanj.commission.index') }}">Commission</a></li>
+                                    <li><a href="{{ route('divanj.narrative.report') }}">Narrative Report</a></li>
+                                    <li><a href="{{ route('divanj.sales.report') }}">Sales Report</a></li>
+
+                                </ul>
+                            </li>
                         </ul>
                     </li>
                     @endif
@@ -59,7 +73,6 @@
                             <li><a href="{{ route('liabilities.index') }}">Liabilities</a></li>
                             <li><a href="{{ route('tax_payments.index') }}">Tax Payment</a></li>
                             <li><a href="{{ route('petty_cash.index') }}">Petty Cash</a></li>
-                            <li><a href="{{ route('transactions.index') }}">Transactions</a></li>
                             <hr>
                             <li><a href="{{ route('invoices.index') }}">Invoices</a></li>
                             <li><a href="{{ route('client_payments.index') }}">Client Payments</a></li>
@@ -78,8 +91,6 @@
                             <li><a href="{{ route('employees.index') }}">Employees</a></li>
                             <li><a href="{{ route('payrolls.index') }}">Payroll</a></li>
                             <li><a href="{{ route('attendance.index') }}">Attendance Sheet</a></li>
-                            <hr>
-                            <li><a href="{{ route('report.sales.report') }}">Sales Report</a></li>
                         </ul>
                     </li>
                     @endif
@@ -88,12 +99,12 @@
                     @if(auth()->user()->isSuperAdmin() || auth()->user()->isHR() || auth()->user()->isAccountant() || auth()->user()->isUser())
                     <li class="submenu">
                         <a href="javascript:void(0);">
-                            <i class="ti ti-user"></i><span>Agent</span>
+                            <i class="ti ti-link"></i><span>Agent</span>
                             <span class="menu-arrow"></span>
                         </a>
                         <ul>
                             <li><a href="{{ route('attendance.index') }}">Attendance</a></li>
-                            <li><a href="{{ route('report.sales.report') }}">Sales Report</a></li>
+                            <li><a href="{{ route('divanj.sales.report') }}">Sales Report</a></li>
                             <li><a href="">Commission</a></li>
                         </ul>
                     </li>

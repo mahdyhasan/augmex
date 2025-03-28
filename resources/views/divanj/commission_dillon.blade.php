@@ -7,7 +7,7 @@
     <div class="card">
         <div class="card-body">
             <!-- Filter Form -->
-            <form action="{{ route('commission.for.dillon') }}" method="GET" class="mb-4">
+            <form action="{{ route('divanj.commission.index') }}" method="GET" class="mb-4">
                 <div class="row g-3">
                     <div class="col-md-4">
                         <label for="week" class="form-label fw-bold">Select Week:</label>
@@ -67,30 +67,30 @@
                                 $total_commission = $weekly_commission + $weekend_commission;
                                 $total_per_agent = $target > 0 ? ($row->achieved * 100 / $target) : 0;
                             @endphp
-<tr>
-    <td>
-        {{ $row->stage_name }}
-        <input type="hidden" class="employee_id" value="{{ $row->employee_id }}">
-    </td>
-    <td>
-        {{ \Carbon\Carbon::parse($row->start_date)->format('M d') }} -
-        {{ \Carbon\Carbon::parse($row->end_date)->format('M d, Y') }}
-    </td>
-    <td>
-        <input type="number" class="form-control text-center target" value="{{ $target }}">
-    </td>
-    <td>{{ $row->achieved }}</td>
-    <td>
-        <input type="number" class="form-control text-center weekly_commission" value="{{ $weekly_commission }}">
-    </td>
-<td>
-    <input type="number" step="0.01" class="form-control text-center weekend_sales" value="{{ number_format($row->weekend_sales, 2) }}">
-</td>
-<td>
-    <input type="number" step="0.01" class="form-control text-center weekend_commission" value="{{ number_format($weekend_commission, 2) }}">
-</td>
-    <td>{{ number_format($total_commission, 2) }}</td>
-</tr>
+                        <tr>
+                            <td>
+                                {{ $row->stage_name }}
+                                <input type="hidden" class="employee_id" value="{{ $row->employee_id }}">
+                            </td>
+                            <td>
+                                {{ \Carbon\Carbon::parse($row->start_date)->format('M d') }} -
+                                {{ \Carbon\Carbon::parse($row->end_date)->format('M d, Y') }}
+                            </td>
+                            <td>
+                                <input type="number" class="form-control text-center target" value="{{ $target }}">
+                            </td>
+                            <td>{{ $row->achieved }}</td>
+                            <td>
+                                <input type="number" class="form-control text-center weekly_commission" value="{{ $weekly_commission }}">
+                            </td>
+                        <td>
+                            <input type="number" step="0.01" class="form-control text-center weekend_sales" value="{{ number_format($row->weekend_sales, 2) }}">
+                        </td>
+                        <td>
+                            <input type="number" step="0.01" class="form-control text-center weekend_commission" value="{{ number_format($weekend_commission, 2) }}">
+                        </td>
+                            <td>{{ number_format($total_commission, 2) }}</td>
+                        </tr>
 
                         @endforeach
                     </tbody>
@@ -119,7 +119,7 @@ $(document).on('blur', '.target, .achieved, .weekly_commission, .weekend_sales, 
     };
 
     $.ajax({
-        url: '{{ route("update.commission.dillon") }}',
+        url: '{{ route("divanj.commission.update") }}',
         method: 'POST',
         data: data,
         success: function(response) {

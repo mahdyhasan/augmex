@@ -3,129 +3,90 @@
 @section('title', 'Clock In & Clock Out')
 
 @section('content')
-    <div class="content-wrapper">
-        <div class="container-fluid" style="width:50% !important;">
-            <div class="card">
-                <div class="card-header d-flex justify-content-center align-items-center">
-                    <h3>Clock In & Clock Out</h3>
-                </div>
-                <div class="card-body text-center">
-                    @if(session('success'))
-                        <div class="alert alert-success">{{ session('success') }}</div>
-                    @endif
-                    @if(session('error'))
-                        <div class="alert alert-danger">{{ session('error') }}</div>
-                    @endif
+<div class="content-wrapper py-5">
+    <div class="container d-flex justify-content-center">
+        <div class="card shadow-lg rounded-4 p-4" style="width: 100%; max-width: 500px;">
+            <div class="card-header text-center bg-white border-0">
+                <h2 class="fw-bold">Clock In & Clock Out</h2>
+            </div>
 
-                    <div class='row'>
+            <div class="card-body text-center">
+                @if(session('success'))
+                    <div class="alert alert-success">{{ session('success') }}</div>
+                @endif
+                @if(session('error'))
+                    <div class="alert alert-danger">{{ session('error') }}</div>
+                @endif
+
+                <div class="d-grid gap-3 mt-4">
                     <!-- Log In Button -->
-                    <div class='col-6'>
-                        <form action="{{ route('attendance.login') }}" method="POST" id="loginForm">
+                    <form action="{{ route('attendance.login') }}" method="POST" id="loginForm">
                         @csrf
-                        <button type="submit" class="btn btn-success btn-lg">Log In</button>
-                    </form>
-                    </div>
-                    <div class='col-6'>
-                        <!-- Log Out Button -->
-                        <button class="btn btn-danger btn-lg" data-bs-toggle="offcanvas" data-bs-target="#offcanvas_log_out">
-                            Log Out
+                        <button type="submit" class="btn btn-success btn-lg fw-bold">
+                            <i class="ti ti-login"></i> Log In
                         </button>
-                    </div>
+                    </form>
+
+                    <!-- Update Sales Button -->
+                    <a href="javascript:void(0);" class="btn btn-dark btn-lg fw-bold" data-bs-toggle="offcanvas" data-bs-target="#importSalesReport">
+                        <i class="ti ti-upload"></i> Update Sales
+                    </a>
+
+                    <!-- Log Out Button -->
+                    <button id="logoutBtn" class="btn btn-danger btn-lg fw-bold">
+                        <i class="ti ti-logout"></i> Log Out
+                    </button>
+
+                    <!-- Hidden Logout Form -->
+                    <form id="logoutForm" action="{{ route('attendance.logout') }}" method="POST" style="display: none;">
+                        @csrf
+                    </form>
                 </div>
             </div>
         </div>
     </div>
+</div>
 
-  <!-- Offcanvas: Log Out with Sales -->
-<div class="offcanvas offcanvas-end offcanvas-large" tabindex="-1" id="offcanvas_log_out">
-    <div class="offcanvas-header border-bottom">
-        <h5 class="fw-semibold">Log Out With Sales</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="offcanvas"></button>
+
+
+
+<!-- Offcanvas for the Import Form -->
+<div class="offcanvas offcanvas-end" tabindex="-1" id="importSalesReport" aria-labelledby="importSalesReportLabel">
+    <div class="offcanvas-header">
+        <h5 class="offcanvas-title" id="importSalesReportLabel">Import Sales Report</h5>
+        <button type="button" class="btn-close text-reset" data-bs-dismiss="offcanvas" aria-label="Close"></button>
     </div>
     <div class="offcanvas-body">
-        <form action="{{ route('attendance.logout') }}" method="POST" id="logoutForm">
+        <form action="{{ route('divanj.sales.import') }}" method="POST" enctype="multipart/form-data">
             @csrf
-
             <div class="mb-3">
-                <label for="sales_qty" class="form-label">Sales Quantity</label>
-                <input type="number" class="form-control" id="sales_qty" name="sales_qty" required>
+                <label for="file" class="form-label">Upload Excel File</label>
+                <input type="file" class="form-control" name="file" id="file" required>
             </div>
-            <div class="mb-3">
-                <label for="sales_amount" class="form-label">Sales Amount</label>
-                <input type="number" class="form-control" id="sales_amount" name="sales_amount" step="0.01" required>
-            </div>
-
-            <div class="mt-3">
-                <button type="submit" class="btn btn-success">Submit</button>
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="offcanvas">Cancel</button>
-            </div>
+            <button type="submit" class="btn btn-primary">Import</button>
         </form>
     </div>
 </div>
 
 
+
+
 @endsection
 
-@section('script')
+@section('js')
 <script>
-    document.addEventListener('DOMContentLoaded', function () {
-        // Handle login form submission
-        document.getElementById('loginForm').addEventListener('submit', function (e) {
-            e.preventDefault();
-            fetch(this.action, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
-                },
-                body: JSON.stringify({})
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    alert('Logged in successfully!');
-                    location.reload();
-                } else {
-                    alert(data.error || 'Failed to log in.');
-                }
-            })
-            .catch(error => console.error('Error:', error));
-        });
+    // Log Out Confirmation
+    document.getElementById('logoutBtn').addEventListener('click', function (e) {
+        e.preventDefault();
 
-        // Handle logout form submission
-        document.getElementById('logoutForm').addEventListener('submit', function (e) {
-            e.preventDefault();
+        if (confirm("Have you submitted your sales report for today?")) {
+            document.getElementById('logoutForm').submit();
+        }
+    });
 
-            let salesQty = document.getElementById('sales_qty').value;
-            let salesAmount = document.getElementById('sales_amount').value;
-
-            if (!salesQty || !salesAmount) {
-                alert('Please enter both Sales Quantity and Sales Amount.');
-                return;
-            }
-
-            fetch(this.action, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
-                },
-                body: JSON.stringify({
-                    sales_qty: salesQty,
-                    sales_amount: salesAmount
-                })
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    alert('Logged out successfully!');
-                    window.location.href = "/login"; // Redirect to login page after logout
-                } else {
-                    alert(data.error || 'Failed to log out.');
-                }
-            })
-            .catch(error => console.error('Error:', error));
-        });
+    // Optional: You may remove this Ajax handler if you're not using it anymore
+    document.getElementById('loginForm')?.addEventListener('submit', function (e) {
+        // If you want to keep default form behavior, just remove this block entirely.
     });
 </script>
 @endsection

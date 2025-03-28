@@ -148,8 +148,8 @@
             <div class="col-xl-4 col-sm-6 mb-4">
                 <div class="dashboard-card">
                     <i class="ti ti-cash"></i>
-                    <h5 class="card-title">Total Expenses</h5>
-                    <h2 class="card-value">{{ number_format($totalExpenses, 2) }} Tk</h2>
+                    <h5 class="card-title">Total Expenses (৳)</h5>
+                    <h2 class="card-value">{{ number_format($totalExpenses) }}</h2>
                 </div>
             </div>
 
@@ -158,15 +158,15 @@
                 <div class="dashboard-card">
                     <i class="ti ti-pig-money"></i>
                     <h5 class="card-title">Bank Balance</h5>
-                    <h2 class="card-value">{{ number_format($bankBalance, 2) }} Tk</h2>
+                    <h2 class="card-value">{{ number_format($bankBalance) }}</h2>
                 </div>
             </div>
             <!-- Total Earnings -->
             <div class="col-xl-4 col-sm-6 mb-4">
                 <div class="dashboard-card">
                     <i class="ti ti-wallet"></i>
-                    <h5 class="card-title">Total Earnings</h5>
-                    <h2 class="card-value">{{ number_format($totalEarnings, 2) }} Tk</h2>
+                    <h5 class="card-title">Total Earnings ($/€/£)</h5>
+                    <h2 class="card-value">{{ number_format($totalEarnings) }} </h2>
                 </div>
             </div>
         </div>
@@ -184,7 +184,6 @@
                             <thead>
                                 <tr>
                                     <th>Date</th>
-                                    <th>Type</th>
                                     <th>Amount (Tk)</th>
                                 </tr>
                             </thead>
@@ -192,7 +191,6 @@
                                 @foreach($recentTransactions as $transaction)
                                 <tr>
                                     <td>{{ $transaction->created_at->format('d M Y') }}</td>
-                                    <td>{{ ucfirst($transaction->type) }}</td>
                                     <td>{{ number_format($transaction->amount, 2) }}</td>
                                 </tr>
                                 @endforeach

@@ -6,14 +6,27 @@
     <div class="content-wrapper">
         <div class="container-fluid">
             <div class="card">
-                <div class="card-header">
-                    <div class="d-flex justify-content-between align-items-center mb-3">
-                        <h3>Attendance Sheet</h3>
-                        @if(Auth::user()->isSuperAdmin() || Auth::user()->isHR())
-                            <button class="btn btn-primary" data-bs-toggle="offcanvas" data-bs-target="#offcanvas_add_attendance">
-                                Add Attendance
-                            </button>
-                        @endif
+                <div class="card-header bg-gradient-primary text-white shadow-sm">
+                    <div class="d-flex flex-column flex-md-row justify-content-between align-items-center p-3">
+                        <div class="mb-2 mb-md-0">
+                            <h3 class="fw-bold mb-0">
+                                <i class="fas fa-clipboard-list me-2"></i>Attendance Sheet
+                            </h3>
+                        </div>
+                        
+                        <div class="d-flex flex-wrap gap-2">
+                            @if(Auth::user()->isSuperAdmin() || Auth::user()->isHR())
+                                <button class="btn btn-light text-primary shadow-sm" id="lateSummaryBtn" 
+                                        data-bs-toggle="offcanvas" data-bs-target="#offcanvas_late_summary">
+                                    <i class="fas fa-clock me-2"></i>Late Summary
+                                </button>
+
+                                <button class="btn btn-white text-primary shadow-sm" 
+                                        data-bs-toggle="offcanvas" data-bs-target="#offcanvas_add_attendance">
+                                    <i class="fas fa-plus-circle me-2"></i>Add Attendance
+                                </button>
+                            @endif
+                        </div>
                     </div>
                 </div>
 
@@ -169,6 +182,27 @@
             </form>
         </div>
     </div>
+
+
+    
+    <!-- Offcanvas: Late Summary -->
+    <div class="offcanvas offcanvas-end offcanvas-large" tabindex="-1" id="offcanvas_late_summary">
+        <div class="offcanvas-header border-bottom">
+            <h5 class="fw-semibold">Late Summary </h5> - Everyone is given 5 minutes grace time
+        </div>
+        <div class="offcanvas-body">
+            <div id="lateSummaryTableContainer">
+                <p>Loading...</p>
+            </div>
+        </div>
+    </div>
+
+
+
+
+
+
+
 @endsection
 
 @section('css')
@@ -198,5 +232,77 @@
             $('#filterForm').submit();
         });
     });
+
+
+    // LATE SUMMARY
+    document.getElementById('lateSummaryBtn').addEventListener('click', function () {
+        const startDate = "{{ $startDate }}";
+        const endDate = "{{ $endDate }}";
+        const employeeName = "{{ $employeeName }}";
+
+        const container = document.getElementById('lateSummaryTableContainer');
+        container.innerHTML = "<p>Loading...</p>";
+
+        fetch("{{ route('attendance.late.summary') }}", {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': '{{ csrf_token() }}'
+            },
+            body: JSON.stringify({
+                start_date: startDate,
+                end_date: endDate,
+                employee_name: employeeName
+            })
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.status === 'error') {
+                container.innerHTML = `<div class="alert alert-warning">${data.message}</div>`;
+                return;
+            }
+
+            const rows = data.data.map(item => `
+                <tr>
+                    <td>${item.date}</td>
+                    <td>${item.name}</td>
+                    <td>${item.check_in ?? '-'}</td>
+                    <td>${item.check_out ?? '-'}</td>
+                    <td>${item.late_by} min</td>
+                </tr>
+            `).join('');
+
+            const summary = Object.entries(data.late_summary).map(([name, count]) => `
+                <p><strong>${name}</strong> was late on <strong>${count}</strong> day(s)</p>
+            `).join('');
+
+            container.innerHTML = `
+                <div class="table-responsive mb-3">
+                    <table class="table table-bordered table-sm">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Date</th>
+                                <th>Employee</th>
+                                <th>Check In</th>
+                                <th>Check Out</th>
+                                <th>Late By</th>
+                            </tr>
+                        </thead>
+                        <tbody>${rows}</tbody>
+                    </table>
+                </div>
+                <div class="mt-4 border-top pt-3">
+                    <h6 class="fw-bold text-primary">Late Summary by Employee</h6>
+                    ${summary || '<p class="text-muted">No late records found.</p>'}
+                </div>
+            `;
+        })
+        .catch(err => {
+            container.innerHTML = `<div class="alert alert-danger">Error loading data.</div>`;
+            console.error(err);
+        });
+    });
+
+
 </script>
 @endsection

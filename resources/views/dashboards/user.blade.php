@@ -37,26 +37,23 @@
             <div class="col-md-4">
                 <div class="card bg-light shadow-sm">
                     <div class="card-body">
-                        <h6 class="text-muted">Top Sales Day</h6>
-                        <h4>{{ $topSalesDay['date'] ?? 'N/A' }}</h4>
-                        <p class="mb-0">${{ number_format($topSalesDay['amount'] ?? 0, 2) }}</p>
+                        <h6 class="text-muted">Top Seller This Week</h6>
+                        <h4>{{ $topPerformerFormatted['name'] ?? 'N/A' }}</h4>
+                        <p class="mb-0">{{ number_format($topPerformerFormatted['quantity'] ?? 0) }} case(s)</p>
                     </div>
                 </div>
             </div>
             <div class="col-md-4">
-                @php
-                    $goal = 3750;
-                    $progress = ($currentWeekSales['total_amount'] / $goal) * 100;
-                @endphp
                 <div class="card bg-light shadow-sm">
                     <div class="card-body">
                         <h6 class="text-muted">Weekly Target Progress</h6>
                         <div class="progress mb-1">
-                            <div class="progress-bar {{ $progress >= 100 ? 'bg-success' : 'bg-info' }}" style="width: {{ min($progress, 100) }}%;">
+                            <div class="progress-bar {{ $progress >= 100 ? 'bg-success' : 'bg-info' }}" 
+                                style="width: {{ min($progress, 100) }}%;">
                                 {{ round($progress) }}%
                             </div>
                         </div>
-                        <small>Target: ${{ number_format($goal, 0) }} (25 cases) </small>
+                        <small>Target: {{ $goalCases }} cases</small>
                     </div>
                 </div>
             </div>
@@ -203,7 +200,7 @@
         data: {
             labels: @json($salesTrendLabels),
             datasets: [{
-                label: 'Sales ($)',
+                label: 'Quantity',
                 data: @json($salesTrendData),
                 borderColor: 'rgba(75, 192, 192, 1)',
                 backgroundColor: 'rgba(75, 192, 192, 0.1)',

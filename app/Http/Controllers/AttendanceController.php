@@ -24,7 +24,7 @@ use App\Models\Liability;
 use App\Models\Payroll;
 use App\Models\PettyCash;
 use App\Models\TaxPayment;
-use App\Models\Transaction;
+
 use App\Models\User;
 
 
@@ -87,117 +87,48 @@ class AttendanceController extends Controller
         
     }
 
-
     public function logIn(Request $request)
     {
         $user = Auth::user();
         $employee = Employee::where('user_id', $user->id)->first();
-
+    
         if (!$employee) {
             return redirect()->back()->with('error', 'Employee record not found.');
         }
-
-        $today = Carbon::today();
-        $dayOfWeek = $today->format('l'); // Get day name (e.g., "Saturday")
-
-        // Check if today is a weekend (Saturday or Sunday)
-        if ($dayOfWeek === 'Saturday' || $dayOfWeek === 'Sunday') {
-            return redirect()->back()->with('error', 'Today is a weekend. No attendance required.');
-        }
-
+    
+        $today = Carbon::today('Asia/Dhaka');
+    
         // Check if already logged in today
         $existingAttendance = Attendance::where('employee_id', $employee->id)
             ->where('date', $today->toDateString())
             ->first();
-
+    
         if ($existingAttendance) {
             return redirect()->back()->with('error', 'You have already logged in today.');
         }
-
-        // Get login time from employee record
-        $expectedLoginTime = Carbon::parse($employee->login_time);
-        $actualCheckInTime = Carbon::now()->setTimezone('Asia/Dhaka');
-
-        // Determine if the employee is late
-        $isLate = $actualCheckInTime->gt($expectedLoginTime->addMinutes(10)) ? 1 : 0;
-
-        // Log the check-in
+    
+        // Get expected login time from employee record (assume it's stored in DB as HH:MM:SS)
+        $expectedLoginTime = Carbon::parse($employee->login_time, 'Asia/Dhaka');
+        $actualCheckInTime = Carbon::now('Asia/Dhaka');
+    
+        // Determine if late (more than 10 minutes after expected login time)
+        $isLate = $actualCheckInTime->gt($expectedLoginTime->copy()->addMinutes(10)) ? 1 : 0;
+    
+        // Save attendance
         Attendance::create([
             'employee_id' => $employee->id,
             'date' => $today->toDateString(),
             'check_in' => $actualCheckInTime->toTimeString(),
             'status_id' => 1,
-            'isLate' => $isLate, 
+            'isLate' => $isLate,
             'created_at' => now(),
-            'updated_at' => now()
+            'updated_at' => now(),
         ]);
-
+    
         return redirect()->back()->with('success', 'Logged in successfully.');
     }
+    
 
-
-
-    // public function logOut(Request $request)
-    // {
-    //     $user = Auth::user();
-    //     $employee = Employee::where('user_id', $user->id)->first();
-
-    //     if (!$employee) {
-    //         return redirect()->back()->with('error', 'Employee record not found.');
-    //     }
-
-    //     $today = Carbon::today()->toDateString();
-
-    //     // Validate sales data
-    //     // $request->validate([
-    //     //     'sales_qty' => 'required|integer|min:0',
-    //     //     'sales_amount' => 'required|numeric|min:0'
-    //     // ]);
-
-    //     // Check if sales entry exists for the employee on the same day
-    //     $existingSales = EmployeeSales::where('employee_id', $employee->id)
-    //         ->where('date', $today)
-    //         ->first();
-
-    //     if ($existingSales) {
-    //         // Update existing sales record
-    //         $existingSales->update([
-    //             'sales_qty' => $request->sales_qty,
-    //             'sales_amount' => $request->sales_amount
-    //         ]);
-    //     } else {
-    //         // Create a new sales record if none exists
-    //         EmployeeSales::create([
-    //             'client_id' => $employee->client_id,
-    //             'employee_id' => $employee->id,
-    //             'date' => $today,
-    //             'sales_qty' => $request->sales_qty,
-    //             'sales_amount' => $request->sales_amount
-    //         ]);
-    //     }
-
-    //     // Update attendance check-out
-    //     $existingAttendance = Attendance::where('employee_id', $employee->id)
-    //         ->where('date', $today)
-    //         ->first();
-
-    //     if ($existingAttendance) {
-    //         $existingAttendance->update([
-    //             'check_out' => Carbon::now()->setTimezone('Asia/Dhaka')->toTimeString()
-    //         ]);
-    //     } else {
-    //         Attendance::create([
-    //             'employee_id' => $employee->id,
-    //             'date' => $today,
-    //             'check_out' => Carbon::now()->setTimezone('Asia/Dhaka')->toTimeString(),
-    //             'status' => 'Absent',
-    //             'updated_at' => now()
-    //         ]);
-    //     }
-
-    //     // Auth::logout();
-    //     return redirect()->back()->with('success', 'Logged Out successfully.');
-    // }
 
     public function logOut(Request $request)
     {
@@ -208,52 +139,23 @@ class AttendanceController extends Controller
             return redirect()->back()->with('error', 'Employee record not found.');
         }
 
-        $today = Carbon::today()->toDateString();
-        $now = Carbon::now()->setTimezone('Asia/Dhaka')->toTimeString();
+        $today = Carbon::today('Asia/Dhaka')->toDateString();
+        $now = Carbon::now('Asia/Dhaka')->toTimeString();
 
         // Check if attendance entry exists for today
         $existingAttendance = Attendance::where('employee_id', $employee->id)
             ->where('date', $today)
             ->first();
 
-        if ($existingAttendance) {
-            // Update check_out time
-            $existingAttendance->update([
-                'check_out' => $now,
-            ]);
-        } else {
-            // Create a new attendance entry with check_in and check_out set to the same time
-            Attendance::create([
-                'employee_id' => $employee->id,
-                'date' => $today,
-                'check_in' => $now,
-                'check_out' => $now,
-                'status_id' => 1, // Default status
-                'isLate' => 1, // Default to late
-            ]);
+        // If no check-in was recorded today
+        if (!$existingAttendance || !$existingAttendance->check_in) {
+            return redirect()->back()->with('error', 'You have not logged in today. Please Log In first and the inform your supervisor.');
         }
 
-        // Handle sales data
-        $existingSales = EmployeeSales::where('employee_id', $employee->id)
-            ->where('date', $today)
-            ->first();
-
-        if ($existingSales) {
-            // Update existing sales record
-            $existingSales->update([
-                'sales_qty' => $request->sales_qty,
-                'sales_amount' => $request->sales_amount
-            ]);
-        } else {
-            // Create a new sales record if none exists
-            EmployeeSales::create([
-                'client_id' => $employee->client_id,
-                'employee_id' => $employee->id,
-                'date' => $today,
-                'sales_qty' => $request->sales_qty,
-                'sales_amount' => $request->sales_amount
-            ]);
-        }
+        // If already has check-in, update check-out
+        $existingAttendance->update([
+            'check_out' => $now,
+        ]);
 
         return redirect()->back()->with('success', 'Logged out successfully.');
     }
@@ -313,7 +215,74 @@ class AttendanceController extends Controller
     
 
 
-
+    // LATE SUMMARY
+    public function lateSummary(Request $request)
+    {
+        $startDate = $request->input('start_date');
+        $endDate = $request->input('end_date');
+        $employeeName = $request->input('employee_name');
+    
+        if (!$startDate || !$endDate) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Please set a date range and click on the filter first.',
+            ]);
+        }
+    
+        // Fetch attendances marked as late
+        $records = Attendance::with('employee.user')
+            ->where('isLate', 1)
+            ->whereBetween('date', [$startDate, $endDate]);
+    
+        if ($employeeName) {
+            $records->whereHas('employee.user', function ($query) use ($employeeName) {
+                $query->where('name', 'like', '%' . $employeeName . '%');
+            });
+        }
+    
+        $results = [];
+        $lateCounts = [];
+    
+        foreach ($records->get() as $record) {
+            $employee = $record->employee;
+            $user = $employee->user ?? null;
+    
+            if (!$employee || !$user || !$record->check_in || !$employee->login_time) {
+                continue;
+            }
+    
+            $expected = Carbon::parse($employee->login_time);
+            $actual = Carbon::parse($record->check_in);
+    
+            // Apply 5-minute grace period
+            if ($actual->lte($expected->copy()->addMinutes(5))) {
+                continue;
+            }
+    
+            $lateBy = $expected->diffInMinutes($actual);
+    
+            $results[] = [
+                'date' => $record->date,
+                'name' => $user->name,
+                'check_in' => $record->check_in,
+                'check_out' => $record->check_out,
+                'late_by' => $lateBy,
+            ];
+    
+            // Count late days per employee
+            $lateCounts[$user->name] = ($lateCounts[$user->name] ?? 0) + 1;
+        }
+    
+        // Sort late counts descending
+        arsort($lateCounts);
+    
+        return response()->json([
+            'status' => 'success',
+            'data' => $results,
+            'late_summary' => $lateCounts,
+        ]);
+    }
+    
 
 
     

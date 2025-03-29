@@ -365,99 +365,343 @@ class DivanjController extends Controller
 
 
 
-
+    // INDIVIDUAL NARRATIVE REPORT
     public function narrativeReport(Request $request)
     {
-        $employees = Employee::all();
+        $startDate = $request->input('start_date', now()->startOfMonth()->toDateString());
+        $endDate = $request->input('end_date', now()->endOfMonth()->toDateString());
+        $employeeId = $request->input('employee_id');
     
-        $employeeId = $request->get('employee_id');
-        $startDate = $request->get('start_date', now()->startOfMonth()->toDateString());
-        $endDate = $request->get('end_date', now()->endOfMonth()->toDateString());
+        $employees = Auth::user()->isSuperAdmin()
+            ? Employee::with('user')->get()
+            : Employee::where('id', Auth::user()->employee->id)->with('user')->get();
     
-        $employee = null;
-        $sales = collect();
-        $lateDays = 0;
-        $absentDays = 0;
-        $totalSalesQty = 0;
-        $totalSalesAmount = 0;
-        $salesByWeek = collect();
-        $bestWeek = $worstWeek = $bestDay = $worstDay = null;
-        $bestWeekAmount = $worstWeekAmount = 0;
-    
-        if ($employeeId) {
-            $employee = Employee::find($employeeId);
-    
-            // Get daily sales
-            $sales = EmployeeSales::selectRaw('DATE(date) as date, SUM(sales_qty) as total_qty, SUM(sales_amount) as total_amount')
-                ->where('employee_id', $employeeId)
-                ->whereBetween('date', [$startDate, $endDate])
-                ->groupByRaw('DATE(date)')
-                ->orderBy('date')
-                ->get();
-    
-            // Attendance analysis
-            $attendances = Attendance::where('employee_id', $employeeId)
-                ->whereBetween('date', [$startDate, $endDate])
-                ->get();
-    
-        //$lateDays = $attendances->where('login_time', '>', '09:30:00')->count();
-        //$absentStatusId = 3; // Adjust as per your DB
-        //$absentDays = $attendances->where('status_id', $absentStatusId)->count();
-    
-            $lateDays = $attendances->where('isLate', 1)->count();
-            $absentStatusId = 2;
-            $absentDays = $attendances->where('status_id', $absentStatusId)->count();
-    
-    
-            // Totals
-            $totalSalesQty = $sales->sum('total_qty');
-            $totalSalesAmount = $sales->sum('total_amount');
-    
-            // Weekly performance
-            $salesByWeek = $sales->groupBy(function ($item) {
-                return Carbon::parse($item->date)->startOfWeek()->toDateString();
-            })->map(function ($weekSales) {
-                return $weekSales->sum('total_amount');
-            });
-    
-            if ($salesByWeek->isNotEmpty()) {
-                $bestWeek = $salesByWeek->sortDesc()->keys()->first();
-                $bestWeekAmount = $salesByWeek[$bestWeek] ?? 0;
-    
-                $worstWeek = $salesByWeek->sort()->keys()->first();
-                $worstWeekAmount = $salesByWeek[$worstWeek] ?? 0;
-            }
-    
-            // Daily performance
-            if ($sales->isNotEmpty()) {
-                $bestDay = $sales->sortByDesc('total_amount')->first();
-                $worstDay = $sales->sortBy('total_amount')->first();
-            }
+        if (!$employeeId) {
+            return view('divanj.narrative_report', compact('employees', 'startDate', 'endDate'));
         }
     
+        $employee = Employee::findOrFail($employeeId);
+    
+        // Daily sales summary
+        $sales = DivanjSale::where('employee_id', $employeeId)
+            ->whereBetween('date', [$startDate, $endDate])
+            ->selectRaw('date, SUM(quantity) as total_qty, SUM(total) as total_amount')
+            ->groupBy('date')
+            ->orderBy('date')
+            ->get();
+    
+        $totalSalesQty = $sales->sum('total_qty');
+        $totalSalesAmount = $sales->sum('total_amount');
+    
+        $bestDay = $sales->sortByDesc('total_qty')->first();
+        $worstDay = $sales->sortBy('total_qty')->first();
+    
+        // Weekly sales (based on ISO week)
+        $weeklySales = DivanjSale::where('employee_id', $employeeId)
+            ->whereBetween('date', [$startDate, $endDate])
+            ->selectRaw('YEARWEEK(date, 1) as week, SUM(quantity) as total_qty')
+            ->groupBy('week')
+            ->get();
+    
+        $bestWeek = $weeklySales->sortByDesc('total_qty')->first();
+        $worstWeek = $weeklySales->sortBy('total_qty')->first();
+    
+        // Convert raw week to a proper start date string
+        $bestWeekStart = $bestWeek
+            ? Carbon::now()->setISODate(substr($bestWeek->week, 0, 4), substr($bestWeek->week, 4))->startOfWeek()->toDateString()
+            : null;
+        $worstWeekStart = $worstWeek
+            ? Carbon::now()->setISODate(substr($worstWeek->week, 0, 4), substr($worstWeek->week, 4))->startOfWeek()->toDateString()
+            : null;
+    
+        $bestWeekQty = $bestWeek->total_qty ?? 0;
+        $worstWeekQty = $worstWeek->total_qty ?? 0;
+    
+        // Attendance data
+        $attendance = Attendance::where('employee_id', $employeeId)
+            ->whereBetween('date', [$startDate, $endDate])
+            ->get();
+    
+        $lateDays = $attendance->where('isLate', 1)->count();
+        $absentDays = $attendance->where('status_id', 2)->count();
+    
+        // Day-of-week performance (weekdays only)
+        $dayOfWeekStats = DivanjSale::where('employee_id', $employeeId)
+            ->whereBetween('date', [$startDate, $endDate])
+            ->whereRaw("WEEKDAY(date) < 5")  // Only Monday (0) to Friday (4)
+            ->get()
+            ->groupBy(function ($sale) {
+                return Carbon::parse($sale->date)->format('l'); // e.g., Monday
+            })
+            ->map(function ($group) {
+                return [
+                    'qty' => $group->sum('quantity'),
+                    'amount' => $group->sum('total'),
+                ];
+            });
+    
+        $bestDayOfWeek = $dayOfWeekStats->sortByDesc('qty')->keys()->first();
+        $worstDayOfWeek = $dayOfWeekStats->sortBy('qty')->keys()->first();
+    
+        // Hourly performance (weekdays only)
+        $hourlyStats = DivanjSale::where('employee_id', $employeeId)
+            ->whereBetween('date', [$startDate, $endDate])
+            ->whereRaw("WEEKDAY(date) < 5")
+            ->get()
+            ->groupBy(function ($sale) {
+                return Carbon::parse($sale->time)->format('H'); // e.g., "13"
+            })
+            ->map(function ($group) {
+                return [
+                    'qty' => $group->sum('quantity'),
+                    'amount' => $group->sum('total'),
+                ];
+            });
+    
+        $bestHour = $hourlyStats->sortByDesc('qty')->keys()->first();
+        $worstHour = $hourlyStats->sortBy('qty')->keys()->first();
+    
+        $bestHourFormatted = $bestHour ? Carbon::createFromTime($bestHour)->format('g A') : null;
+        $worstHourFormatted = $worstHour ? Carbon::createFromTime($worstHour)->format('g A') : null;
+    
+        // Most sold item
+        // $mostSoldItem = DivanjSale::where('employee_id', $employeeId)
+        //     ->whereBetween('date', [$startDate, $endDate])
+        //     ->selectRaw('name, SUM(quantity) as total_qty')
+        //     ->groupBy('name')
+        //     ->orderByDesc('total_qty')
+        //     ->first();
+
+        $wineTypes = [
+            'Shiraz', 'Cabernet Sauvignon', 'Pinot Noir', 'Sauvignon Blanc', 
+            'Merlot', 'Pinot Grigio', 'Malbec', 'Chardonnay', 'Cabernet',
+            'Rosé', 'Prosecco', 'Riesling', 'Zinfandel', 'Tempranillo'
+        ];
+        
+        $mostSoldItems = DivanjSale::where('employee_id', $employeeId)
+            ->whereBetween('date', [$startDate, $endDate])
+            ->get()
+            ->groupBy(function ($item) use ($wineTypes) {
+                foreach ($wineTypes as $wine) {
+                    if (stripos($item->name, $wine) !== false) {
+                        return $wine;
+                    }
+                }
+                return 'Other';
+            })
+            ->map(function ($group, $wineType) {
+                return [
+                    'wine_type' => $wineType,
+                    'total_qty' => $group->sum('quantity'),
+                    'examples' => $group->pluck('name')->unique()->take(3)->all() // Convert to array
+                ];
+            })
+            ->sortByDesc('total_qty');
+        
+        $topWineType = $mostSoldItems->first();
+        
+        // Alternative: If you want the raw product name with pattern matching
+        $mostSoldProduct = DivanjSale::where('employee_id', $employeeId)
+            ->whereBetween('date', [$startDate, $endDate])
+            ->selectRaw('name, SUM(quantity) as total_qty')
+            ->groupBy('name')
+            ->orderByDesc('total_qty')
+            ->get()
+            ->first(function ($item) use ($wineTypes) {
+                foreach ($wineTypes as $wine) {
+                    if (stripos($item->name, $wine) !== false) {
+                        return true;
+                    }
+                }
+                return false;
+            });
+            
+            
+
         return view('divanj.narrative_report', compact(
             'employees',
             'employee',
             'startDate',
             'endDate',
             'sales',
-            'lateDays',
-            'absentDays',
             'totalSalesQty',
             'totalSalesAmount',
-            'salesByWeek',
-            'bestWeek',
-            'bestWeekAmount',
-            'worstWeek',
-            'worstWeekAmount',
             'bestDay',
-            'worstDay'
+            'worstDay',
+            'bestWeek',
+            'worstWeek',
+            'bestWeekStart',
+            'worstWeekStart',
+            'bestWeekQty',
+            'worstWeekQty',
+            'lateDays',
+            'absentDays',
+            'bestDayOfWeek',
+            'worstDayOfWeek',
+            'bestHourFormatted',
+            'worstHourFormatted',
+            'mostSoldItems',
+            'topWineType', 
+            'mostSoldProduct'
         ));
-        
+    }
+                
+    
+    // NARRATIVE REPORT FOR ALL AGENTS
+    public function narrativeReportForAll(Request $request)
+    {
+
+        // Access control: allow only Admins
+        if (!(Auth::user()->isSuperAdmin() )) {
+            abort(403, 'Unauthorized access');
+        }
+
+                
+        $startDate = $request->input('start_date', now()->startOfMonth()->toDateString());
+        $endDate = $request->input('end_date', now()->endOfMonth()->toDateString());
+    
+        // All employees for reference or dropdowns
+        $employees = Employee::with('user')->get();
+    
+        // Sales summary (daily)
+        $sales = DivanjSale::whereBetween('date', [$startDate, $endDate])
+            ->selectRaw('date, SUM(quantity) as total_qty, SUM(total) as total_amount')
+            ->groupBy('date')
+            ->orderBy('date')
+            ->get();
+    
+        $totalSalesQty = $sales->sum('total_qty');
+        $totalSalesAmount = $sales->sum('total_amount');
+    
+        $bestDay = $sales->sortByDesc('total_qty')->first();
+        $worstDay = $sales->sortBy('total_qty')->first();
+    
+        // Weekly performance
+        $weeklySales = DivanjSale::whereBetween('date', [$startDate, $endDate])
+            ->selectRaw('YEARWEEK(date, 1) as week, SUM(quantity) as total_qty')
+            ->groupBy('week')
+            ->get();
+    
+        $bestWeek = $weeklySales->sortByDesc('total_qty')->first();
+        $worstWeek = $weeklySales->sortBy('total_qty')->first();
+    
+        $bestWeekStart = $bestWeek
+            ? Carbon::now()->setISODate(substr($bestWeek->week, 0, 4), substr($bestWeek->week, 4))->startOfWeek()->toDateString()
+            : null;
+        $worstWeekStart = $worstWeek
+            ? Carbon::now()->setISODate(substr($worstWeek->week, 0, 4), substr($worstWeek->week, 4))->startOfWeek()->toDateString()
+            : null;
+    
+        $bestWeekQty = $bestWeek->total_qty ?? 0;
+        $worstWeekQty = $worstWeek->total_qty ?? 0;
+    
+        // Attendance summary across all employees
+        $attendance = Attendance::whereBetween('date', [$startDate, $endDate])->get();
+        $lateDays = $attendance->where('isLate', 1)->count();
+        $absentDays = $attendance->where('status_id', 2)->count();
+    
+        // Best/worst weekday (exclude Saturday & Sunday)
+        $dayOfWeekStats = DivanjSale::whereBetween('date', [$startDate, $endDate])
+            ->whereRaw("WEEKDAY(date) < 5")
+            ->get()
+            ->groupBy(function ($sale) {
+                return Carbon::parse($sale->date)->format('l');
+            })
+            ->map(fn($group) => [
+                'qty' => $group->sum('quantity'),
+                'amount' => $group->sum('total'),
+            ]);
+    
+        $bestDayOfWeek = $dayOfWeekStats->sortByDesc('qty')->keys()->first();
+        $worstDayOfWeek = $dayOfWeekStats->sortBy('qty')->keys()->first();
+    
+        // Best/worst hour (weekdays only)
+        $hourlyStats = DivanjSale::whereBetween('date', [$startDate, $endDate])
+            ->whereRaw("WEEKDAY(date) < 5")
+            ->get()
+            ->groupBy(function ($sale) {
+                return Carbon::parse($sale->time)->format('H');
+            })
+            ->map(fn($group) => [
+                'qty' => $group->sum('quantity'),
+                'amount' => $group->sum('total'),
+            ]);
+    
+        $bestHour = $hourlyStats->sortByDesc('qty')->keys()->first();
+        $worstHour = $hourlyStats->sortBy('qty')->keys()->first();
+    
+        $bestHourFormatted = $bestHour ? Carbon::createFromTime($bestHour)->format('g A') : null;
+        $worstHourFormatted = $worstHour ? Carbon::createFromTime($worstHour)->format('g A') : null;
+    
+        // Wine Type Grouping
+        $wineTypes = [
+            'Shiraz', 'Cabernet Sauvignon', 'Pinot Noir', 'Sauvignon Blanc', 
+            'Merlot', 'Pinot Grigio', 'Malbec', 'Chardonnay', 'Cabernet',
+            'Rosé', 'Prosecco', 'Riesling', 'Zinfandel', 'Tempranillo'
+        ];
+    
+        $mostSoldItems = DivanjSale::whereBetween('date', [$startDate, $endDate])
+            ->get()
+            ->groupBy(function ($item) use ($wineTypes) {
+                foreach ($wineTypes as $wine) {
+                    if (stripos($item->name, $wine) !== false) {
+                        return $wine;
+                    }
+                }
+                return 'Other';
+            })
+            ->map(function ($group, $wineType) {
+                return [
+                    'wine_type' => $wineType,
+                    'total_qty' => $group->sum('quantity'),
+                    'examples' => $group->pluck('name')->unique()->take(3)->all()
+                ];
+            })
+            ->sortByDesc('total_qty');
+    
+        $topWineType = $mostSoldItems->first();
+    
+        $mostSoldProduct = DivanjSale::whereBetween('date', [$startDate, $endDate])
+            ->selectRaw('name, SUM(quantity) as total_qty')
+            ->groupBy('name')
+            ->orderByDesc('total_qty')
+            ->get()
+            ->first(function ($item) use ($wineTypes) {
+                foreach ($wineTypes as $wine) {
+                    if (stripos($item->name, $wine) !== false) {
+                        return true;
+                    }
+                }
+                return false;
+            });
+    
+        return view('divanj.narrative_report_all', compact(
+            'employees',
+            'startDate',
+            'endDate',
+            'sales',
+            'totalSalesQty',
+            'totalSalesAmount',
+            'bestDay',
+            'worstDay',
+            'bestWeek',
+            'worstWeek',
+            'bestWeekStart',
+            'worstWeekStart',
+            'bestWeekQty',
+            'worstWeekQty',
+            'lateDays',
+            'absentDays',
+            'bestDayOfWeek',
+            'worstDayOfWeek',
+            'bestHourFormatted',
+            'worstHourFormatted',
+            'mostSoldItems',
+            'topWineType',
+            'mostSoldProduct'
+        ));
     }
     
-    
-
 
 
 

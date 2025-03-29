@@ -15,6 +15,7 @@ use App\Http\Controllers\InvoiceController;
 use App\Http\Controllers\PayrollController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\DivanjController;
+use App\Http\Controllers\CareerController;
 
 
 /*
@@ -30,7 +31,23 @@ use App\Http\Controllers\DivanjController;
 
 
 
-Auth::routes(['register' => false]);
+    Auth::routes(['register' => false]);
+
+    // Career Page for Candidates
+    Route::get('career/apply', [CareerController::class, 'applyForPosition'])->name('career.apply');
+    Route::post('career/apply', [CareerController::class, 'storeCandidatesData'])->name('career.store');
+    Route::post('/check-application', function(Request $request) {
+        $exists = \App\Models\CareerApplicant::where('position', $request->position)
+            ->where(function($query) use ($request) {
+                $query->where('email', $request->email)
+                    ->orWhere('phone', $request->phone);
+            })
+            ->exists();
+            
+        return response()->json(['exists' => $exists]);
+    })->middleware('web');
+
+
 
 
 Route::group(['middleware' => 'auth'], function () {
@@ -38,7 +55,15 @@ Route::group(['middleware' => 'auth'], function () {
     Route::get('/', [HomeController::class, 'index'])->name('dashboard');
     
 
-   // Accounts
+    // HR - Career
+    Route::prefix('career')->middleware(['auth'])->group(function () {
+        Route::get('/applicants', [CareerController::class, 'careerPageIndex'])->name('career-applicants.index');
+        Route::post('/applicants/{id}/status', [CareerController::class, 'updateStatus'])->name('career-applicants.update-status');
+        Route::post('/applicants/{id}/note', [CareerController::class, 'addNote'])->name('career-applicants.add-note');
+        Route::get('/applicants/export', [CareerController::class, 'export'])->name('career-applicants.export');
+    });
+
+    // Accounts
     
    Route::get('/income-statement', [AccountController::class, 'incomeStatement'])->name('accounts.incomeStatement');
 
@@ -205,6 +230,7 @@ Route::group(['middleware' => 'auth'], function () {
         Route::put('/commissions/update/{id}', [DivanjController::class, 'updateCommissionDivanj'])->name('divanj.commission.update');
         Route::get('/sales-summary', [DivanjController::class, 'salesSummaryDivanj'])->name('divanj.sales.summary');
         Route::get('/narrative-report', [DivanjController::class, 'narrativeReport'])->name('divanj.narrative.report');
+        Route::get('/narrative-report-all', [DivanjController::class, 'narrativeReportForAll'])->name('divanj.narrative.report.all');
         Route::get('/sales-report', [DivanjController::class, 'salesReport'])->name('divanj.sales.report');
         Route::post('/sales-report', [DivanjController::class, 'importSalesDivanj'])->name('divanj.sales.import');
 
@@ -213,8 +239,9 @@ Route::group(['middleware' => 'auth'], function () {
     });
 
 
-
    
 
-    });
+});
+
+
 

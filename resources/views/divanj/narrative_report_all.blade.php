@@ -3,44 +3,33 @@
 @section('title', 'Narrative Report')
 
 @section('content')
+
+@if(Auth::user()->isSuperAdmin() || Auth::user()->isHR())
+
 <div class="content-wrapper">
     <div class="container-fluid">
         <!-- Filter Card -->
         <div class="card border-0 shadow-sm mb-4">
 
             <div class="card-header bg-gradient-primary text-white shadow-sm">
-                    <div class="d-flex flex-column flex-md-row justify-content-between align-items-center p-3">
-                        <div class="mb-2 mb-md-0">
-                            <h3 class="fw-bold mb-0">
-                                <i class="fas fa-user-tie me-2"></i>Employee Performance Report
-                            </h3>
-                        </div>
-                        
-                        <div class="d-flex flex-wrap gap-2">
-                            @if(Auth::user()->isSuperAdmin() || Auth::user()->isHR())
-                            <a href="{{ route('divanj.narrative.report.all') }}" class="btn btn-light text-primary shadow-sm" id="narrativeReportAllBtn">
-                                <i class="fas fa-user me-2"></i>Report For All
-                            </a>
-                            @endif
-                        </div>
+                <div class="d-flex flex-column flex-md-row justify-content-between align-items-center p-3">
+                    <div class="mb-2 mb-md-0">
+                        <h3 class="fw-bold mb-0">
+                            <i class="fas fa-user-tie me-2"></i>Narrative Report for All
+                        </h3>
+                    </div>                        
+                    <div class="d-flex flex-wrap gap-2">
+                        <a href="{{ route('divanj.narrative.report') }}" class="btn btn-light text-primary shadow-sm" id="narrativeReportAllBtn">
+                            <i class="fas fa-user me-2"></i>Back to Individual Report
+                        </a>
                     </div>
                 </div>
+            </div>            
+        </div>
 
-            
-            <div class="card-body">
+        <div class="card-header">
                 <form method="GET" class="report-filter">
                     <div class="row g-3 align-items-end">
-                        <div class="col-md-4">
-                            <label class="form-label small text-uppercase fw-bold">Select Employee</label>
-                            <select name="employee_id" class="form-select form-select-lg" required>
-                                <option value="">Choose employee...</option>
-                                @foreach($employees as $emp)
-                                    <option value="{{ $emp->id }}" {{ request('employee_id') == $emp->id ? 'selected' : '' }}>
-                                        {{ $emp->stage_name }}
-                                    </option>
-                                @endforeach
-                            </select>
-                        </div>
                         <div class="col-md-3">
                             <label class="form-label small text-uppercase fw-bold">Start Date</label>
                             <input type="date" name="start_date" value="{{ $startDate }}" class="form-control form-control-lg">
@@ -59,19 +48,19 @@
             </div>
         </div>
 
-        @isset($employee)
+
         <!-- Summary Card -->
         <div class="card border-0 shadow-sm mb-4">
             <div class="card-header bg-white border-bottom">
                 <h4 class="mb-0 text-primary">
-                    <i class="fas fa-file-alt me-2"></i>Performance Summary
+                    <i class="fas fa-users me-2"></i>Team Performance Summary
                 </h4>
             </div>
             <div class="card-body">
                 <div class="row">
                     <div class="col-md-6">
                         <div class="performance-stats p-4 rounded bg-light mb-4">
-                            <h5 class="text-center mb-4">{{ $employee->stage_name }}</h5>
+                            <h5 class="text-center mb-4">Overall Team Performance</h5>
                             <div class="d-flex justify-content-between border-bottom pb-2 mb-2">
                                 <span>Reporting Period:</span>
                                 <strong>{{ $startDate }} to {{ $endDate }}</strong>
@@ -85,7 +74,7 @@
                                 <strong>${{ number_format($totalSalesAmount) }}</strong>
                             </div>
                             <div class="d-flex justify-content-between">
-                                <span>Attendance:</span>
+                                <span>Attendance Summary:</span>
                                 <div>
                                     <span class="badge bg-warning text-dark">{{ $lateDays }} late</span>
                                     <span class="badge bg-danger">{{ $absentDays }} absent</span>
@@ -103,9 +92,9 @@
                             <h3 class="text-white">{{ $topWineType['wine_type'] }}</h3>
                             <p class="text-white display-6 mb-1">{{ $topWineType['total_qty'] }} bottles sold</p>
                             @if(!empty($topWineType['examples']))
-                            <p class="small text-grey mt-2 mb-0">
+                            <p class="small text-white-70 mt-2 mb-0">
                                 <i class="fas fa-wine-bottle me-1"></i> 
-                                Featured products: {{ implode(', ', $topWineType['examples']) }}
+                                Examples: {{ implode(', ', $topWineType['examples']) }}
                             </p>
                             @endif
                         </div>
@@ -144,7 +133,7 @@
                                 
                                 @if($bestDayOfWeek && $worstDayOfWeek)
                                 <div class="mt-4 pt-3 border-top">
-                                    <h6>Weekly Pattern</h6>
+                                    <h6>Weekday Performance Pattern</h6>
                                     <div class="d-flex justify-content-between">
                                         <span class="badge bg-success">{{ $bestDayOfWeek }} (strongest)</span>
                                         <span class="badge bg-danger">{{ $worstDayOfWeek }} (weakest)</span>
@@ -158,14 +147,14 @@
                     <div class="col-md-6">
                         <div class="card border-0 shadow-sm h-100">
                             <div class="card-header bg-white">
-                                <h5 class="mb-0"><i class="fas fa-clock me-2"></i>Hourly Performance</h5>
+                                <h5 class="mb-0"><i class="fas fa-clock me-2"></i>Hourly Insights</h5>
                             </div>
                             <div class="card-body">
                                 @if($bestHourFormatted && $worstHourFormatted)
                                 <div class="text-center mb-4">
-                                    <h6>Peak Sales Time</h6>
+                                    <h6>Peak Time</h6>
                                     <div class="display-4 text-primary mb-3">{{ $bestHourFormatted }}</div>
-                                    <p class="small">Most productive time on weekdays</p>
+                                    <p class="small">Highest weekday sales hour</p>
                                 </div>
                                 <div class="text-center">
                                     <h6>Lowest Activity</h6>
@@ -179,11 +168,11 @@
             </div>
         </div>
 
-        <!-- Data Visualization -->
+        <!-- Team Sales Chart & Table -->
         <div class="card border-0 shadow-sm mb-4">
             <div class="card-header bg-white">
                 <h4 class="mb-0 text-primary">
-                    <i class="fas fa-chart-bar me-2"></i>Sales Trend & Details
+                    <i class="fas fa-chart-bar me-2"></i>Sales Trend & Breakdown
                 </h4>
             </div>
             <div class="card-body">
@@ -223,74 +212,42 @@
                 </div>
             </div>
         </div>
-        @endisset
+
     </div>
 </div>
+
+@endif <!-- Admin Access Only  -->
+
 @endsection
 
 @section('js')
 @if(isset($sales) && $sales->isNotEmpty())
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    // Sales Chart
+document.addEventListener('DOMContentLoaded', function () {
     const ctx = document.getElementById('salesChart').getContext('2d');
     new Chart(ctx, {
         type: 'bar',
         data: {
             labels: {!! json_encode($sales->pluck('date')) !!},
             datasets: [{
-                label: 'Daily Sales',
+                label: 'Sales Quantity',
                 data: {!! json_encode($sales->pluck('total_qty')) !!},
-                backgroundColor: 'rgba(75, 192, 192, 0.7)',
-                borderColor: 'rgba(75, 192, 192, 1)',
-                borderWidth: 1,
-                borderRadius: 4
+                backgroundColor: 'rgba(54, 162, 235, 0.7)',
+                borderColor: 'rgba(54, 162, 235, 1)',
+                borderWidth: 1
             }]
         },
         options: {
             responsive: true,
             maintainAspectRatio: false,
-            plugins: {
-                legend: {
-                    display: false
-                },
-                tooltip: {
-                    backgroundColor: '#333',
-                    titleFont: { size: 14 },
-                    bodyFont: { size: 12 },
-                    callbacks: {
-                        label: function(context) {
-                            return `${context.raw} cases sold`;
-                        }
-                    }
-                }
-            },
             scales: {
                 y: {
                     beginAtZero: true,
-                    grid: {
-                        color: 'rgba(0,0,0,0.05)'
-                    },
-                    title: {
-                        display: true,
-                        text: 'Number of Cases',
-                        font: {
-                            weight: 'bold'
-                        }
-                    }
+                    title: { display: true, text: 'Cases' }
                 },
                 x: {
-                    grid: {
-                        display: false
-                    },
-                    title: {
-                        display: true,
-                        text: 'Date',
-                        font: {
-                            weight: 'bold'
-                        }
-                    }
+                    title: { display: true, text: 'Date' }
                 }
             }
         }

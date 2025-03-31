@@ -18,12 +18,12 @@
     <!-- To/From -->
     <div class="row mb-4">
         <div class="col-md-6">
-            <h5 class="fw-bold">Invoice To:</h5>
-            <p>
-                {{ $invoice->client->company }}<br>
-                {{ $invoice->client->kdm }}<br>
-                {{ $invoice->client->address }}
-            </p>
+        <h5 class="fw-bold">Invoice To:</h5>
+        <p>
+            {{ $invoice->client->agency ?? $invoice->client->company }}<br>
+            {{ $invoice->client->kdm }}<br>
+            {{ $invoice->client->address ?? '' }}
+        </p>
         </div>
         <div class="col-md-6 text-end">
             <h5 class="fw-bold">From:</h5>

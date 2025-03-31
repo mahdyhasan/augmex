@@ -21,7 +21,6 @@ use App\Models\Expense;
 use App\Models\ExpenseCategory;
 use App\Models\FixedAsset;
 use App\Models\Invoice;
-use App\Models\Liability;
 use App\Models\Payroll;
 use App\Models\PettyCash;
 use App\Models\TaxPayment;
@@ -58,6 +57,7 @@ class ClientController extends Controller
         // ]);
 
         $client = new Client();
+        $client->agency = $request->agency;
         $client->company = $request->company_name;
         $client->country = $request->country;
         $client->kdm = $request->kdm;
@@ -100,6 +100,7 @@ class ClientController extends Controller
     
         // Find the client
         $client = Client::findOrFail($id);
+        $client->agency = $request->agency;
         $client->company = $request->company_name;
         $client->country = $request->country;
         $client->kdm = $request->kdm;

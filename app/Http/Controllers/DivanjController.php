@@ -31,7 +31,6 @@ use App\Models\ExpenseCategory;
 use App\Models\FixedAsset;
 use App\Models\Invoice;
 use App\Models\InvoiceItem;
-use App\Models\Liability;
 use App\Models\Payroll;
 use App\Models\PettyCash;
 use App\Models\TaxPayment;
@@ -76,25 +75,46 @@ class DivanjController extends Controller
      
          // COMMISISON FOR DIVANJ
      
-         public function generateDivanjCommission(Request $request)
-         {   
+         public function generateCommissionDivanj(Request $request)
+         {
              $request->validate([
                  'start_date' => 'required|date',
                  'end_date'   => 'required|date|after_or_equal:start_date',
              ]);
-     
+         
              $start = Carbon::parse($request->start_date)->startOfDay();
-             $end   = Carbon::parse($request->end_date)->endOfDay();
-     
-             $employees = Employee::all();
-     
+             $end = Carbon::parse($request->end_date)->endOfDay();
+         
+             // Process week by week
+             $currentStart = $start->copy();
+             while ($currentStart <= $end) {
+                 $currentEnd = $currentStart->copy()->endOfWeek(); // Sunday end of day
+                 
+                 // Don't process beyond the requested end date
+                 if ($currentEnd > $end) {
+                     $currentEnd = $end;
+                 }
+         
+                 $this->processCommissionForWeek($currentStart, $currentEnd);
+         
+                 // Move to next week
+                 $currentStart = $currentEnd->copy()->addDay()->startOfDay();
+             }
+         
+             return redirect()->route('divanj.commission.index')->with('success', 'Commission generated successfully.');
+         }
+         
+         protected function processCommissionForWeek($weekStart, $weekEnd)
+         {
+            $employees = Employee::where('client_id', 1)->get();
+         
              foreach ($employees as $employee) {
-                 $hiring_date = Carbon::parse($employee->hiring_date);
-                 $months_with_company = $hiring_date->diffInMonths($start);
+                 $hiring_date = Carbon::parse($employee->date_of_hire);
+                 $months_with_company = $hiring_date->diffInMonths($weekStart);
                  $target = $months_with_company <= 2 ? 15 : 25;
              
-                 $sales = EmployeeSales::where('employee_id', $employee->id)
-                     ->whereBetween('date', [$start, $end])
+                 $sales = DivanjSale::where('employee_id', $employee->id)
+                     ->whereBetween('date', [$weekStart, $weekEnd])
                      ->get();
              
                  $weekday_qty = 0;
@@ -103,109 +123,147 @@ class DivanjController extends Controller
                  $weekend_amount = 0;
              
                  foreach ($sales as $sale) {
-                     $day = Carbon::parse($sale->sale_date)->format('N');
-                     if ($day <= 5) {
-                         $weekday_qty += $sale->sales_qty;
-                         $weekday_amount += $sale->sales_amount;
+                     $saleDate = Carbon::parse($sale->date);
+                     if ($saleDate->isWeekday()) {
+                         $weekday_qty += $sale->quantity;
+                         $weekday_amount += $sale->total;
                      } else {
-                         $weekend_qty += $sale->sales_qty;
-                         $weekend_amount += $sale->sales_amount;
+                         $weekend_qty += $sale->quantity;
+                         $weekend_amount += $sale->total;
                      }
                  }
              
-                 $achieved_qty = $weekday_qty + $weekend_qty;
-             
-                 // ---- Option A: Base + Extra Weekend Bonus ----
-                 $optionA = 0;
-                 if ($achieved_qty >= $target) {
-                     $optionA += 50;
-             
-                     $extra_units = $achieved_qty - $target;
-             
-                     if ($extra_units > 0 && $weekend_qty > 0) {
-                         $weekend_sales = $sales->filter(function ($s) {
-                             return Carbon::parse($s->sale_date)->isWeekend();
-                         });
-             
-                         $weekend_units_collected = 0;
-                         $extra_units_value = 0;
-             
-                         foreach ($weekend_sales as $sale) {
-                             if ($weekend_units_collected >= $extra_units) break;
-             
-                             $units_to_add = min($extra_units - $weekend_units_collected, $sale->sales_qty);
-                             $unit_price = $sale->sales_amount / $sale->sales_qty;
-             
-                             $extra_units_value += $units_to_add * $unit_price;
-                             $weekend_units_collected += $units_to_add;
-                         }
-             
-                         $optionA += round($extra_units_value * 0.06, 2);
-                     }
-                 }
-             
-                 // ---- Option B: 6% of all weekend sales ----
-                 $optionB = round($weekend_amount * 0.06, 2);
-             
-                 // ---- Final Commission ----
+                 $total_qty = $weekday_qty + $weekend_qty;
+                 $total_amount = $weekday_amount + $weekend_amount;
+                 
+                 // Calculate base commission based on slabs
+                 $base_commission = $this->calculateBaseCommission($total_qty, $total_amount);
+                 
+                 // Option A: Base + Weekend Bonus (6% of weekend sales)
+                 $optionA = $base_commission + ($weekend_amount * 0.06);
+                 
+                 // Option B: Mixed (use weekend units to meet target if needed)
+                 $optionB = $this->calculateMixedOption($weekday_qty, $weekday_amount, $weekend_qty, $weekend_amount, $target, $total_amount);
+                 
+                 // Option C: Weekend Only (6% of all weekend sales)
+                 $optionC = $weekend_amount * 0.06;
+                 
+                 // Determine the best option
                  $commission_options = [
-                     'mixed' => $optionA,
-                     'weekend' => $optionB
+                     'fixed' => $optionA,
+                     'mixed' => $optionB,
+                     'weekend' => $optionC
                  ];
-             
+                 
                  $max_type = array_keys($commission_options, max($commission_options))[0];
                  $final_commission = $commission_options[$max_type];
-             
-     
+                 
                  // Save to DB
                  DivanjCommission::updateOrCreate(
                      [
                          'employee_id' => $employee->id,
-                         'start_date'  => $start->toDateString(),
-                         'end_date'    => $end->toDateString(),
+                         'start_date'  => $weekStart->toDateString(),
+                         'end_date'    => $weekEnd->toDateString(),
                      ],
                      [
-                         'target'               => $target,
-                         'achieved_qty'         => $achieved_qty,
-                         'weekday_sales_qty'    => $weekday_qty,
+                         'target' => $target,
+                         'achieved_qty' => $total_qty,
+                         'weekday_sales_qty' => $weekday_qty,
                          'weekday_sales_amount' => $weekday_amount,
-                         'weekend_sales_qty'    => $weekend_qty,
+                         'weekend_sales_qty' => $weekend_qty,
                          'weekend_sales_amount' => $weekend_amount,
-                         'commission_type'      => $max_type,
-                         'commission_amount'    => $final_commission,
+                         'base_commission' => $base_commission,
+                         'option_a_amount' => $optionA,
+                         'option_b_amount' => $optionB,
+                         'option_c_amount' => $optionC,
+                         'commission_type' => $max_type,
+                         'commission_amount' => $final_commission,
                      ]
                  );
              }
-     
-             return redirect()->route('divanj.commission.index')->with('success', 'Commission generated successfully.');
          }
          
-         
-         public function editDivanjCommission($id)
+         protected function calculateBaseCommission($total_qty, $total_amount)
          {
-             $commission = DivanjCommission::with('employee')->findOrFail($id);
-             return view('divanj.commission_edit', compact('commission'));
+             if ($total_qty < 15) {
+                 return 0; // No commission if target not met
+             } elseif ($total_qty < 35) {
+                 return 50; // Base commission
+             } elseif ($total_qty < 50) {
+                 return 75; // 35-45 units
+             } elseif ($total_qty < 60) {
+                 return max(100, $total_amount * 0.03); // 50-55 units
+             } else {
+                 return max(125, $total_amount * 0.04); // 60+ units
+             }
          }
+         
+         protected function calculateMixedOption($weekday_qty, $weekday_amount, $weekend_qty, $weekend_amount, $target, $total_amount)
+         {
+             $shortfall = max(0, $target - $weekday_qty);
+             
+             if ($shortfall == 0) {
+                 // If weekday sales meet target, same as Option A
+                 $base_commission = $this->calculateBaseCommission($weekday_qty, $total_amount);
+                 return $base_commission + ($weekend_amount * 0.06);
+             }
+             
+             // Calculate how much weekend units we need to take to meet target
+             $weekend_units_used = min($shortfall, $weekend_qty);
+             $remaining_weekend_qty = $weekend_qty - $weekend_units_used;
+             
+             // Calculate base commission with the combined units
+             $combined_qty = $weekday_qty + $weekend_units_used;
+             $base_commission = $this->calculateBaseCommission($combined_qty, $total_amount);
+             
+             // Calculate 6% of remaining weekend sales
+             if ($remaining_weekend_qty > 0 && $weekend_amount > 0) {
+                 $weekend_unit_price = $weekend_amount / $weekend_qty;
+                 $remaining_weekend_amount = $remaining_weekend_qty * $weekend_unit_price;
+                 $weekend_bonus = $remaining_weekend_amount * 0.06;
+             } else {
+                 $weekend_bonus = 0;
+             }
+             
+             return $base_commission + $weekend_bonus;
+         }         
+         
+        //  public function editDivanjCommission($id)
+        //  {
+        //      $commission = DivanjCommission::with('employee')->findOrFail($id);
+        //      return view('divanj.commission_edit', compact('commission'));
+        //  }
              
          
-         public function updateDivanjCommission(Request $request, $id)
-         {
-             $request->validate([
-                 'commission_amount' => 'required|numeric|min:0',
-                 'commission_type'   => 'required|string|in:fixed,mixed,weekend',
-             ]);
+        //  public function updateDivanjCommission(Request $request, $id)
+        //  {
+        //      $request->validate([
+        //          'commission_amount' => 'required|numeric|min:0',
+        //          'commission_type'   => 'required|string|in:fixed,mixed,weekend',
+        //      ]);
      
-             $commission = DivanjCommission::findOrFail($id);
+        //      $commission = DivanjCommission::findOrFail($id);
      
-             $commission->commission_amount = $request->commission_amount;
-             $commission->commission_type = $request->commission_type;
-             $commission->save();
+        //      $commission->commission_amount = $request->commission_amount;
+        //      $commission->commission_type = $request->commission_type;
+        //      $commission->save();
      
-             return redirect()->route('divanj.commission.index')->with('success', 'Commission updated successfully.');
-         }
+        //      return redirect()->route('divanj.commission.index')->with('success', 'Commission updated successfully.');
+        //  }
      
-    
-         
+
+        public function salesCommissionForAgent()
+        {
+            // Get commissions for the currently authenticated agent who belongs to client_id = 1
+            $commissions = DivanjCommission::whereHas('employee', function($query) {
+                                $query->where('client_id', 1);
+                            })
+                            ->where('employee_id', auth()->user()->id)
+                            ->orderBy('start_date', 'desc')
+                            ->get();
+        
+            return view('divanj.commission_table', compact('commissions'));
+        }
 
 
     

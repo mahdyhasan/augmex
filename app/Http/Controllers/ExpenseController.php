@@ -21,7 +21,6 @@ use App\Models\Expense;
 use App\Models\ExpenseCategory;
 use App\Models\FixedAsset;
 use App\Models\Invoice;
-use App\Models\Liability;
 use App\Models\Payroll;
 use App\Models\PettyCash;
 use App\Models\TaxPayment;

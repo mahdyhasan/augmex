@@ -14,4 +14,11 @@ class Payroll extends Model
     {
         return $this->belongsTo(Employee::class);
     }
+
+    protected $casts = [
+        'pay_period_start' => 'date',
+        'pay_period_end' => 'date',
+        'payment_date' => 'datetime', 
+    ];
+    
 }

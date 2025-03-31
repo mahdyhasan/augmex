@@ -22,7 +22,6 @@ use App\Models\Expense;
 use App\Models\ExpenseCategory;
 use App\Models\FixedAsset;
 use App\Models\Invoice;
-use App\Models\Liability;
 use App\Models\Payroll;
 use App\Models\PettyCash;
 use App\Models\TaxPayment;
@@ -32,6 +31,15 @@ use App\Models\User;
 class AccountController extends Controller
 {
 
+
+    // Fixed exchange rates
+    protected $exchangeRates = [
+        'USD' => 120,
+        'EUR' => 130,
+        'GBP' => 145,
+        'AUD' => 75,
+        'BDT' => 1
+    ];
     
     public function __construct()
     {
@@ -237,64 +245,6 @@ class AccountController extends Controller
         }
 
 
-        // List all liabilities
-        public function liabilitiesIndex()
-        {
-            $liabilities = Liability::with('account')->orderBy('due_date', 'asc')->get();
-            $accounts = Account::all(); // Fetch accounts for dropdown selection
-            return view('liabilities.index', compact('liabilities', 'accounts'));
-        }
-
-        // Store a new liability record
-        public function liabilitiesStore(Request $request)
-        {
-            // $request->validate([
-            //     'account_id' => 'required|exists:accounts,id',
-            //     'amount' => 'required|numeric|min:0',
-            //     'interest_rate' => 'nullable|numeric|min:0|max:100',
-            //     'start_date' => 'required|date',
-            //     'due_date' => 'required|date|after_or_equal:start_date',
-            //     'status' => 'required|string|max:50',
-            // ]);
-
-            Liability::create($request->all());
-
-            return redirect()->route('liabilities.index')->with('success', 'Liability added successfully.');
-        }
-
-        // Edit liability record
-        public function liabilitiesEdit($id)
-        {
-            $liability = Liability::findOrFail($id);
-            $accounts = Account::all();
-            return view('liabilities.edit', compact('liability', 'accounts'));
-        }
-
-        // Update liability record
-        public function liabilitiesUpdate(Request $request, $id)
-        {
-            // $request->validate([
-            //     'account_id' => 'required|exists:accounts,id',
-            //     'amount' => 'required|numeric|min:0',
-            //     'interest_rate' => 'nullable|numeric|min:0|max:100',
-            //     'start_date' => 'required|date',
-            //     'due_date' => 'required|date|after_or_equal:start_date',
-            //     'status' => 'required|string|max:50',
-            // ]);
-
-            $liability = Liability::findOrFail($id);
-            $liability->update($request->all());
-
-            return redirect()->route('liabilities.index')->with('success', 'Liability updated successfully.');
-        }
-
-        // Delete liability record
-        public function liabilitiesDestroy($id)
-        {
-            Liability::findOrFail($id)->delete();
-            return redirect()->route('liabilities.index')->with('success', 'Liability deleted successfully.');
-        }
-
 
 
 
@@ -351,7 +301,64 @@ class AccountController extends Controller
 
 
 
+    public function incomeStatement(Request $request)
+    {
 
+        // Access control: allow only Admins and users whose employee->client_id equals 1
+        if (!(Auth::user()->isSuperAdmin() )) {
+            abort(403, 'Unauthorized access');
+        }
+
+        $validated = $request->validate([
+            'start_date' => 'sometimes|date',
+            'end_date' => 'sometimes|date|after_or_equal:start_date'
+        ]);
+
+        // Default to current month if no dates provided
+        $startDate = $request->input('start_date') ? Carbon::parse($request->input('start_date')) : now()->startOfMonth();
+        $endDate = $request->input('end_date') ? Carbon::parse($request->input('end_date')) : now()->endOfMonth();
+
+        // Get revenue data with currency conversion
+        $revenuePayments = ClientPayment::with(['invoice.client.clientConditions'])
+            ->whereBetween('payment_date', [$startDate, $endDate])
+            ->get();
+
+        // Calculate revenue in original currency and BDT
+        $revenueOriginal = 0;
+        $revenueBdt = 0;
+
+        foreach ($revenuePayments as $payment) {
+            $currency = optional(optional($payment->invoice)->client)->clientConditions->first()->currency ?? 'USD';
+            $revenueOriginal += $payment->amount;
+            $revenueBdt += $payment->amount * ($this->exchangeRates[$currency] ?? 1);
+        }
+
+        // Get expenses by category (assuming expenses are in BDT)
+        $expensesByCategory = ExpenseCategory::with(['expenses' => function($query) use ($startDate, $endDate) {
+                $query->whereBetween('expense_date', [$startDate, $endDate]);
+            }])
+            ->get()
+            ->map(function($category) {
+                return [
+                    'name' => $category->name,
+                    'amount' => $category->expenses->sum('amount')
+                ];
+            });
+
+        $totalExpenses = $expensesByCategory->sum('amount');
+        $netIncome = $revenueBdt - $totalExpenses;
+
+        return view('accounts.incomeStatement', [
+            'startDate' => $startDate->format('Y-m-d'),
+            'endDate' => $endDate->format('Y-m-d'),
+            'revenueOriginal' => $revenueOriginal,
+            'revenueBdt' => $revenueBdt,
+            'expensesByCategory' => $expensesByCategory,
+            'totalExpenses' => $totalExpenses,
+            'netIncome' => $netIncome,
+            'exchangeRates' => $this->exchangeRates
+        ]);
+        }
 
 
 

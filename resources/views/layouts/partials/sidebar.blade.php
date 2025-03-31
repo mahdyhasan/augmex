@@ -70,7 +70,6 @@
                             <li><a href="{{ route('expenses.index') }}">All Expenses</a></li>
                             <li><a href="{{ route('bank_accounts.index') }}">Bank Account</a></li>
                             <li><a href="{{ route('fixed_assets.index') }}">Fixed Assets</a></li>
-                            <li><a href="{{ route('liabilities.index') }}">Liabilities</a></li>
                             <li><a href="{{ route('tax_payments.index') }}">Tax Payment</a></li>
                             <li><a href="{{ route('petty_cash.index') }}">Petty Cash</a></li>
                             <hr>
@@ -109,8 +108,8 @@
                             <li><a href="{{ route('attendance.index') }}">Attendance</a></li>
                             <li><a href="{{ route('divanj.sales.report') }}">Sales Report</a></li>
                             <li><a href="{{ route('divanj.narrative.report') }}">Narrative Report</a></li>
-                            <li><a href="">Commission</a></li>
-                        </ul>
+                            <li><a href="{{ route('divanj.agent.commission.history') }}">Commission History</a></li>
+                            </ul>
                     </li>
                     @endif
         

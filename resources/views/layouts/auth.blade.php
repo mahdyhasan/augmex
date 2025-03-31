@@ -19,8 +19,8 @@
     <link rel="apple-touch-icon" sizes="180x180" href="{{ asset('public/assets/img/apple-touch-icon.png') }}">
 
     <!-- Favicon -->
-    <link rel="icon" href="{{ asset('public/assets/img/favicon.png') }}" type="image/x-icon">
-    <link rel="shortcut icon" type="image/x-icon" href="{{ asset('public/assets/img/favicon.png') }}">
+    <link rel="icon" href="{{ asset('public/assets/img/favicon.ico') }}" type="image/x-icon">
+    <link rel="shortcut icon" type="image/x-icon" href="{{ asset('public/assets/img/favicon.ico') }}">
 
     <!-- Bootstrap CSS -->
     <link rel="stylesheet" href="{{ asset('public/assets/css/bootstrap.min.css') }}">

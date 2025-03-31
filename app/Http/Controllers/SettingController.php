@@ -82,21 +82,39 @@ class SettingController extends Controller
      * @param  int  $id
      * @return \Illuminate\Http\RedirectResponse
      */
+
     public function update(Request $request, $id)
     {
         $user = User::findOrFail($id);
-
-        $user->name = $request->input('name');
-        $user->email = $request->input('email');
-          $user->phone = $request->input('phone');
-        $user->user_type_id = $request->input('user_type_id'); // Update user type
+    
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+            'email' => 'required|email|unique:users,email,'.$user->id,
+            'phone' => 'required|string|max:20|unique:users,phone,'.$user->id,
+            'user_type_id' => 'required|exists:user_types,id',
+            'status' => 'required|in:1,0', 
+            'password' => 'nullable|string|min:6|confirmed',
+        ]);
+    
+        $user->name = $validated['name'];
+        $user->email = $validated['email'];
+        $user->phone = $validated['phone'];
+        $user->status = $validated['status']; 
+        $user->user_type_id = $validated['user_type_id'];
+    
+        // Update password if provided
+        if (!empty($validated['password'])) {
+            $user->password = Hash::make($validated['password']);
+        }
+    
         $user->save();
-
+    
         Session::flash('success', 'User updated successfully.');
         return redirect()->route('user.index');
     }
 
-    /**
+    
+        /**
      * Show the form for changing the user's password.
      *
      * @return \Illuminate\View\View

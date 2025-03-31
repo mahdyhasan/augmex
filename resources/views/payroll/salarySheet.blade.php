@@ -1,87 +1,128 @@
 @extends('layouts.app')
 
-@section('title', 'Company Salary Sheet')
+@section('title', 'Salary Sheet')
 
 @section('content')
-<div class="container">
-    <div class="d-flex justify-content-between align-items-center mb-3">
-        <h3>Company Salary Sheet</h3>
-        <a href="{{ route('payrolls.index') }}" class="btn btn-secondary">Back</a>
-    </div>
-
-    <form action="{{ route('payrolls.salary.sheet') }}" method="GET" class="mb-4">
-        <div class="row">
-            <div class="col-md-4">
-                <label class="form-label">Select Month:</label>
-                <input type="month" name="month" value="{{ request('month') }}" class="form-control" required>
-            </div>
-            <div class="col-md-4 align-self-end">
-                <button type="submit" class="btn btn-primary">Filter</button>
+<div class="content-wrapper">
+    <div class="container-fluid">
+        <div class="card">
+        <div class="card-header">
+            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                <!-- Title -->
+                <h3 class="mb-0">Salary Sheet</h3>
                 
-                <a href="{{ route('payrolls.salary.sheet.export', ['format' => 'csv', 'month' => request('month')]) }}" class="btn btn-success">Export CSV</a>
-
-                <a href="{{ route('payrolls.salary.sheet.export', ['format' => 'pdf', 'month' => request('month')]) }}" class="btn btn-danger">Export PDF</a>
-
-                <a href="{{ route('payrolls.salary.sheet.print', ['month' => request('month')]) }}" target="_blank" class="btn btn-dark">
-                    <i class="fas fa-print"></i> Print</a>
-
+                <!-- Action Buttons Group -->
+                <div class="d-flex align-items-center flex-wrap gap-2">
+                    <!-- Month Filter -->
+                    <form action="{{ route('payrolls.salary.sheet') }}" method="GET" class="d-flex">
+                        <input type="month" name="month" class="form-control me-2" 
+                            value="{{ request('month', \Carbon\Carbon::now()->format('Y-m')) }}">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-filter"></i> Filter
+                        </button>
+                    </form>
+                    
+                    <!-- Export Options -->
+                    <div class="dropdown">
+                        <button class="btn btn-success dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                            <i class="fas fa-file-export"></i> Export
+                        </button>
+                        <ul class="dropdown-menu">
+                            <li>
+                                <form action="{{ route('payrolls.salary.sheet.export') }}" method="GET" class="px-2 py-1">
+                                    <input type="hidden" name="month" value="{{ request('month') }}">
+                                    <input type="hidden" name="format" value="pdf">
+                                    <button type="submit" class="dropdown-item">
+                                        <i class="fas fa-file-pdf text-danger me-2"></i> PDF
+                                    </button>
+                                </form>
+                            </li>
+                            <li>
+                                <form action="{{ route('payrolls.salary.sheet.export') }}" method="GET" class="px-2 py-1">
+                                    <input type="hidden" name="month" value="{{ request('month') }}">
+                                    <input type="hidden" name="format" value="csv">
+                                    <button type="submit" class="dropdown-item">
+                                        <i class="fas fa-file-csv text-success me-2"></i> CSV
+                                    </button>
+                                </form>
+                            </li>
+                        </ul>
+                    </div>
+                    
+                    <!-- Cash Signature Sheet -->
+                    <div class="dropdown">
+                        <button class="btn btn-info dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                            <i class="fas fa-file-signature"></i> Signature Sheet
+                        </button>
+                        <ul class="dropdown-menu">
+                            <li>
+                                <a class="dropdown-item" href="{{ route('payrolls.cash.signature', ['month' => request('month'), 'format' => 'pdf']) }}">
+                                    <i class="fas fa-file-pdf text-danger me-2"></i> PDF
+                                </a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item" href="{{ route('payrolls.cash.signature', ['month' => request('month'), 'format' => 'csv']) }}">
+                                    <i class="fas fa-file-csv text-success me-2"></i> CSV
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
             </div>
         </div>
-    </form>
-
-    <div class="table-responsive">
-        <table class="table table-striped table-hover" id="salarySheetTable">
-            <thead class="table-dark">
-                <tr>
-                    <th>Employee Name</th>
-                    <th>Position</th>
-                    <th>Base Salary</th>
-                    <th>Bonuses</th>
-                    <th>Commission</th>
-                    <th>Transport</th>
-                    <th>Others</th>
-                    <th>Deductions</th>
-                    <th>Net Salary</th>
-                    <th>Status</th>
-                    <th>Payment Date</th>
-                </tr>
-            </thead>
-            <tbody>
-                @foreach ($payrolls as $payroll)
-                    <tr>
-                        <td>{{ $payroll->employee->user->name ?? 'N/A' }}</td>
-                        <td>{{ $payroll->employee->position ?? '-' }}</td>
-                        <td>{{ number_format($payroll->base_salary, 2) }}</td>
-                        <td>{{ number_format($payroll->bonuses, 2) }}</td>
-                        <td>{{ number_format($payroll->commission, 2) }}</td>
-                        <td>{{ number_format($payroll->transport, 2) }}</td>
-                        <td>{{ number_format($payroll->others, 2) }}</td>
-                        <td class="text-danger">{{ number_format($payroll->deductions, 2) }}</td>
-                        <td class="text-success">{{ number_format($payroll->net_salary, 2) }}</td>
-                        <td>
-                            <span class="badge {{ $payroll->payment_status == 'paid' ? 'bg-success' : 'bg-warning' }}">
-                                {{ ucfirst($payroll->payment_status) }}
-                            </span>
-                        </td>
-                        <td>{{ $payroll->payment_date ? \Carbon\Carbon::parse($payroll->payment_date)->format('Y-m-d') : '-' }}</td>
-                    </tr>
-                @endforeach
-            </tbody>
-        </table>
+            <div class="card-body">
+                @if($payrolls->isEmpty())
+                    <div class="alert alert-info">No payroll data found for the selected period.</div>
+                @else
+                    <div class="alert alert-info">
+                        Showing payroll for period: 
+                        {{ \Carbon\Carbon::parse($payrolls->first()->pay_period_start)->format('d M Y') }} to 
+                        {{ \Carbon\Carbon::parse($payrolls->first()->pay_period_end)->format('d M Y') }}
+                    </div>
+                    
+                    <table class="table table-bordered table-striped">
+                        <thead class="thead-dark">
+                            <tr>
+                                <th>Sl</th>
+                                <th>Employee Name</th>
+                                <th>Department</th>
+                                <th>Position</th>
+                                <th>Gross Salary</th>
+                                <th>Transport</th>
+                                <th>Commission</th>
+                                <th>Bonus</th>
+                                <th>Total Salary</th>
+                                <th>Deductions</th>
+                                <th>Net Salary</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach($payrolls as $index => $payroll)
+                            <tr>
+                                <td>{{ $index + 1 }}</td>
+                                <td>{{ $payroll->employee->user->name ?? 'N/A' }}</td>
+                                <td>{{ $payroll->employee->department ?? '-' }}</td>
+                                <td>{{ $payroll->employee->position ?? '-' }}</td>
+                                <td class="text-right">{{ number_format($payroll->base_salary, 2) }}</td>
+                                <td class="text-right">{{ number_format($payroll->transport, 2) }}</td>
+                                <td class="text-right">{{ number_format($payroll->commission, 2) }}</td>
+                                <td class="text-right">{{ number_format($payroll->bonuses, 2) }}</td>
+                                <td class="text-right">{{ number_format($payroll->base_salary + $payroll->transport + $payroll->commission + $payroll->bonuses, 2) }}</td>
+                                <td class="text-right">{{ number_format($payroll->deductions, 2) }}</td>
+                                <td class="text-right">{{ number_format($payroll->net_salary, 2) }}</td>
+                                <td>
+                                    <span class="badge badge-{{ $payroll->payment_status == 'paid' ? 'success' : 'warning' }}">
+                                        {{ ucfirst($payroll->payment_status) }}
+                                    </span>
+                                </td>
+                            </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                @endif
+            </div>
+        </div>
     </div>
 </div>
-@endsection
-
-@section('script')
-<script src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js"></script>
-<script src="https://cdn.datatables.net/1.11.5/js/dataTables.bootstrap5.min.js"></script>
-<script>
-    $(document).ready(function() {
-        $('#salarySheetTable').DataTable({
-            "paging": true,
-            "ordering": true,
-            "info": true
-        });
-    });
-</script>
 @endsection

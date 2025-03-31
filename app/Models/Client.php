@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Model;
 class Client extends Model
 {
     use HasFactory;
-    protected $fillable = ['kdm', 'company', 'country', 'status'];
+    protected $fillable = ['kdm', 'company', 'country', 'status', 'agency'];
     
     public function invoices()
     {

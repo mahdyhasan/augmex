@@ -85,6 +85,7 @@
                                         id="department"
                                     >
                                         <option value="">Select Department</option>
+                                        <option value="Management" {{ old('department', $employee->department) == 'Management' ? 'selected' : '' }}>Management</option>
                                         <option value="HR" {{ old('department', $employee->department) == 'HR' ? 'selected' : '' }}>HR</option>
                                         <option value="IT" {{ old('department', $employee->department) == 'IT' ? 'selected' : '' }}>IT</option>
                                         <option value="Finance" {{ old('department', $employee->department) == 'Finance' ? 'selected' : '' }}>Finance</option>
@@ -110,6 +111,7 @@
                                         <option value="Team Leader" {{ old('position', $employee->position) == 'Team Leader' ? 'selected' : '' }}>Team Leader</option>
                                         <option value="Sr. Executive" {{ old('position', $employee->position) == 'Sr. Executive' ? 'selected' : '' }}>Sr. Executive</option>
                                         <option value="Executive" {{ old('position', $employee->position) == 'Executive' ? 'selected' : '' }}>Executive</option>
+                                        <option value="Jr. Executive" {{ old('position', $employee->position) == 'Jr. Executive' ? 'selected' : '' }}>Jr. Executive</option>
                                     </select>
                                     @error('position')
                                         <div class="text-danger">{{ $message }}</div>

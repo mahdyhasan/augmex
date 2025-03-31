@@ -18,6 +18,7 @@
                         <thead>
                             <tr>
                                 <th>ID</th>
+                                <th>Agency</th>
                                 <th>Company</th>
                                 <th>Country</th>
                                 <th>KDM</th>
@@ -32,6 +33,7 @@
                             @foreach ($clients as $client)
                                 <tr>
                                     <td>{{ $client->id }}</td>
+                                    <td>{{ $client->agency }}</td>
                                     <td>{{ $client->company }}</td>
                                     <td>{{ $client->country }}</td>
                                     <td>{{ $client->kdm }}</td>
@@ -67,55 +69,76 @@
         <div class="offcanvas-body">
             <form action="{{ route('clients.store') }}" method="POST">
                 @csrf
-                <div class="mb-3">
-                    <label for="company_name" class="form-label">Company Name</label>
-                    <input type="text" class="form-control" id="company_name" name="company_name" required>
-                </div>
-                <div class="mb-3">
-                    <label for="country" class="form-label">Country</label>
-                    <input type="text" class="form-control" id="country" name="country" required>
-                </div>
-                <div class="mb-3">
-                    <label for="kdm" class="form-label">KDM</label>
-                    <input type="text" class="form-control" id="kdm" name="kdm" required>
-                </div>
-                <div class="mb-3">
-                    <label for="status" class="form-label">Status</label>
-                    <select class="form-control" id="status" name="status" required>
-                        <option value="1">Active</option>
-                        <option value="0">Inactive</option>
-                    </select>
-                </div>
-                <div class="mb-3">
-                    <label for="rate" class="form-label">Rate</label>
-                    <input type="text" class="form-control" id="rate" name="rate" required>
-                </div>
-                <div class="mb-3">
-                    <label for="currency" class="form-label">Currency</label>
-                    <select class="form-control" id="currency" name="currency" required>
-                        <option value="">Select Currency</option>
-                        <option value="AUD">AUD</option>
-                        <option value="GBP">GBP</option>
-                        <option value="EURO">EURO</option>
-                        <option value="USD">USD</option>
-                    </select>
-                </div>
-                <div class="mb-3">
-                    <label for="rate_type" class="form-label">Rate Type</label>
-                    <select class="form-control" id="rate_type" name="rate_type" required>
-                        <option value="">Select Rate Type</option>
-                        <option value="hourly">Hourly</option>
-                        <option value="monthly">Monthly</option>
-                    </select>
-                </div>
-                <div class="mb-3">
-                    <label for="invoice_type" class="form-label">Invoice Type</label>
-                    <select class="form-control" id="invoice_type" name="invoice_type" required>
-                        <option value="">Select Invoice Type</option>
-                        <option value="biweekly">Biweekly</option>
-                        <option value="monthly">Monthly</option>
-                    </select>
-                </div>
+                <div class="modal-form-container">
+                    <div class="row g-3">
+                        <!-- First Column -->
+                        <div class="col-md-6">
+                        <div class="form-group">
+                            <label for="agency" class="form-label">Agency</label>
+                            <input type="text" class="form-control input-field" id="agency" name="agency" placeholder="Enter agency name">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="company_name" class="form-label">Company Name <span class="required">*</span></label>
+                            <input type="text" class="form-control input-field" id="company_name" name="company_name" required placeholder="Enter company name">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="country" class="form-label">Country <span class="required">*</span></label>
+                            <input type="text" class="form-control input-field" id="country" name="country" required placeholder="Enter country">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="kdm" class="form-label">KDM <span class="required">*</span></label>
+                            <input type="text" class="form-control input-field" id="kdm" name="kdm" required placeholder="Enter KDM">
+                        </div>
+                        </div>
+                        
+                        <!-- Second Column -->
+                        <div class="col-md-6">
+                        <div class="form-group">
+                            <label for="status" class="form-label">Status <span class="required">*</span></label>
+                            <select class="form-select input-field" id="status" name="status" required>
+                            <option value="">Select status</option>
+                            <option value="1">Active</option>
+                            <option value="0">Inactive</option>
+                            </select>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="rate" class="form-label">Rate <span class="required">*</span></label>
+                            <div class="input-group">
+                            <input type="text" class="form-control input-field" id="rate" name="rate" required placeholder="0.00">
+                            <select class="form-select input-field currency-select" id="currency" name="currency" required>
+                                <option value="">Currency</option>
+                                <option value="AUD">AUD</option>
+                                <option value="GBP">GBP</option>
+                                <option value="EURO">EURO</option>
+                                <option value="USD">USD</option>
+                            </select>
+                            </div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="rate_type" class="form-label">Rate Type <span class="required">*</span></label>
+                            <select class="form-select input-field" id="rate_type" name="rate_type" required>
+                            <option value="">Select rate type</option>
+                            <option value="hourly">Hourly</option>
+                            <option value="monthly">Monthly</option>
+                            </select>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="invoice_type" class="form-label">Invoice Type <span class="required">*</span></label>
+                            <select class="form-select input-field" id="invoice_type" name="invoice_type" required>
+                            <option value="">Select invoice type</option>
+                            <option value="biweekly">Biweekly</option>
+                            <option value="monthly">Monthly</option>
+                            </select>
+                        </div>
+                        </div>
+                    </div>
+                    </div>
                 <button type="submit" class="btn btn-primary">Create</button>
             </form>
         </div>
@@ -125,6 +148,70 @@
 
 
 @endsection
+
+@section ('css')
+
+<style>
+    .modal-form-container {
+    padding: 20px;
+    }
+
+    .form-group {
+    margin-bottom: 1.5rem;
+    }
+
+    .form-label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: 500;
+    color: #333;
+    }
+
+    .required {
+    color: #dc3545;
+    }
+
+    .input-field {
+    width: 100%;
+    padding: 0.75rem 1rem;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    transition: border-color 0.2s;
+    }
+
+    .input-field:focus {
+    border-color: #4a90e2;
+    box-shadow: 0 0 0 3px rgba(74, 144, 226, 0.1);
+    outline: none;
+    }
+
+    .form-select {
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%23343a40' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M2 5l6 6 6-6'/%3e%3c/svg%3e");
+    background-repeat: no-repeat;
+    background-position: right 1rem center;
+    background-size: 16px 12px;
+    }
+
+    .input-group {
+    display: flex;
+    }
+
+    .input-group .form-control {
+    border-top-right-radius: 0;
+    border-bottom-right-radius: 0;
+    }
+
+    .input-group .currency-select {
+    width: 120px;
+    border-top-left-radius: 0;
+    border-bottom-left-radius: 0;
+    border-left: none;
+    }
+</style>
+
+@endsection
+
 
 @section('script')
     <script src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js"></script>

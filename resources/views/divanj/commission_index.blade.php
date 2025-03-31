@@ -22,38 +22,39 @@
 
     <div class="table-responsive">
         <table id="commissionTable" class="table table-bordered table-hover">
-            <thead >
+            <thead>
                 <tr>
-                    <th>ID</th>
                     <th>Employee</th>
-                    <th>Date Range</th>
+                    <th>Week</th>
                     <th>Target</th>
                     <th>Achieved</th>
-                    <th>Commission Type</th>
-                    <th>Total Commission</th>
-                    <th>Actions</th>
+                    <th>Weekday Sales</th>
+                    <th>Weekend Sales</th>
+                    <th>Base Commission</th>
+                    <th>Option A (Fixed)</th>
+                    <th>Option B (Mixed)</th>
+                    <th>Option C (Weekend)</th>
+                    <th>Selected Option</th>
+                    <th>Final Commission</th>
                 </tr>
             </thead>
             <tbody>
-                @forelse($commissions as $commission)
-                    <tr>
-                        <td>{{ $commission->id }}</td>
-                        <td>{{ $commission->employee->stage_name ?? 'N/A' }}</td>
-                        <td>{{ $commission->start_date }} to {{ $commission->end_date }}</td>
-                        <td>{{ $commission->target }}</td>
-                        <td>{{ $commission->achieved_qty }}</td>
-                        <td>{{ ucfirst($commission->commission_type) }}</td>
-                        <td>${{ number_format($commission->commission_amount, 2) }}</td>
-                        <td>
-                            <a href="{{ route('divanj.commission.view', $commission->id) }}" class="btn btn-sm btn-info">View</a>
-                            <a href="{{ route('divanj.commission.edit', $commission->id) }}" class="btn btn-sm btn-warning">Edit</a>
-                        </td>
-                    </tr>
-                @empty
-                    <tr>
-                        <td colspan="8" class="text-center">No commissions found.</td>
-                    </tr>
-                @endforelse
+                @foreach($commissions as $commission)
+                <tr>
+                    <td>{{ $commission->employee->stage_name }}</td>
+                    <td>{{ $commission->start_date }} to {{ $commission->end_date }}</td>
+                    <td>{{ $commission->target }}</td>
+                    <td>{{ $commission->achieved_qty }}</td>
+                    <td>{{ $commission->weekday_sales_qty }} ({{ number_format($commission->weekday_sales_amount, 2) }})</td>
+                    <td>{{ $commission->weekend_sales_qty }} ({{ number_format($commission->weekend_sales_amount, 2) }})</td>
+                    <td>{{ number_format($commission->base_commission, 2) }}</td>
+                    <td>{{ number_format($commission->option_a_amount, 2) }}</td>
+                    <td>{{ number_format($commission->option_b_amount, 2) }}</td>
+                    <td>{{ number_format($commission->option_c_amount, 2) }}</td>
+                    <td>{{ ucfirst($commission->commission_type) }}</td>
+                    <td class="font-weight-bold">{{ number_format($commission->commission_amount, 2) }}</td>
+                </tr>
+                @endforeach
             </tbody>
         </table>
     </div>

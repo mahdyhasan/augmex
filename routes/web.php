@@ -64,8 +64,10 @@ Route::group(['middleware' => 'auth'], function () {
     });
 
     // Accounts
-    
-   Route::get('/income-statement', [AccountController::class, 'incomeStatement'])->name('accounts.incomeStatement');
+    Route::prefix('accounts')->middleware(['auth'])->group(function () {
+
+        Route::get('/income-statement', [AccountController::class, 'incomeStatement'])->name('accounts.incomeStatement');
+    });
 
 
     // Bank Accounts
@@ -114,14 +116,6 @@ Route::group(['middleware' => 'auth'], function () {
 
     });
         
-    //LIABILITIES
-    Route::prefix('accounts/liabilities')->middleware(['auth'])->group(function () {
-        Route::get('/', [AccountController::class, 'liabilitiesIndex'])->name('liabilities.index');
-        Route::post('/', [AccountController::class, 'liabilitiesStore'])->name('liabilities.store');
-        Route::get('/{id}/edit', [AccountController::class, 'liabilitiesEdit'])->name('liabilities.edit');
-        Route::put('/{id}', [AccountController::class, 'liabilitiesUpdate'])->name('liabilities.update');
-        Route::delete('/{id}', [AccountController::class, 'liabilitiesDestroy'])->name('liabilities.destroy');
-    });
     
     
     //Tax Payments
@@ -180,19 +174,21 @@ Route::group(['middleware' => 'auth'], function () {
     
     
     
-    //PAYROLL
     Route::prefix('payroll')->middleware(['auth'])->group(function () {
         Route::get('/', [PayrollController::class, 'index'])->name('payrolls.index'); 
-        Route::post('/store', [PayrollController::class, 'generatePayroll'])->name('payrolls.store'); // Generate payroll
-        Route::put('/pay/{id}', [PayrollController::class, 'markAsPaid'])->name('payrolls.pay'); // View payroll details
         Route::get('/{id}/edit', [PayrollController::class, 'edit'])->name('payrolls.edit'); 
         Route::put('/{id}', [PayrollController::class, 'update'])->name('payrolls.update');
+        Route::get('/{id}/view', [PayrollController::class, 'view'])->name('payrolls.view');
+        Route::post('/{id}/mark-as-paid', [PayrollController::class, 'markAsPaid'])->name('payrolls.markAsPaid');
+
+        Route::post('/generate-all', [PayrollController::class, 'generateAll'])->name('payrolls.generate.all');
+ 
         Route::get('/salary-sheet', [PayrollController::class, 'salarySheet'])->name('payrolls.salary.sheet'); 
         Route::get('/salary-sheet/export', [PayrollController::class, 'exportSalarySheet'])->name('payrolls.salary.sheet.export'); 
         Route::get('/salary-sheet/print', [PayrollController::class, 'printSalarySheet'])->name('payrolls.salary.sheet.print'); 
-
+        Route::get('/cash-signature-sheet', [PayrollController::class, 'downloadCashSignatureSheet'])->name('payrolls.cash.signature');
     });
-    
+
     
     
     Route::prefix('clients')->middleware(['auth'])->group(function () {
@@ -225,21 +221,25 @@ Route::group(['middleware' => 'auth'], function () {
 
         Route::get('/commissions', [DivanjController::class, 'showCommissionListDivanj'])->name('divanj.commission.index');
         Route::post('/commissions/generate', [DivanjController::class, 'generateCommissionDivanj'])->name('divanj.commission.generate');
-        Route::get('/commissions/{id}/view', [DivanjController::class, 'viewCommissionDivanj'])->name('divanj.commission.view');
-        Route::get('/commissions/{id}/edit', [DivanjController::class, 'editCommissionDivanj'])->name('divanj.commission.edit');
-        Route::put('/commissions/update/{id}', [DivanjController::class, 'updateCommissionDivanj'])->name('divanj.commission.update');
+        // Route::get('/commissions/{id}/view', [DivanjController::class, 'viewCommissionDivanj'])->name('divanj.commission.view');
+        // Route::get('/commissions/{id}/edit', [DivanjController::class, 'editCommissionDivanj'])->name('divanj.commission.edit');
+        // Route::put('/commissions/update/{id}', [DivanjController::class, 'updateCommissionDivanj'])->name('divanj.commission.update');
         Route::get('/sales-summary', [DivanjController::class, 'salesSummaryDivanj'])->name('divanj.sales.summary');
         Route::get('/narrative-report', [DivanjController::class, 'narrativeReport'])->name('divanj.narrative.report');
         Route::get('/narrative-report-all', [DivanjController::class, 'narrativeReportForAll'])->name('divanj.narrative.report.all');
         Route::get('/sales-report', [DivanjController::class, 'salesReport'])->name('divanj.sales.report');
         Route::post('/sales-report', [DivanjController::class, 'importSalesDivanj'])->name('divanj.sales.import');
 
+    });
 
+    Route::prefix('agent')->middleware(['auth'])->group(function () {
+        Route::get('/commission-history', [DivanjController::class, 'salesCommissionForAgent'])->name('divanj.agent.commission.history');
 
+   
     });
 
 
-   
+
 
 });
 

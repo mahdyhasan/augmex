@@ -1,130 +1,170 @@
 @extends('layouts.app')
 
-@section('title', 'Edit Invoice')
+@section('title', 'Edit Payroll')
 
 @section('content')
 <div class="content-wrapper">
     <div class="container-fluid">
         <div class="card">
-            <div class="card-header">
-                <h3>Edit Invoice</h3>
+            <div class="card-header bg-primary text-white">
+                <h3>Edit Payroll</h3>
             </div>
             <div class="card-body">
-                <form action="{{ route('invoices.update', $invoice->id) }}" method="POST">
+                <form action="{{ route('payrolls.update', $payroll->id) }}" method="POST">
                     @csrf
                     @method('PUT')
-
-                    <div class="row">
-                        <!-- Invoice Date Column -->
-                        <div class="col-md-4 mb-3">
-                            <label for="invoice_date" class="form-label">Invoice Date</label>
-                            <input type="date" class="form-control" id="invoice_date" name="invoice_date" value="{{ $invoice->invoice_date }}" required>
+                    
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Employee</label>
+                            <input type="text" class="form-control" value="{{ $payroll->employee->user->name }}" readonly>
                         </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Pay Period</label>
+                            <input type="text" class="form-control" 
+                                   value="{{ \Carbon\Carbon::parse($payroll->pay_period_start)->format('d M Y') }} - {{ \Carbon\Carbon::parse($payroll->pay_period_end)->format('d M Y') }}" readonly>
+                        </div>
+                    </div>
 
-                        <!-- Client Selection Column -->
-                        <div class="col-md-4 mb-3">
-                            <label for="client_id" class="form-label">Client</label>
-                            <select class="form-control" id="client_id" name="client_id" required>
-                                @foreach($clients as $client)
-                                    <option value="{{ $client->id }}" {{ $invoice->client_id == $client->id ? 'selected' : '' }}>
-                                        {{ $client->company }}
-                                    </option>
-                                @endforeach
+                    <div class="row mb-3">
+                        <div class="col-md-4">
+                            <label class="form-label">Base Salary</label>
+                            <div class="input-group">
+                                <span class="input-group-text">BDT</span>
+                                <input type="number" name="base_salary" id="base_salary" class="form-control salary-input" 
+                                       value="{{ $payroll->base_salary }}" step="0.01" required>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Bonuses</label>
+                            <div class="input-group">
+                                <span class="input-group-text">BDT</span>
+                                <input type="number" name="bonuses" id="bonuses" class="form-control salary-input" 
+                                       value="{{ $payroll->bonuses }}" step="0.01">
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Commission</label>
+                            <div class="input-group">
+                                <span class="input-group-text">BDT</span>
+                                <input type="number" name="commission" id="commission" class="form-control salary-input" 
+                                       value="{{ $payroll->commission }}" step="0.01">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-md-4">
+                            <label class="form-label">Transport Allowance</label>
+                            <div class="input-group">
+                                <span class="input-group-text">BDT</span>
+                                <input type="number" name="transport" id="transport" class="form-control salary-input" 
+                                       value="{{ $payroll->transport }}" step="0.01">
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Other Allowances</label>
+                            <div class="input-group">
+                                <span class="input-group-text">BDT</span>
+                                <input type="number" name="others" id="others" class="form-control salary-input" 
+                                       value="{{ $payroll->others }}" step="0.01">
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Deductions</label>
+                            <div class="input-group">
+                                <span class="input-group-text">BDT</span>
+                                <input type="number" name="deductions" id="deductions" class="form-control salary-input" 
+                                       value="{{ $payroll->deductions }}" step="0.01">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Payment Status</label>
+                            <select name="payment_status" class="form-control">
+                                <option value="pending" {{ $payroll->payment_status == 'pending' ? 'selected' : '' }}>Pending</option>
+                                <option value="paid" {{ $payroll->payment_status == 'paid' ? 'selected' : '' }}>Paid</option>
                             </select>
                         </div>
-
-                        <!-- Currency Column -->
-                        @php
-                            $currency = $invoice->client->clientConditions->first()->currency ?? 'N/A';
-                        @endphp
-                        <div class="col-md-4 mb-3">
-                            <label for="currency" class="form-label">Currency</label>
-                            <input type="text" class="form-control" id="currency" name="currency" value="{{ $currency }}" >
+                        <div class="col-md-6">
+                            <label class="form-label">Payment Date</label>
+                            <input type="date" name="payment_date" class="form-control" 
+                                   value="{{ $payroll->payment_date ? $payroll->payment_date->format('Y-m-d') : '' }}">
                         </div>
                     </div>
 
-                    <!-- Invoice Items -->
-                    <h5 class="mt-4">Invoice Items</h5>
-                    <table class="table table-bordered">
-                        <thead>
-                            <tr>
-                                <th>Employee</th>
-                                <th>Days</th>
-                                <th>Hours</th>
-                                <th>Rate ({{ $currency }})</th>
-                                <th>Deductions ({{ $currency }})</th>
-                                <th>Commission ({{ $currency }})</th>
-                                <th>Amount ({{ $currency }})</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @foreach($invoice->invoiceItems as $index => $item)
-                            <tr>
-                                <td>
-                                    <input type="hidden" name="items[{{ $index }}][id]" value="{{ $item->id }}">
-                                    <input type="text" class="form-control" value="{{ $item->employee_name }}" readonly>
-                                </td>
-                                <td><input type="number" class="form-control" name="items[{{ $index }}][days_worked]" value="{{ $item->days_worked }}" ></td>
-                                <td><input type="number" class="form-control" name="items[{{ $index }}][hours_worked]" value="{{ $item->hours_worked }}" step="0.01" ></td>
-                                <td><input type="number" class="form-control rate-field" name="items[{{ $index }}][rate]" value="{{ $item->rate }}" step="0.01" ></td>
-                                <td><input type="number" class="form-control deduction-field" name="items[{{ $index }}][deductions]" value="{{ $item->deductions }}" step="0.01"></td>
-                                <td><input type="number" class="form-control commission-field" name="items[{{ $index }}][commission]" value="{{ $item->commission }}" step="0.01"></td>
-                                <td><input type="number" class="form-control amount-field" name="items[{{ $index }}][amount]" value="{{ $item->amount }}" step="0.01" ></td>
-                            </tr>
-                            @endforeach
-                        </tbody>
-                    </table>
-
-                    <!-- Total Amount -->
-                    <div class="mb-3">
-                        <label for="total_amount" class="form-label">Total Amount ({{ $currency }})</label>
-                        <input type="number" class="form-control" id="total_amount" name="total_amount" value="{{ $invoice->total_amount }}" step="0.01" required>
+                    <!-- Net Salary Calculation Display -->
+                    <div class="row mb-4">
+                        <div class="col-md-12">
+                            <div class="card bg-light">
+                                <div class="card-body">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <h5 class="mb-0">Net Salary Calculation</h5>
+                                        <h3 class="mb-0 text-success" id="netSalaryDisplay">
+                                            {{ number_format($payroll->net_salary, 2) }} BDT
+                                        </h3>
+                                    </div>
+                                    <div class="calculation-breakdown mt-2 text-muted small" id="calculationBreakdown"></div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
 
-                    <a href="{{ route('invoices.index') }}" class="btn btn-dark">Cancel</a>
-                    <button type="submit" class="btn btn-primary">Update Invoice</button>
-
+                    <div class="d-flex justify-content-between">
+                        <a href="{{ route('payrolls.index') }}" class="btn btn-secondary">Back</a>
+                        <button type="submit" class="btn btn-primary">Update Payroll</button>
+                    </div>
                 </form>
             </div>
         </div>
     </div>
 </div>
-
-
 @endsection
 
 @section('js')
 <script>
-document.addEventListener('DOMContentLoaded', function () {
-    // Attach listeners to all relevant fields
-    document.querySelectorAll('.rate-field, .deduction-field, .commission-field, input[name^="items"][name$="[hours_worked]"]').forEach(field => {
-        field.addEventListener('input', recalculateAmounts);
-    });
-
-    function recalculateAmounts() {
-        let total = 0;
-
-        document.querySelectorAll('tbody tr').forEach(row => {
-            const hours = parseFloat(row.querySelector('input[name^="items"][name$="[hours_worked]"]').value) || 0;
-            const rate = parseFloat(row.querySelector('.rate-field').value) || 0;
-            const deductions = parseFloat(row.querySelector('.deduction-field').value) || 0;
-            const commission = parseFloat(row.querySelector('.commission-field').value) || 0;
-
-            const calculatedAmount = ((hours * rate) - deductions + commission).toFixed(2);
-
-            const amountField = row.querySelector('.amount-field');
-            amountField.value = calculatedAmount;
-
-            total += parseFloat(calculatedAmount);
-        });
-
-        document.getElementById('total_amount').value = total.toFixed(2);
-    }
-
-    // Trigger initial calculation in case values are prefilled
-    recalculateAmounts();
-});
-
+document.addEventListener('DOMContentLoaded', function() {
+    // Get all salary input fields
+    const salaryInputs = document.querySelectorAll('.salary-input');
     
+    // Attach event listeners to each input
+    salaryInputs.forEach(input => {
+        input.addEventListener('input', calculateNetSalary);
+    });
+    
+    // Initial calculation
+    calculateNetSalary();
+    
+    function calculateNetSalary() {
+        // Get all input values
+        const baseSalary = parseFloat(document.getElementById('base_salary').value) || 0;
+        const bonuses = parseFloat(document.getElementById('bonuses').value) || 0;
+        const commission = parseFloat(document.getElementById('commission').value) || 0;
+        const transport = parseFloat(document.getElementById('transport').value) || 0;
+        const others = parseFloat(document.getElementById('others').value) || 0;
+        const deductions = parseFloat(document.getElementById('deductions').value) || 0;
+        
+        // Calculate net salary
+        const additions = baseSalary + bonuses + commission + transport + others;
+        const netSalary = additions - deductions;
+        
+        // Update display
+        document.getElementById('netSalaryDisplay').textContent = 
+            netSalary.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}) + ' BDT';
+        
+        // Update calculation breakdown
+        document.getElementById('calculationBreakdown').innerHTML = `
+            Base Salary: ${baseSalary.toFixed(2)} BDT<br>
+            + Bonuses: ${bonuses.toFixed(2)} BDT<br>
+            + Commission: ${commission.toFixed(2)} BDT<br>
+            + Transport: ${transport.toFixed(2)} BDT<br>
+            + Others: ${others.toFixed(2)} BDT<br>
+            - Deductions: ${deductions.toFixed(2)} BDT<br>
+            <strong>Total: ${netSalary.toFixed(2)} BDT</strong>
+        `;
+    }
+});
 </script>
 @endsection

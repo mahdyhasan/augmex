@@ -15,6 +15,8 @@ use App\Models\BankAccount;
 use App\Models\Client;
 use App\Models\ClientCondition;
 use App\Models\ClientPayment;
+use App\Models\DivanjCommission;
+use App\Models\DivanjSale;
 use App\Models\DepreciationRecord;
 use App\Models\Employee;
 use App\Models\Expense;
@@ -22,7 +24,6 @@ use App\Models\ExpenseCategory;
 use App\Models\FixedAsset;
 use App\Models\Invoice;
 use App\Models\InvoiceItem;
-use App\Models\Liability;
 use App\Models\Payroll;
 use App\Models\PettyCash;
 use App\Models\TaxPayment;
@@ -54,84 +55,169 @@ class InvoiceController extends Controller
         }
     
         // Generate invoice based on user input
+        // public function generateInvoice(Request $request)
+        // {
+        //     $client = Client::findOrFail($request->client_id);
+        //     $clientCondition = ClientCondition::where('client_id', $client->id)->first();
+        //     $employees = Employee::where('client_id', $client->id)->get();
+
+        //     $totalHours = 0;
+        //     $totalAmount = 0;
+        //     $invoiceItems = [];
+
+        //     foreach ($employees as $employee) {
+        //         $attendances = Attendance::where('employee_id', $employee->id)
+        //             ->whereBetween('date', [$request->start_date, $request->end_date])
+        //             ->get();
+
+        //         $employeeHours = 0;
+        //         $workedDays = 0;
+
+        //         foreach ($attendances as $attendance) {
+        //             if ($attendance->check_in && $attendance->check_out) {
+        //                 $seconds = strtotime($attendance->check_out) - strtotime($attendance->check_in);
+        //                 $hours = $seconds / 3600;
+
+        //                 // Cap at 8 hours
+        //                 $finalHours = ($hours >= 8) ? 8 : floor($hours * 2) / 2;
+
+        //                 $employeeHours += $finalHours;
+
+        //                 if ($finalHours > 0) {
+        //                     $workedDays++;
+        //                 }
+        //             }
+        //         }
+
+        //         if ($employeeHours > 0) {
+        //             $rate = $clientCondition->rate ?? 0;
+        //             $amount = $employeeHours * $rate;
+        //             $totalHours += $employeeHours;
+        //             $totalAmount += $amount;
+
+        //             $invoiceItems[] = [
+        //                 'employee_id'   => $employee->id,
+        //                 'employee_name' => $employee->stage_name ?? 'Unknown',
+        //                 'days_worked'   => $workedDays,
+        //                 'hours_worked'  => $employeeHours,
+        //                 'rate'          => $rate,
+        //                 'deductions'    => 0,
+        //                 'commission'    => 0,
+        //                 'amount'        => $amount,
+        //             ];
+        //         }
+        //     }
+
+        //     // Improved invoice number generation with safety limit
+        //     $invoiceNumber = $this->generateUniqueInvoiceNumber();
+
+            
+        //     // Save invoice first before inserting items
+        //     $invoice = Invoice::create([
+        //         'client_id' => $client->id,
+        //         'invoice_no' => $invoiceNumber,
+        //         'invoice_date' => now(),
+        //         'work_start_date' => $request->start_date,
+        //         'work_end_date' => $request->end_date,
+        //         'total_amount' => $totalAmount,
+        //     ]);
+
+        //     // Insert invoice items
+        //     foreach ($invoiceItems as $item) {
+        //         $invoice->invoiceItems()->create($item);
+        //     }
+
+
+        //     return redirect()->route('invoices.view', $invoice->id);
+        // }
+
+        
         public function generateInvoice(Request $request)
         {
             $client = Client::findOrFail($request->client_id);
             $clientCondition = ClientCondition::where('client_id', $client->id)->first();
             $employees = Employee::where('client_id', $client->id)->get();
-
+        
             $totalHours = 0;
             $totalAmount = 0;
             $invoiceItems = [];
-
+        
             foreach ($employees as $employee) {
+                // Get employee's commission for this period
+                $commission = DivanjCommission::where('employee_id', $employee->id)
+                    ->where(function($query) use ($request) {
+                        $query->whereBetween('start_date', [$request->start_date, $request->end_date])
+                              ->orWhereBetween('end_date', [$request->start_date, $request->end_date])
+                              ->orWhere(function($q) use ($request) {
+                                  $q->where('start_date', '<=', $request->start_date)
+                                    ->where('end_date', '>=', $request->end_date);
+                              });
+                    })
+                    ->sum('commission_amount') ?? 0;
+        
+                // Calculate attendance and hours
                 $attendances = Attendance::where('employee_id', $employee->id)
                     ->whereBetween('date', [$request->start_date, $request->end_date])
                     ->get();
-
+        
                 $employeeHours = 0;
                 $workedDays = 0;
-
+        
                 foreach ($attendances as $attendance) {
                     if ($attendance->check_in && $attendance->check_out) {
                         $seconds = strtotime($attendance->check_out) - strtotime($attendance->check_in);
                         $hours = $seconds / 3600;
-
-                        // Cap at 8 hours
                         $finalHours = ($hours >= 8) ? 8 : floor($hours * 2) / 2;
-
                         $employeeHours += $finalHours;
-
-                        if ($finalHours > 0) {
-                            $workedDays++;
-                        }
+                        if ($finalHours > 0) $workedDays++;
                     }
                 }
-
+        
                 if ($employeeHours > 0) {
                     $rate = $clientCondition->rate ?? 0;
-                    $amount = $employeeHours * $rate;
+                    $baseAmount = $employeeHours * $rate;
+                    $deductions = 0; // Initialize deductions (you can add logic here)
+                    
+                    // THE CRUCIAL CHANGE - Correct calculation
+                    $amount = $baseAmount + $commission - $deductions;
+                    
                     $totalHours += $employeeHours;
                     $totalAmount += $amount;
-
+        
                     $invoiceItems[] = [
-                        'employee_id'   => $employee->id,
-                        'employee_name' => $employee->stage_name ?? 'Unknown',
-                        'days_worked'   => $workedDays,
-                        'hours_worked'  => $employeeHours,
-                        'rate'          => $rate,
-                        'deductions'    => 0,
-                        'commission'    => 0,
-                        'amount'        => $amount,
+                        'employee_id'    => $employee->id,
+                        'employee_name'  => $employee->stage_name ?? 'Unknown',
+                        'days_worked'    => $workedDays,
+                        'hours_worked'   => $employeeHours,
+                        'rate'           => $rate,
+                        'deductions'     => $deductions,
+                        'commission'     => $commission,
+                        'amount'         => $amount, // Now correctly calculated
                     ];
                 }
             }
-
-            // Improved invoice number generation with safety limit
-            $invoiceNumber = $this->generateUniqueInvoiceNumber();
-
-            
-            // Save invoice first before inserting items
+        
+            // Create invoice (keeping your existing table structure)
             $invoice = Invoice::create([
-                'client_id' => $client->id,
-                'invoice_no' => $invoiceNumber,
-                'invoice_date' => now(),
+                'client_id'       => $client->id,
+                'invoice_no'      => $this->generateUniqueInvoiceNumber(),
+                'invoice_date'    => now(),
                 'work_start_date' => $request->start_date,
-                'work_end_date' => $request->end_date,
-                'total_amount' => $totalAmount,
+                'work_end_date'   => $request->end_date,
+                'total_amount'    => $totalAmount, // Final calculated amount
             ]);
-
+        
             // Insert invoice items
             foreach ($invoiceItems as $item) {
                 $invoice->invoiceItems()->create($item);
             }
-
-
+        
             return redirect()->route('invoices.view', $invoice->id);
-        }
+        }        
+        
 
-        
-        
+
+
         protected function generateUniqueInvoiceNumber($maxAttempts = 100)
         {
             $prefix = 'INV-' . date('Ymd') . '-';

@@ -140,18 +140,34 @@ class CareerController extends Controller
     }
 
 
+    // public function export(Request $request)
+    // {
+    //     $status = $request->input('status');
+        
+    //     $filename = 'candidates_'.now()->format('Ymd_His').'.xlsx';
+        
+    //     return Excel::download(new CareerApplicantsExport($status), $filename);
+    // }
+
+
     public function export(Request $request)
     {
         $status = $request->input('status');
+        $export = new CareerApplicantsExport($status);
         
-        $filename = 'candidates_'.now()->format('Ymd_His').'.xlsx';
+        if (class_exists(\Maatwebsite\Excel\Excel::class)) {
+            $filename = 'candidates_'.now()->format('Ymd_His').'.xlsx';
+            return \Excel::download($export, $filename);
+        }
         
-        return Excel::download(new CareerApplicantsExport($status), $filename);
+        // Fallback to CSV
+        $filename = 'candidates_'.now()->format('Ymd_His').'.csv';
+        return response()->streamDownload(function() use ($export) {
+            $export->collection()->each(function($item) {
+                echo implode(',', $item) . "\n";
+            });
+        }, $filename);
     }
-
-
-
-
 
 
 

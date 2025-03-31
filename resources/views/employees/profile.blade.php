@@ -120,8 +120,23 @@
 
                                 <!-- Emergency Contact Relationship -->
                                 <div class="mb-3">
-                                    <label class="form-label">Emergency Contact Relationship</label>
-                                    <input type="text" name="emergency_contact_relationship" class="form-control" value="{{ $employee->emergency_contact_relationship ?? '' }}">
+                                    <label for="emergency_contact_relationship" class="form-label">Emergency Contact Relationship</label>
+                                    <select 
+                                        name="emergency_contact_relationship" 
+                                        class="form-select @error('emergency_contact_relationship') is-invalid @enderror"
+                                        id="emergency_contact_relationship"
+                                    >
+                                        <option value="">Select Relationship</option>
+                                        <option value="Parent" {{ old('emergency_contact_relationship', $employee->emergency_contact_relationship) == 'Parent' ? 'selected' : '' }}>Parent</option>
+                                        <option value="Spouse" {{ old('emergency_contact_relationship', $employee->emergency_contact_relationship) == 'Spouse' ? 'selected' : '' }}>Spouse</option>
+                                        <option value="Sibling" {{ old('emergency_contact_relationship', $employee->emergency_contact_relationship) == 'Sibling' ? 'selected' : '' }}>Sibling</option>
+                                        <option value="Friend" {{ old('emergency_contact_relationship', $employee->emergency_contact_relationship) == 'Friend' ? 'selected' : '' }}>Friend</option>
+                                        <option value="Other" {{ old('emergency_contact_relationship', $employee->emergency_contact_relationship) == 'Other' ? 'selected' : '' }}>Other</option>
+                                    </select>
+                                    @error('emergency_contact_relationship')
+                                        <div class="text-danger">{{ $message }}</div>
+                                    @enderror
+
                                 </div>
 
                                 <!-- Emergency Contact Phone -->

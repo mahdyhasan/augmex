@@ -37,8 +37,8 @@
             <div class="col-md-4">
                 <div class="card bg-light shadow-sm">
                     <div class="card-body">
-                        <h6 class="text-muted">Top Seller This Week</h6>
-                        <h4>{{ $topPerformerFormatted['name'] ?? 'N/A' }}</h4>
+                        <h6 class="text-muted">Warrior of the Week</h6>
+                        <h4 class="text-primary">{{ $topPerformerFormatted['name'] ?? 'N/A' }}</h4>
                         <p class="mb-0">{{ number_format($topPerformerFormatted['quantity'] ?? 0) }} case(s)</p>
                     </div>
                 </div>

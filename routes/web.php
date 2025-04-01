@@ -34,8 +34,8 @@ use App\Http\Controllers\CareerController;
     Auth::routes(['register' => false]);
 
     // Career Page for Candidates
-    Route::get('career/apply', [CareerController::class, 'applyForPosition'])->name('career.apply');
-    Route::post('career/apply', [CareerController::class, 'storeCandidatesData'])->name('career.store');
+    Route::get('career/sales/apply', [CareerController::class, 'applyForPosition'])->name('career.apply');
+    Route::post('career/sales/apply', [CareerController::class, 'storeCandidatesData'])->name('career.store');
     Route::post('/check-application', function(Request $request) {
         $exists = \App\Models\CareerApplicant::where('position', $request->position)
             ->where(function($query) use ($request) {
@@ -113,6 +113,13 @@ Route::group(['middleware' => 'auth'], function () {
         Route::put('/{id}', [EmployeeController::class, 'update'])->name('employees.update');
         Route::get('/profile', [EmployeeController::class, 'employeeProfile'])->name('employees.profile'); 
         Route::post('/profile', [EmployeeController::class, 'updateEmployeeProfile'])->name('employees.profile.update'); 
+
+
+
+        Route::get('/employees/{employee}', [EmployeeController::class, 'show'])->name('employees.show');
+        Route::get('/employees/{employee}/attendance', [EmployeeController::class, 'attendance'])->name('employees.attendance');
+        Route::get('/employees/{employee}/payroll', [EmployeeController::class, 'payroll'])->name('employees.payroll');
+
 
     });
         
@@ -229,6 +236,7 @@ Route::group(['middleware' => 'auth'], function () {
         Route::get('/narrative-report-all', [DivanjController::class, 'narrativeReportForAll'])->name('divanj.narrative.report.all');
         Route::get('/sales-report', [DivanjController::class, 'salesReport'])->name('divanj.sales.report');
         Route::post('/sales-report', [DivanjController::class, 'importSalesDivanj'])->name('divanj.sales.import');
+        Route::get('/dashboard', [DivanjController::class, 'divanjDashboard'])->name('divanj.dashboard');
 
     });
 

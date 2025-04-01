@@ -3,65 +3,105 @@
 @section('title', 'Login')
 
 @section('content')
-    <div class="account-content">
-        <div class="d-flex flex-wrap w-100 vh-100 overflow-hidden account-bg-01">
-            <div class="d-flex align-items-center justify-content-center flex-wrap vh-100 overflow-auto p-4 w-50 bg-backdrop">
-                <form action="{{ route('login') }}" method="POST" class="flex-fill">
-                    @csrf
-                    <div class="mx-auto mw-450">
-                        <div class="text-center mb-4">
-                            <img src="{{ asset('public/assets/img/logo.png') }}" class="img-fluid" alt="Logo">
-                        </div>
-                        <div class="mb-4">
-                            <h4 class="mb-2 fs-20">Sign In</h4>
-                            <p>Access the {{ config('app.name', 'Augmex') }} panel using your Phone No and Password.</p>
-                        </div>
-                        <div class="mb-3">
-                            <label class="col-form-label" for="phone">Phone No</label>
-                            <div class="position-relative">
-                                <span class="input-icon-addon">
-                                    <i class="ti ti-phone"></i>
-                                </span>
-                                <input type="text" class="form-control @error('phone') is-invalid @enderror"
-                                       id="phone" name="phone" placeholder="Enter your phone number"
-                                       value="{{ old('phone') }}" required autofocus>
-                            </div>
-                            @error('phone')
-                            <span class="invalid-feedback" role="alert">
-                                <strong>{{ $message }}</strong>
-                            </span>
-                            @enderror
-                        </div>
+<div class="container-fluid">
+    <div class="row no-gutter">
+        <!-- The image half -->
+        <div class="col-md-6 d-none d-md-flex bg-orange">
+            <div class="d-flex align-items-center justify-content-center p-5 h-100">
+                <div class="text-white text-center">
+                    <h1 class="display-1 mb-4 text-white">Welcome to {{ config('app.name', 'Augmex') }}</h1>
+                    <p class="lead mb-4">Access your personalized dashboard with all the tools you need.</p>
+                    <div class="mt-5">
+                        <i class="fas fa-mobile-alt fa-5x"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
 
-                        <div class="mb-3">
-                            <label class="col-form-label" for="password">Password</label>
-                            <div class="pass-group">
-                                <input type="password" class="pass-input form-control @error('password') is-invalid @enderror" id="password" name="password" placeholder="********" required>
-                                <span class="ti toggle-password ti-eye-off"></span>
+        <!-- The content half -->
+        <div class="col-md-6 bg-light">
+            <div class="login d-flex align-items-center py-5">
+                <div class="container">
+                    <div class="row">
+                        <div class="col-lg-10 col-xl-7 mx-auto">
+                            <div class="text-center mb-4">
+                                <!-- <img src="{{ asset('public/assets/img/logo.png') }}" class="img-fluid" alt="Logo" style="max-height: 60px;"> -->
                             </div>
-                            @error('password')
-                                <span class="invalid-feedback" role="alert">
-                                    <strong>{{ $message }}</strong>
-                                </span>
-                            @enderror
-                        </div>
-                        <div class="d-flex align-items-center justify-content-between mb-3">
-                            <div class="form-check form-check-md d-flex align-items-center">
-                                <input class="form-check-input" type="checkbox" value="" id="checkebox-md" checked="">
-                                <label class="form-check-label" for="checkebox-md">
-                                    Remember Me
-                                </label>
-                            </div>
-                        </div>
-                        <div class="mb-3">
-                            <button type="submit" class="btn btn-primary w-100">Sign In</button>
-                        </div>
-                        <div class="text-center">
-                            <p class="fw-medium text-gray">Copyright &copy; {{ date('Y') }} - {{ config('app.name', 'Augmex') }}</p>
+                            
+                            <h3 class="text-center mb-4">Sign In</h3>
+                            <p class="text-muted text-center mb-4">Access the panel using your Phone No and Password.</p>
+                            
+                            <form method="POST" action="{{ route('login') }}">
+                                @csrf
+                                
+                                <div class="form-group mb-3">
+                                    <label for="phone" class="form-label">Phone Number</label>
+                                    <div class="input-group">
+                                        <div class="input-group-prepend">
+                                            <span class="input-group-text"><i class="fas fa-phone"></i></span>
+                                        </div>
+                                        <input id="phone" type="text" 
+                                               class="form-control @error('phone') is-invalid @enderror" 
+                                               name="phone" value="{{ old('phone') }}" 
+                                               placeholder="Enter your phone number" required autofocus>
+                                        @error('phone')
+                                            <span class="invalid-feedback" role="alert">
+                                                <strong>{{ $message }}</strong>
+                                            </span>
+                                        @enderror
+                                    </div>
+                                </div>
+                                
+                                <div class="form-group mb-3">
+                                    <label for="password" class="form-label">Password</label>
+                                    <div class="input-group">
+                                        <div class="input-group-prepend">
+                                            <span class="input-group-text"><i class="fas fa-lock"></i></span>
+                                        </div>
+                                        <input id="password" type="password" 
+                                               class="form-control @error('password') is-invalid @enderror" 
+                                               name="password" placeholder="Enter your password" required>
+                                        @error('password')
+                                            <span class="invalid-feedback" role="alert">
+                                                <strong>{{ $message }}</strong>
+                                            </span>
+                                        @enderror
+                                    </div>
+                                </div>
+                                
+                                <div class="form-group mb-3">
+                                    <div class="custom-control custom-checkbox">
+                                        <input type="checkbox" class="custom-control-input" id="remember" name="remember" checked>
+                                        <label class="custom-control-label" for="remember">Remember me</label>
+                                    </div>
+                                </div>
+                                
+                                <button type="submit" class="btn btn-dark btn-block mb-3">Sign In</button>
+                                
+                                <div class="text-center small text-muted mt-4">
+                                    Copyright &copy; {{ date('Y') }} - {{ config('app.name', 'Lemon Infosys') }}
+                                </div>
+                            </form>
                         </div>
                     </div>
-                </form>
+                </div>
             </div>
         </div>
     </div>
+</div>
+@endsection
+
+@section('css')
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+
+
+@endsection
+
+
+@section('js')
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+<script>
+
+</script>
 @endsection

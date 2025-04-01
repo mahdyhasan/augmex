@@ -78,6 +78,7 @@
                                                 <span class="menu-arrow"></span>
                                             </a>
                                             <ul>
+                                                <li><a href="{{ route('divanj.dashboard') }}">Dashboard</a></li>
                                                 <li><a href="{{ route('divanj.sales.summary') }}">Sales Summary</a></li>
                                                 <li><a href="{{ route('divanj.commission.index') }}">Commission</a></li>
                                                 <li><a href="{{ route('divanj.narrative.report') }}">Narrative Report</a></li>

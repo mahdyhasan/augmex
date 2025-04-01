@@ -76,8 +76,9 @@ class CareerController extends Controller
     
         CareerApplicant::create($validated);
     
-        return redirect()->back()->with('success', 'Your application has been submitted successfully.');
-    }
+        $success = "Your application has been submitted successfully.";
+        return view('career.thank-you', compact('success'));
+}
     
 
 

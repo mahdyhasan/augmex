@@ -23,7 +23,10 @@ class Attendance extends Model
         return $this->belongsTo(AttendanceStatus::class, 'status_id', 'id');
     }
 
-
+    protected $casts = [
+        'date' => 'date',
+        // other casts...
+    ];
     
     
 }

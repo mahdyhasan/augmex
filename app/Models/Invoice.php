@@ -9,6 +9,12 @@ class Invoice extends Model
 {
     use HasFactory;
 
+    // protected $casts = [
+    //     'invoice_date' => 'invoice_date',
+    //     'work_start_date' => 'work_start_date',
+    //     'work_end_date' => 'work_end_date',
+    // ];
+
     protected $fillable = [
         'client_id', 'invoice_date', 'work_start_date', 'work_end_date', 'total_amount', 'invoice_no'
     ];

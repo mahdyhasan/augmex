@@ -766,6 +766,60 @@ class DivanjController extends Controller
 
 
 
+    public function divanjDashboard()
+    {
+        // Basic counts
+        $employeeCount = Employee::where('client_id', 1)->count();
+        
+        // Sales totals
+        $salesTotals = DivanjSale::selectRaw(
+            'SUM(quantity) as total_units,
+            SUM(total) as total_amount'
+        )->first();
+        
+        // Commission totals
+        $commissionTotals = DivanjCommission::selectRaw(
+            'SUM(commission_amount) as total_commission'
+        )->first();
+        
+        // Weekly sales data for chart
+        $weeklySales = DivanjSale::selectRaw(
+            'YEAR(date) as year, 
+            WEEK(date) as week,
+            SUM(quantity) as units,
+            SUM(total) as amount'
+        )
+        ->groupBy('year', 'week')
+        ->orderBy('year', 'desc')
+        ->orderBy('week', 'desc')
+        ->limit(12)
+        ->get();
+        
+        // Recent commissions
+        $recentCommissions = DivanjCommission::with('employee')
+            ->orderBy('end_date', 'desc')
+            ->limit(5)
+            ->get();
+        
+        // Top performers
+        $topPerformers = Employee::select('employees.id', 'employees.stage_name')
+            ->join('divanj_commissions', 'employees.id', '=', 'divanj_commissions.employee_id')
+            ->selectRaw('SUM(divanj_commissions.commission_amount) as total_commission')
+            ->groupBy('employees.id', 'employees.stage_name')
+            ->orderBy('total_commission', 'desc')
+            ->limit(5)
+            ->get();
+        
+        return view('divanj.dashboard', compact(
+            'employeeCount',
+            'salesTotals',
+            'commissionTotals',
+            'weeklySales',
+            'recentCommissions',
+            'topPerformers'
+        ));
+    }
+
 
 
 

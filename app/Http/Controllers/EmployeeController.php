@@ -225,6 +225,36 @@ class EmployeeController extends Controller
 
 
 
+    public function show($id)
+    {
+        $employee = Employee::with(['user', 'client', 'attendances', 'payrolls'])->findOrFail($id);
+        return response()->json($employee);
+    }
+    
+
+    public function attendance(Employee $employee)
+    {
+        $attendances = $employee->attendances()
+            ->with('status')
+            ->orderBy('date', 'desc')
+            ->get();
+        
+        return response()->json([
+            'attendance' => $attendances
+        ]);
+    }
+
+    public function payroll(Employee $employee)
+    {
+        $payrolls = $employee->payrolls()
+            ->orderBy('pay_period_start', 'desc')
+            ->get();
+        
+        return response()->json([
+            'payroll' => $payrolls
+        ]);
+    }
+
 
 
 }

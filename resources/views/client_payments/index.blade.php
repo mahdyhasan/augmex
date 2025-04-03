@@ -99,9 +99,12 @@
 
             <div class="mb-3">
                 <label for="method" class="form-label">Payment Method</label>
-                <input type="text" class="form-control" id="method" name="method" required placeholder="e.g., Bank Transfer, Cash">
+                <select class="form-select" id="method" name="method" required>
+                    <option value="" disabled selected>Select payment method</option>
+                    <option value="Bank Transfer">Bank Transfer</option>
+                    <option value="PayPal">PayPal</option>
+                </select>
             </div>
-
             <div class="d-flex justify-content-between">
                 <button type="submit" class="btn btn-primary">Add Client Payment</button>
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="offcanvas">Cancel</button>

@@ -129,7 +129,7 @@
                                             <a href="{{ route('payrolls.edit', $payroll->id) }}" class="btn btn-warning btn-sm me-1" title="Edit">
                                                 <i class="fas fa-edit"></i>
                                             </a>
-                                            <a href="#" class="btn btn-info btn-sm" title="View Details">
+                                            <a href="{{ route('payrolls.view', $payroll->id) }}" class="btn btn-info btn-sm" title="View Details" target="_blank">
                                                 <i class="fas fa-eye"></i>
                                             </a>
                                         </div>

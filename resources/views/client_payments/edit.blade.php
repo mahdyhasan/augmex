@@ -45,7 +45,11 @@
                     <!-- Payment Method -->
                     <div class="mb-3">
                         <label for="method" class="form-label">Payment Method</label>
-                        <input type="text" class="form-control" id="method" name="method" value="{{ $clientPayment->method }}" required>
+                        <select class="form-select" id="method" name="method" required>
+                            <option value="" disabled {{ !$clientPayment->method ? 'selected' : '' }}>Select payment method</option>
+                            <option value="Bank Transfer" {{ $clientPayment->method == 'Bank Transfer' ? 'selected' : '' }}>Bank Transfer</option>
+                            <option value="PayPal" {{ $clientPayment->method == 'PayPal' ? 'selected' : '' }}>PayPal</option>
+                        </select>
                     </div>
 
                     <button type="submit" class="btn btn-primary">Update Payment</button>

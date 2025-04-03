@@ -63,6 +63,15 @@ class DivanjController extends Controller
 
      public function showCommissionListDivanj()
      {
+        if (!Auth::check() || !Auth::user()->isSuperAdmin()) {
+            // Redirect non-admins to user dashboard
+            return redirect()->route('dashboard');
+            
+            // Or show 403 forbidden
+            // abort(403, 'Unauthorized action.');
+        }        
+
+        
          $commissions = DivanjCommission::with('employee')
              ->orderBy('start_date', 'desc')
              ->get();
@@ -270,6 +279,16 @@ class DivanjController extends Controller
     //Sales Summary for Dillon
     public function salesSummaryDivanj (Request $request)
     {
+
+        // Allow only admins
+        if (!Auth::check() || !Auth::user()->isSuperAdmin()) {
+            // Redirect non-admins to user dashboard
+            return redirect()->route('dashboard');
+            
+            // Or show 403 forbidden
+            // abort(403, 'Unauthorized action.');
+        }
+        
         $startDate = $request->input('start_date', now()->toDateString());
         $endDate = $request->input('end_date', now()->toDateString());
 
@@ -300,7 +319,9 @@ class DivanjController extends Controller
                 $hours = min(round($diff * 2) / 2, 8); // round to nearest 0.5, max 8 hours
             }
 
-            $attendanceByDate[$date][] = [
+            $dateString = $date->format('Y-m-d');
+
+            $attendanceByDate[$dateString][] = [
                 'employee' => $record->employee,
                 'check_in' => $checkIn?->format('H:i'),
                 'check_out' => $checkOut?->format('H:i'),
@@ -331,25 +352,55 @@ class DivanjController extends Controller
 
 
         // Group sales by date
+        // $salesByDate = [];
+        // $totalCases = 0;
+        // $totalSales = 0;
+
+        // foreach ($sales->groupBy(['date', 'employee_id']) as $date => $groupedEmployees) {
+        //     foreach ($groupedEmployees as $employeeId => $salesGroup) {
+        //         $employee = $salesGroup->first()->employee;
+        //         $cases = $salesGroup->sum('quantity');
+        //         $amount = $salesGroup->sum('total');
+        
+        //         $salesByDate[$date][] = [
+        //             'employee' => $employee,
+        //             'cases' => $cases,
+        //             'amount' => $amount,
+        //         ];
+        
+        //         $totalCases += $cases;
+        //         $totalSales += $amount;
+        //     }
+        // }
+
+        // Group sales by date
         $salesByDate = [];
         $totalCases = 0;
         $totalSales = 0;
 
-        foreach ($sales->groupBy(['date', 'employee_id']) as $date => $groupedEmployees) {
-            foreach ($groupedEmployees as $employeeId => $salesGroup) {
-                $employee = $salesGroup->first()->employee;
-                $cases = $salesGroup->sum('quantity');
-                $amount = $salesGroup->sum('total');
-        
-                $salesByDate[$date][] = [
-                    'employee' => $employee,
-                    'cases' => $cases,
-                    'amount' => $amount,
-                ];
-        
-                $totalCases += $cases;
-                $totalSales += $amount;
+        foreach ($sales as $sale) {
+            $dateString = Carbon::parse($sale->date)->format('Y-m-d');
+            
+            if (!isset($salesByDate[$dateString])) {
+                $salesByDate[$dateString] = [];
             }
+
+            // Initialize employee data if not exists
+            $employeeId = $sale->employee_id;
+            if (!isset($salesByDate[$dateString][$employeeId])) {
+                $salesByDate[$dateString][$employeeId] = [
+                    'employee' => $sale->employee,
+                    'cases' => 0,
+                    'amount' => 0,
+                ];
+            }
+
+            // Accumulate values
+            $salesByDate[$dateString][$employeeId]['cases'] += $sale->quantity;
+            $salesByDate[$dateString][$employeeId]['amount'] += $sale->total;
+
+            $totalCases += $sale->quantity;
+            $totalSales += $sale->total;
         }
 
         return view('divanj.sales_summary', compact(
@@ -768,6 +819,14 @@ class DivanjController extends Controller
 
     public function divanjDashboard()
     {
+        if (!Auth::check() || !Auth::user()->isSuperAdmin()) {
+            // Redirect non-admins to user dashboard
+            return redirect()->route('dashboard');
+            
+            // Or show 403 forbidden
+            // abort(403, 'Unauthorized action.');
+        }        
+
         // Basic counts
         $employeeCount = Employee::where('client_id', 1)->count();
         

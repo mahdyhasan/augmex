@@ -84,6 +84,15 @@ class CareerController extends Controller
 
     public function careerPageIndex(Request $request)
     {
+
+        if (!Auth::check() || !Auth::user()->isSuperAdmin()) {
+            // Redirect non-admins to user dashboard
+            return redirect()->route('dashboard');
+            
+            // Or show 403 forbidden
+            // abort(403, 'Unauthorized action.');
+        }        
+
         $applicants = CareerApplicant::query()
             ->when($request->position, function($query, $position) {
                 return $query->where('position', $position);

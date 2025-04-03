@@ -3,6 +3,9 @@
 @section('title', 'Divanj Dashboard')
 
 @section('content')
+
+@if(Auth::user()->isSuperAdmin())
+
 <div class="container-fluid">
     <div class="row mb-4">
         <div class="col-md-12">
@@ -175,6 +178,8 @@
         </div>
     </div>
 </div>
+
+@endif
 @endsection
 
 @section('css')

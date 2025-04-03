@@ -87,7 +87,7 @@
                                 <tr>
                                     <td>{{ $attendance->id }}</td>
                                     <td>{{ $attendance->employee->user->name ?? 'N/A' }}</td>
-                                    <td>{{ $attendance->date }}</td>
+                                    <td>{{ $attendance->date->format('j F Y') }}</td>
                                     <td>{{ $attendance->check_in }}</td>
                                     <td>{{ $attendance->check_out }}</td>
                                     <td>

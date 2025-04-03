@@ -90,28 +90,59 @@
                                     </div>
                                     <div class="card-body">
                                         <!-- Sales Records -->
-                                        <div class="border p-3 mb-3 bg-white rounded shadow-sm">
-                                            <h6 class="fw-bold">Sales Records</h6>
-                                            @php
-                                                $dayTotalQty = 0;
-                                                $dayTotalAmount = 0;
-                                            @endphp
+                                        <!--<div class="border p-3 mb-3 bg-white rounded shadow-sm">-->
+                                        <!--    <h6 class="fw-bold">Sales Records</h6>-->
+                                        <!--    @php-->
+                                        <!--        $dayTotalQty = 0;-->
+                                        <!--        $dayTotalAmount = 0;-->
+                                        <!--    @endphp-->
                                             
-                                            @forelse($salesByDate[$date] ?? [] as $sale)
-                                                @php
-                                                    $dayTotalQty += $sale['cases'];
-                                                    $dayTotalAmount += $sale['amount'];
-                                                @endphp
-                                                <p class="mb-1">
-                                                    <strong>{{ $sale['employee']->stage_name }}</strong> - 
-                                                    {{ $sale['cases'] }} case(s) - 
-                                                    ${{ number_format($sale['amount'], 2) }}
-                                                </p>
-                                            @empty
-                                                <p class="text-muted">No sales recorded</p>
-                                            @endforelse
-                                        </div>
-
+                                        <!--    @forelse($salesByDate[$date] ?? [] as $sale)-->
+                                        <!--        @php-->
+                                        <!--            $dayTotalQty += $sale['cases'];-->
+                                        <!--            $dayTotalAmount += $sale['amount'];-->
+                                        <!--        @endphp-->
+                                        <!--        <p class="mb-1">-->
+                                        <!--            <strong>{{ $sale['employee']->stage_name }}</strong> - -->
+                                        <!--            {{ $sale['cases'] }} case(s) - -->
+                                        <!--            ${{ number_format($sale['amount'], 2) }}-->
+                                        <!--        </p>-->
+                                        <!--    @empty-->
+                                        <!--        <p class="text-muted">No sales recorded</p>-->
+                                        <!--    @endforelse-->
+                                        <!--</div>-->
+<!-- Sales Records -->
+<div class="border p-3 mb-3 bg-white rounded shadow-sm">
+    <h6 class="fw-bold">Sales Records</h6>
+    @php
+        $dayTotalQty = 0;
+        $dayTotalAmount = 0;
+    @endphp
+    
+    @if(isset($salesByDate[$date]))
+        @foreach($salesByDate[$date] as $employeeSales)
+            @php
+                $dayTotalQty += $employeeSales['cases'];
+                $dayTotalAmount += $employeeSales['amount'];
+            @endphp
+            <p class="mb-1">
+                <strong>{{ $employeeSales['employee']->stage_name }}</strong> - 
+                {{ $employeeSales['cases'] }} case(s) - 
+                ${{ number_format($employeeSales['amount'], 2) }}
+            </p>
+        @endforeach
+    @else
+        <p class="text-muted">No sales recorded</p>
+    @endif
+    
+    @if($dayTotalQty > 0)
+        <div class="mt-2 pt-2 border-top">
+            <strong>Day Total:</strong> 
+            {{ $dayTotalQty }} case(s) - 
+            ${{ number_format($dayTotalAmount, 2) }}
+        </div>
+    @endif
+</div>
                                         <!-- Day Totals -->
                                         <div class="border p-3 bg-info text-white rounded shadow-sm">
                                             <h6 class="fw-bold">Day Totals</h6>

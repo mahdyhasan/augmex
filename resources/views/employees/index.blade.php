@@ -430,7 +430,7 @@
                                                 <dd class="col-sm-7">{{ $employee->salary_type ? ucfirst($employee->salary_type) : 'N/A' }}</dd>
 
                                                 <dt class="col-sm-5 text-muted">Salary Amount:</dt>
-                                                <dd class="col-sm-7">{{ $employee->salary_amount ? '$' . number_format($employee->salary_amount, 2) : 'N/A' }}</dd>
+                                                <dd class="col-sm-7">{{ $employee->salary_amount ? 'Tk' . number_format($employee->salary_amount, 2) : 'N/A' }}</dd>
 
                                                 <dt class="col-sm-5 text-muted">Client:</dt>
                                                 <dd class="col-sm-7">{{ $employee->client->company ?? 'N/A' }}</dd>
@@ -500,16 +500,16 @@
                                 <div class="card-header bg-light d-flex justify-content-between align-items-center">
                                     <h5 class="mb-0"><i class="fas fa-calendar-check me-2"></i>Attendance Records</h5>
                                     <div class="dropdown">
-                                        <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
-                                            <i class="fas fa-filter me-1"></i> Filter
-                                        </button>
-                                        <ul class="dropdown-menu dropdown-menu-end">
-                                            <li><a class="dropdown-item" href="#">All Records</a></li>
-                                            <li><a class="dropdown-item" href="#">This Month</a></li>
-                                            <li><a class="dropdown-item" href="#">Late Arrivals</a></li>
-                                            <li><a class="dropdown-item" href="#">Absences</a></li>
-                                        </ul>
-                                    </div>
+    <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+        <i class="fas fa-filter me-1"></i> Filter
+    </button>
+    <ul class="dropdown-menu dropdown-menu-end">
+        <li><a class="dropdown-item" href="#" data-filter="all">All Records</a></li>
+        <li><a class="dropdown-item" href="#" data-filter="month">This Month</a></li>
+        <li><a class="dropdown-item" href="#" data-filter="late">Late Arrivals</a></li>
+        <li><a class="dropdown-item" href="#" data-filter="absent">Absences</a></li>
+    </ul>
+</div>
                                 </div>
                                 <div class="card-body">
                                     <div class="table-responsive">
@@ -608,10 +608,10 @@
                                                         {{ $payroll->pay_period_start->format('M d') }} - 
                                                         {{ $payroll->pay_period_end->format('M d, Y') }}
                                                     </td>
-                                                    <td>${{ number_format($payroll->base_salary, 2) }}</td>
-                                                    <td>${{ number_format($payroll->bonuses, 2) }}</td>
-                                                    <td>${{ number_format($payroll->deductions, 2) }}</td>
-                                                    <td>${{ number_format($payroll->net_salary, 2) }}</td>
+                                                    <td>Tk {{ number_format($payroll->base_salary, 2) }}</td>
+                                                    <td>Tk {{ number_format($payroll->bonuses, 2) }}</td>
+                                                    <td>Tk {{ number_format($payroll->deductions, 2) }}</td>
+                                                    <td>Tk {{ number_format($payroll->net_salary, 2) }}</td>
                                                     <td>
                                                         <span class="badge {{ $payroll->payment_status === 'paid' ? 'bg-success' : 'bg-warning' }}">
                                                             {{ ucfirst($payroll->payment_status) }}
@@ -1127,6 +1127,100 @@
             printWindow.close();
         }, 500);
     });
+
+
+// Attendance Tab Update
+
+document.addEventListener('DOMContentLoaded', function() {
+    // Load initial attendance data (last 7 days)
+    loadAttendanceData('default');
+
+    // Handle attendance filter clicks
+    document.querySelectorAll('#attendance-pane-{{ $employee->id }} .dropdown-item').forEach(item => {
+        item.addEventListener('click', function(e) {
+            e.preventDefault();
+            const filter = this.getAttribute('data-filter');
+            loadAttendanceData(filter);
+        });
+    });
+    
+    function loadAttendanceData(filter) {
+        fetch(`/employees/{{ $employee->id }}/attendance?filter=${filter}`)
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+                return response.json();
+            })
+            .then(data => {
+                updateAttendanceTable(data.attendance);
+            })
+            .catch(error => {
+                console.error('Error fetching attendance data:', error);
+                const tbody = document.querySelector('#attendance-pane-{{ $employee->id }} tbody');
+                tbody.innerHTML = '<tr><td colspan="7" class="text-center text-danger">Error loading attendance data</td></tr>';
+            });
+    }
+    
+    function updateAttendanceTable(attendances) {
+        const tbody = document.querySelector('#attendance-pane-{{ $employee->id }} tbody');
+        tbody.innerHTML = '';
+        
+        if (attendances.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted">No attendance records found</td></tr>';
+            return;
+        }
+        
+        attendances.forEach(attendance => {
+            // Format date
+            const date = new Date(attendance.date);
+            const formattedDate = date.toLocaleDateString('en-US', { 
+                day: 'numeric', 
+                month: 'short', 
+                year: '2-digit' 
+            });
+            const dayName = date.toLocaleDateString('en-US', { weekday: 'short' });
+            
+            // Calculate hours if check_in and check_out exist
+            let hours = '-';
+            if (attendance.check_in && attendance.check_out) {
+                const start = new Date(attendance.check_in);
+                const end = new Date(attendance.check_out);
+                const diffMs = end - start;
+                const diffHrs = Math.floor(diffMs / 3600000);
+                const diffMins = Math.round((diffMs % 3600000) / 60000);
+                hours = `${diffHrs}h ${diffMins}m`;
+            }
+            
+            // Determine status badge
+            const statusName = attendance.status?.name || 'N/A';
+            const statusClass = attendance.status ? `bg-${attendance.status.color_class}` : 'bg-secondary';
+            
+            const row = `
+                <tr>
+                    <td>${formattedDate}</td>
+                    <td>${dayName}</td>
+                    <td>${attendance.check_in || '-'}</td>
+                    <td>${attendance.check_out || '-'}</td>
+                    <td>
+                        <span class="badge ${statusClass}">
+                            ${statusName}
+                        </span>
+                    </td>
+                    <td>${hours}</td>
+                    <td>
+                        <span class="badge ${attendance.isLate ? 'bg-warning text-dark' : 'bg-success'}">
+                            ${attendance.isLate ? 'Yes' : 'No'}
+                        </span>
+                    </td>
+                </tr>
+            `;
+            
+            tbody.insertAdjacentHTML('beforeend', row);
+        });
+    }
+});
+
 
 
     </script>

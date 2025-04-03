@@ -73,86 +73,181 @@ class EmployeeController extends Controller
 
 
     
-    public function update(Request $request, $id)
-    {
+    // public function update(Request $request, $id)
+    // {
 
-        try {
-            \DB::beginTransaction();
+    //     try {
+    //         \DB::beginTransaction();
 
-            $employee = Employee::findOrFail($id);
+    //         $employee = Employee::findOrFail($id);
             
-            // Handle resume file upload
-            if ($request->hasFile('resume_cv')) {
-                $file = $request->file('resume_cv');
-                $filename = time() . '_' . $file->getClientOriginalName();
-                $file->storeAs('public/resumes', $filename);
+    //         // Handle resume file upload
+    //         if ($request->hasFile('resume_cv')) {
+    //             $file = $request->file('resume_cv');
+    //             $filename = time() . '_' . $file->getClientOriginalName();
+    //             $file->storeAs('public/resumes', $filename);
 
-                if ($employee->resume_cv) {
-                    $oldFilePath = storage_path('app/public/resumes/' . $employee->resume_cv);
-                    if (file_exists($oldFilePath)) {
-                        unlink($oldFilePath);
-                    }
-                }
+    //             if ($employee->resume_cv) {
+    //                 $oldFilePath = storage_path('app/public/resumes/' . $employee->resume_cv);
+    //                 if (file_exists($oldFilePath)) {
+    //                     unlink($oldFilePath);
+    //                 }
+    //             }
 
-                $employee->resume_cv = $filename;
-            }
+    //             $employee->resume_cv = $filename;
+    //         }
 
-            // Update user-related fields if they exist
-            if ($employee->user && ($request->filled('name') || $request->filled('phone'))) {
-                $employee->user->update([
-                    'name' => $request->input('name'),
-                    'phone' => $request->input('phone')
-                ]);
-            }
+    //         // Update user-related fields if they exist
+    //         if ($employee->user && ($request->filled('name') || $request->filled('phone'))) {
+    //             $employee->user->update([
+    //                 'name' => $request->input('name'),
+    //                 'phone' => $request->input('phone')
+    //             ]);
+    //         }
 
-            // Update all fields from the request
-            $employee->stage_name = $request->stage_name;
-            $employee->client_id = $request->client_id;
-            $employee->department = $request->department;
-            $employee->position = $request->position;
-            $employee->salary_amount = $request->salary_amount;
-            $employee->salary_type = $request->salary_type;
-            $employee->login_time = $request->login_time;
-            $employee->date_of_hire = $request->date_of_hire;
-            $employee->date_of_termination = $request->date_of_termination;
-            $employee->gender = $request->gender;
-            $employee->married = $request->married;
-            $employee->address_line_1 = $request->address_line_1;
-            $employee->address_line_2 = $request->address_line_2;
-            $employee->city = $request->city;
-            $employee->postal_code = $request->postal_code;
-            $employee->country = $request->country;
-            $employee->emergency_contact_name = $request->emergency_contact_name;
-            $employee->emergency_contact_relationship = $request->emergency_contact_relationship;
-            $employee->emergency_contact_phone = $request->emergency_contact_phone;
-            $employee->notes = $request->notes;
-            $employee->date_of_birth = $request->date_of_birth;
-            $employee->nid_number = $request->nid_number;
+    //         // Update all fields from the request
+    //         $employee->stage_name = $request->stage_name;
+    //         $employee->client_id = $request->client_id;
+    //         $employee->department = $request->department;
+    //         $employee->position = $request->position;
+    //         $employee->salary_amount = $request->salary_amount;
+    //         $employee->salary_type = $request->salary_type;
+    //         $employee->login_time = $request->login_time;
+    //         $employee->date_of_hire = $request->date_of_hire;
+    //         $employee->date_of_termination = $request->date_of_termination;
+    //         $employee->gender = $request->gender;
+    //         $employee->married = $request->married;
+    //         $employee->address_line_1 = $request->address_line_1;
+    //         $employee->address_line_2 = $request->address_line_2;
+    //         $employee->city = $request->city;
+    //         $employee->postal_code = $request->postal_code;
+    //         $employee->country = $request->country;
+    //         $employee->emergency_contact_name = $request->emergency_contact_name;
+    //         $employee->emergency_contact_relationship = $request->emergency_contact_relationship;
+    //         $employee->emergency_contact_phone = $request->emergency_contact_phone;
+    //         $employee->notes = $request->notes;
+    //         $employee->date_of_birth = $request->date_of_birth;
+    //         $employee->nid_number = $request->nid_number;
 
-            $employee->save();
+    //         $employee->save();
 
-            \DB::commit();
+    //         \DB::commit();
 
-            return redirect()
-                ->route('employees.index')
-                ->with('success', 'Employee updated successfully.');
+    //         return redirect()
+    //             ->route('employees.index')
+    //             ->with('success', 'Employee updated successfully.');
 
-        } catch (\Exception $e) {
-            \DB::rollBack();
-            \Log::error('Employee Update Error:', [
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
-            ]);
+    //     } catch (\Exception $e) {
+    //         \DB::rollBack();
+    //         \Log::error('Employee Update Error:', [
+    //             'error' => $e->getMessage(),
+    //             'trace' => $e->getTraceAsString()
+    //         ]);
 
-            return redirect()
-                ->back()
-                ->withInput()
-                ->with('error', 'Failed to update employee. Please try again.');
-        }
-    }
+    //         return redirect()
+    //             ->back()
+    //             ->withInput()
+    //             ->with('error', 'Failed to update employee. Please try again.');
+    //     }
+    // }
 
     
+public function update(Request $request, $id)
+{
+    try {
+        \DB::beginTransaction();
 
+        $employee = Employee::findOrFail($id);
+        
+        // Handle resume file upload
+        if ($request->hasFile('resume_cv')) {
+            $file = $request->file('resume_cv');
+            $filename = time() . '_' . $file->getClientOriginalName();
+            $file->storeAs('public/resumes', $filename);
+
+            if ($employee->resume_cv) {
+                $oldFilePath = storage_path('app/public/resumes/' . $employee->resume_cv);
+                if (file_exists($oldFilePath)) {
+                    unlink($oldFilePath);
+                }
+            }
+
+            $employee->resume_cv = $filename;
+        }
+
+        // Check if termination date is being set/changed
+        $terminationDateChanged = $request->date_of_termination != $employee->date_of_termination;
+        $terminationDateBeingSet = $request->date_of_termination && !$employee->date_of_termination;
+
+        // Update user-related fields if they exist
+        if ($employee->user) {
+            $userData = [];
+            
+            if ($request->filled('name') || $request->filled('phone')) {
+                $userData['name'] = $request->input('name');
+                $userData['phone'] = $request->input('phone');
+            }
+            
+            // If termination date is being set, deactivate the user
+            if ($terminationDateBeingSet) {
+                $userData['status'] = 0; // Set status to inactive
+            }
+            
+            if (!empty($userData)) {
+                $employee->user->update($userData);
+            }
+        }
+
+        // Update all fields from the request
+        $employee->stage_name = $request->stage_name;
+        $employee->client_id = $request->client_id;
+        $employee->department = $request->department;
+        $employee->position = $request->position;
+        $employee->salary_amount = $request->salary_amount;
+        $employee->salary_type = $request->salary_type;
+        $employee->login_time = $request->login_time;
+        $employee->date_of_hire = $request->date_of_hire;
+        $employee->date_of_termination = $request->date_of_termination;
+        $employee->gender = $request->gender;
+        $employee->married = $request->married;
+        $employee->address_line_1 = $request->address_line_1;
+        $employee->address_line_2 = $request->address_line_2;
+        $employee->city = $request->city;
+        $employee->postal_code = $request->postal_code;
+        $employee->country = $request->country;
+        $employee->emergency_contact_name = $request->emergency_contact_name;
+        $employee->emergency_contact_relationship = $request->emergency_contact_relationship;
+        $employee->emergency_contact_phone = $request->emergency_contact_phone;
+        $employee->notes = $request->notes;
+        $employee->date_of_birth = $request->date_of_birth;
+        $employee->nid_number = $request->nid_number;
+
+        $employee->save();
+
+        \DB::commit();
+        
+        $message = 'Employee updated successfully.';
+        if ($terminationDateBeingSet) {
+            $message = 'Employee terminated successfully. User account has been deactivated.';
+        }
+        
+        return redirect()
+            ->route('employees.index')
+            ->with('success', $message);
+
+    } catch (\Exception $e) {
+        \DB::rollBack();
+        \Log::error('Employee Update Error:', [
+            'error' => $e->getMessage(),
+            'trace' => $e->getTraceAsString()
+        ]);
+
+        return redirect()
+            ->back()
+            ->withInput()
+            ->with('error', 'Failed to update employee. Please try again.');
+    }
+}
     
     
     public function edit($id)
@@ -232,17 +327,50 @@ class EmployeeController extends Controller
     }
     
 
-    public function attendance(Employee $employee)
-    {
-        $attendances = $employee->attendances()
-            ->with('status')
-            ->orderBy('date', 'desc')
-            ->get();
-        
-        return response()->json([
-            'attendance' => $attendances
-        ]);
+public function attendance(Employee $employee, Request $request)
+{
+    $query = $employee->attendances()
+        ->with('status')
+        ->orderBy('date', 'desc');
+    
+    // Apply filters if requested
+    if ($request->has('filter')) {
+        switch ($request->filter) {
+            case 'all':
+                // No additional filtering needed
+                break;
+            case 'month':
+                $query->whereBetween('date', [
+                    now()->startOfMonth(),
+                    now()->endOfMonth()
+                ]);
+                break;
+            case 'late':
+                $query->where('isLate', true);
+                break;
+            case 'absent':
+                $query->whereHas('status', function($q) {
+                    $q->where('name', 'like', '%Absent%');
+                });
+                break;
+            default:
+                // Default: last 7 days
+                $query->where('date', '>=', now()->subDays(7));
+                break;
+        }
+    } else {
+        // Default: last 7 days
+        $query->where('date', '>=', now()->subDays(7));
     }
+    
+    $attendances = $query->get();
+    
+    return response()->json([
+        'attendance' => $attendances
+    ]);
+}
+
+
 
     public function payroll(Employee $employee)
     {

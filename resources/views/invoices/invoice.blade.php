@@ -51,21 +51,48 @@
             </tr>
         </thead>
         <tbody>
+            @php
+                // Initialize totals
+                $totalHours = 0;
+                $totalDeductions = 0;
+                $totalCommission = 0;
+                $totalAmount = 0;
+            @endphp
+            
             @foreach($invoice->invoiceItems as $item)
                 <tr>
                     <td>{{ $item->employee_name }}</td>
                     <td>{{ $item->days_worked }}</td>
-                    <td>{{ $item->hours_worked, 2 }}</td>
+                    <td>{{ number_format($item->hours_worked, 2) }}</td>
                     <td>{{ number_format($item->rate, 2) }}</td>
                     <td>{{ number_format($item->deductions, 2) }}</td>
                     <td>{{ number_format($item->commission, 2) }}</td>
                     <td>{{ number_format($item->amount, 2) }}</td>
                 </tr>
+                @php
+                    // Accumulate totals
+                    $totalHours += $item->hours_worked;
+                    $totalDeductions += $item->deductions;
+                    $totalCommission += $item->commission;
+                    $totalAmount += $item->amount;
+                @endphp
             @endforeach
         </tbody>
         <tfoot>
+            <!-- Column Totals Row -->
             <tr class="fw-bold">
-                <td colspan="6" class="text-end">TOTAL ({{ $currency }}):</td>
+                <td class="text-end">Subtotals:</td>
+                <td></td>
+                <td>{{ number_format($totalHours, 2) }}</td>
+                <td></td>
+                <td>{{ number_format($totalDeductions, 2) }}</td>
+                <td>{{ number_format($totalCommission, 2) }}</td>
+                <td>{{ number_format($totalAmount, 2) }}</td>
+            </tr>
+            
+            <!-- Grand Total Row -->
+            <tr class="fw-bold table-active">
+                <td colspan="6" class="text-end">GRAND TOTAL ({{ $currency }}):</td>
                 <td>{{ number_format($invoice->total_amount, 2) }}</td>
             </tr>
         </tfoot>
@@ -92,8 +119,47 @@
     </div>
 
     <!-- Print -->
-    <div class="text-center mt-4">
+    <div class="text-center mt-4 d-print-none">
         <button onclick="window.print()" class="btn btn-primary"><i class="fas fa-print"></i> Print Invoice</button>
     </div>
 </div>
 @endsection
+
+@section ('css')
+
+<style>
+    @media print {
+        /* Hide header and navigation */
+        header, .navbar, .breadcrumb, .d-print-none, .menu-horizontal .header, .sidebar-contact .toggle-theme {
+            display: none !important;
+        }
+        
+        /* Show only the invoice card */
+        .card {
+            border: none;
+            box-shadow: none;
+            margin: 0;
+            padding: 0;
+        }
+        
+        /* Ensure proper spacing for printed content */
+        body {
+            padding: 0 20px !important;
+            /*margin-top: 0px !important;*/
+            font-size: 12pt;
+        }
+        
+        /* Keep footer visible (if you have one) */
+        footer {
+            display: block !important;
+            position: fixed;
+            bottom: 0;
+            width: 100%;
+        }
+    }
+</style>
+
+
+@endsection
+
+

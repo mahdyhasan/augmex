@@ -11,6 +11,10 @@ class DivanjSale extends Model
 
     protected $table = 'divanj_sales';
 
+    protected $casts = [
+        'date' => 'date',
+    ];
+
     protected $fillable = [
         'employee_id',
         'date',

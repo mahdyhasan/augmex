@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Carbon\Carbon;
 use Auth;
+use DB;
 
 
 use App\Models\Account;
@@ -20,6 +21,7 @@ use App\Models\Expense;
 use App\Models\ExpenseCategory;
 use App\Models\FixedAsset;
 use App\Models\Invoice;
+use App\Models\Leave;
 use App\Models\Payroll;
 use App\Models\PettyCash;
 use App\Models\TaxPayment;
@@ -285,4 +287,166 @@ class AttendanceController extends Controller
 
 
     
+
+
+
+
+
+
+    // LEAVE MANAGEMENT
+
+    // Display all leaves (for HR/Admin) or employee's own leaves
+    public function leavesIndex(Request $request)
+    {
+        $user = auth()->user();
+        $isHR = $user->isSuperAdmin() || $user->isHR();
+        
+        $leaves = Leave::with(['employee.user', 'status'])
+            ->when(!$isHR, fn($q) => $q->where('employee_id', $user->employee->id))
+            ->when($isHR && $request->employee_id, fn($q) => $q->where('employee_id', $request->employee_id))
+            ->when($request->approved !== null, fn($q) => $q->where('approved', $request->approved))
+            ->latest()
+            ->paginate(20);
+    
+        // Always pass employees, but for non-HR, pass only their own employee record
+        $employees = $isHR 
+            ? Employee::with('user')->get() 
+            : collect([$user->employee]);
+    
+        return view('attendances.leaves', [
+            'leaves' => $leaves,
+            'employees' => $employees,
+            'leaveTypes' => AttendanceStatus::whereIn('name', ['LWP', 'Sick', 'Casual', 'Holiday'])->get()
+        ]);
+    }
+    
+    // Store new leave application
+    public function storeLeave(Request $request)
+    {
+        $validated = $request->validate([
+            'employee_id' => 'required|exists:employees,id',
+            'status_id' => 'required|exists:attendance_statuses,id',
+            'start_date' => 'required|date',
+            'end_date' => 'required|date|after_or_equal:start_date',
+            'reason' => 'nullable|string|max:500',
+            'approved' => 'required|integer|in:0,1' // Ensures only 0 or 1 is accepted
+        ]);
+    
+        // For regular employees, force pending status
+        $user = Auth::user();
+        if (!($user->isSuperAdmin() || $user->isHR())) {
+            $validated['approved'] = 0;
+            $validated['employee_id'] = $user->employee->id; // Ensure they can only apply for themselves
+        }
+    
+        // Rest of your leave creation logic...
+        $leave = Leave::create($validated);
+    
+        return redirect()->route('attendance.leaves')
+            ->with('success', 'Leave application submitted successfully!');
+    }
+    
+    
+
+
+    // APPROVE LEAVE
+    public function approveLeave(Leave $leave)
+    {
+        if (!(Auth::user()->isSuperAdmin() || Auth::user()->isHR())) {
+            abort(403);
+        }
+        
+        // Use DB transaction to ensure data consistency
+        DB::transaction(function () use ($leave) {
+            // Refresh the model first to ensure we have latest data
+            $leave->refresh();
+            
+            if ($leave->approved) {
+                throw new \Exception('Leave is already approved.');
+            }
+            
+            // Update using save() instead of update() to ensure model events fire
+            $leave->approved = true;
+            $leave->save();
+            
+        });
+        
+        return back()->with('success', 'Leave approved successfully!');
+    }
+    
+
+
+    // Delete a leave
+    public function destroyLeave(Leave $leave)
+    {
+        $user = Auth::user();
+        
+        // Authorization check
+        if (!($user->isSuperAdmin() || $user->isHR() )) {
+            abort(403);
+        }
+        
+        // If leave was approved, remove attendance records
+        
+        $leave->delete();
+        
+        return redirect()->route('attendance.leaves')
+            ->with('success', 'Leave deleted successfully!');
+    }
+    
+
+
+   
+    public function editLeave(Leave $leave)
+    {
+        if (!(Auth::user()->isSuperAdmin() || Auth::user()->isHR() || Auth::user()->employee->id == $leave->employee_id)) {
+            abort(403);
+        }
+    
+        return view('attendances.edit_leave', [
+            'leave' => $leave,
+            'employees' => Employee::with('user')->get(),
+            'leaveTypes' => AttendanceStatus::whereIn('name', ['LWP', 'Sick', 'Casual', 'Holiday'])->get()
+        ]);
+    }
+    
+    public function updateLeave(Request $request, Leave $leave)
+    {
+        $user = Auth::user();
+        
+        // Authorization check
+        if (!($user->isSuperAdmin() || $user->isHR() || $user->employee->id == $leave->employee_id)) {
+            abort(403);
+        }
+        
+        $validated = $request->validate([
+            'status_id' => 'required|exists:attendance_statuses,id',
+            'start_date' => 'required|date',
+            'end_date' => 'required|date|after_or_equal:start_date',
+            'reason' => 'nullable|string|max:500',
+            'approved' => 'boolean'
+        ]);
+        
+        // Debug the input
+        \Log::info('Updating leave', [
+            'input' => $request->all(),
+            'validated' => $validated
+        ]);
+        
+        $leave->update($validated);
+        
+        // Debug the result
+        \Log::info('Leave updated', [
+            'approved' => $leave->approved,
+            'fresh_data' => $leave->fresh()->toArray()
+        ]);
+        
+        return redirect()->route('attendance.leaves')
+            ->with('success', 'Leave updated successfully!');
+    }
+
+
+
+
+
 }

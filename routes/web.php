@@ -177,10 +177,20 @@ Route::group(['middleware' => 'auth'], function () {
         Route::put('/{id}', [AttendanceController::class, 'update'])->name('attendance.update');
         Route::post('/', [AttendanceController::class, 'store'])->name('attendance.store');
         Route::post('/late-summary', [AttendanceController::class, 'lateSummary'])->name('attendance.late.summary');
+
+        // Leave Management Routes
+        Route::get('/leaves', [AttendanceController::class, 'leavesIndex'])->name('attendance.leaves');
+        Route::post('/leaves', [AttendanceController::class, 'storeLeave'])->name('leaves.store');
+        Route::get('/leaves/{leave}/edit', [AttendanceController::class, 'editLeave'])->name('leaves.edit');
+        Route::put('/leaves/{leave}', [AttendanceController::class, 'updateLeave'])->name('leaves.update');
+        Route::delete('/leaves/{leave}', [AttendanceController::class, 'destroyLeave'])->name('leaves.destroy');
+        Route::post('/leaves/{leave}/approve', [AttendanceController::class, 'approveLeave'])->name('leaves.approve');
+
+
     });
     
     
-    
+    // PAYROLL
     Route::prefix('payroll')->middleware(['auth'])->group(function () {
         Route::get('/', [PayrollController::class, 'index'])->name('payrolls.index'); 
         Route::get('/{id}/edit', [PayrollController::class, 'edit'])->name('payrolls.edit'); 
@@ -194,6 +204,9 @@ Route::group(['middleware' => 'auth'], function () {
         Route::get('/salary-sheet/export', [PayrollController::class, 'exportSalarySheet'])->name('payrolls.salary.sheet.export'); 
         Route::get('/salary-sheet/print', [PayrollController::class, 'printSalarySheet'])->name('payrolls.salary.sheet.print'); 
         Route::get('/cash-signature-sheet', [PayrollController::class, 'downloadCashSignatureSheet'])->name('payrolls.cash.signature');
+
+        Route::get('/{payroll}/deductions', [PayrollController::class, 'showDeductions'])->name('payrolls.deductions');
+
     });
 
     

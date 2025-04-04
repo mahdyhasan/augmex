@@ -24,6 +24,7 @@ use App\Models\Expense;
 use App\Models\ExpenseCategory;
 use App\Models\FixedAsset;
 use App\Models\Invoice;
+use App\Models\Leave;
 use App\Models\Payroll;
 use App\Models\PettyCash;
 use App\Models\TaxPayment;
@@ -42,15 +43,26 @@ class PayrollController extends Controller
     
     public function index()
     {
-        $payrolls = Payroll::with('employee', 'employee.user')->orderBy('pay_period_start', 'desc')->get();
+        $payrolls = Payroll::with('employee', 'employee.user', 'employee.leaves')->orderBy('pay_period_start', 'desc')->get();
         $employees = Employee::with('user')->get(); // Fetch employees for the dropdown
         return view('payroll.index', compact('payrolls', 'employees'));
     }
 
-
     public function edit($id)
     {
-        $payroll = Payroll::with(['employee.user'])->findOrFail($id);
+        $payroll = Payroll::with([
+            'employee.user',
+            'employee.leaves' => function($query) use ($id) {
+                $payroll = Payroll::find($id);
+                $query->where('approved', 1)
+                      ->where(function($q) use ($payroll) {
+                          $q->whereBetween('start_date', [$payroll->pay_period_start, $payroll->pay_period_end])
+                            ->orWhereBetween('end_date', [$payroll->pay_period_start, $payroll->pay_period_end]);
+                      });
+            },
+            'employee.leaves.status'
+        ])->findOrFail($id);
+        
         return view('payroll.edit', compact('payroll'));
     }
 
@@ -108,161 +120,306 @@ class PayrollController extends Controller
 }
 
 
-public function generateAll(Request $request)
-{
-    try {
-        // First validate the input as a string
-        $validated = $request->validate([
-            'month' => 'required|string|date_format:Y-m'
-        ]);
-        
-        // Then parse the validated string
-        $selectedMonth = Carbon::parse($validated['month']);
-
-        // Currency conversion rates
-        $currencyRates = [
-            'AUD' => 75,
-            'EUR' => 130, 
-            'GBP' => 145,
-            'USD' => 120
-        ];
-
-        $startDate = $selectedMonth->copy()->subMonth()->day(25);
-        $endDate = $selectedMonth->copy()->day(24);
-
-        $employees = Employee::with('user')->get();
-
-        if ($employees->isEmpty()) {
-            return response()->json([
-                'success' => false,
-                'message' => 'No employees found'
-            ], 200);
-        }
-
-        $generatedCount = 0;
-        $updatedCount = 0;
-        $errors = [];
-
-        foreach ($employees as $employee) {
+        public function generateAll(Request $request)
+        {
             try {
-                if (empty($employee->salary_amount)) {
-                    $errors[] = "Skipped: Employee {$employee->user->name} has no salary amount set";
-                    continue;
-                }
-
-                // 1. Calculate total working days (weekdays only, Monday-Friday)
-                $totalWorkingDays = 0;
-                $currentDate = $startDate->copy();
+                // Validate input
+                $validated = $request->validate([
+                    'month' => 'required|string|date_format:Y-m'
+                ]);
                 
-                while ($currentDate <= $endDate) {
-                    if ($currentDate->isWeekday()) {
-                        $totalWorkingDays++;
-                    }
-                    $currentDate->addDay();
-                }
+                // Parse dates
+                $selectedMonth = Carbon::parse($validated['month']);
+                $startDate = $selectedMonth->copy()->subMonth()->day(25);
+                $endDate = $selectedMonth->copy()->day(24);
 
-                // 2. Calculate attendance (only weekdays with check_in)
-                $attendanceCount = Attendance::where('employee_id', $employee->id)
-                    ->whereBetween('date', [$startDate, $endDate])
-                    ->whereNotNull('check_in')
-                    ->whereRaw('WEEKDAY(date) < 5')
-                    ->count();
-
-                // 3. Calculate deductions (only for weekday absences)
-                $absentDays = max(0, $totalWorkingDays - $attendanceCount);
-                
-                // Calculate per day salary considering only working days
-                $perDaySalary = $totalWorkingDays > 0 ? $employee->salary_amount / $totalWorkingDays : 0;
-
-                $deduction = $absentDays * $perDaySalary;
-
-                // 4. Calculate commission in BDT
-                $totalCommission = 0;
-                
-                $commissions = DivanjCommission::where('employee_id', $employee->id)
-                    ->whereBetween('start_date', [$startDate, $endDate])
-                    ->get();
-
-                foreach ($commissions as $commission) {
-                    $clientCondition = ClientCondition::where('client_id', $employee->client_id)
-                        ->first();
-                    
-                    $currency = $clientCondition->currency ?? 'AUD';
-                    $rate = $currencyRates[strtoupper($currency)] ?? 75;
-                    
-                    $totalCommission += $commission->commission_amount * $rate;
-                }
-
-                // 5. Calculate net salary
-                $netSalary = $employee->salary_amount + $totalCommission - $deduction;
-
-                // 6. Update or create payroll record
-                $payrollData = [
-                    'year' => $selectedMonth->year,
-                    'month' => $selectedMonth->month,
-                    'employee_id' => $employee->id,
-                    'base_salary' => $employee->salary_amount,
-                    'commission' => $totalCommission,
-                    'deductions' => $deduction,
-                    'net_salary' => $netSalary,
-                    'payment_status' => 'pending', // Default status
-                    'pay_period_start' => $startDate,
-                    'pay_period_end' => $endDate
+                // Currency rates
+                $currencyRates = [
+                    'AUD' => 75,
+                    'EUR' => 130, 
+                    'GBP' => 145,
+                    'USD' => 120
                 ];
 
-                // Only update these fields if they exist in the original record
-                if ($existing = Payroll::where('employee_id', $employee->id)
-                    ->where('pay_period_start', $startDate)
-                    ->where('pay_period_end', $endDate)
-                    ->first()) {
-                    $payrollData['bonuses'] = $existing->bonuses ?? 0;
-                    $payrollData['transport'] = $existing->transport ?? 0;
-                    $payrollData['others'] = $existing->others ?? 0;
-                    $payrollData['payment_status'] = $existing->payment_status;
-                    $payrollData['payment_date'] = $existing->payment_date;
-                    $updatedCount++;
-                } else {
-                    $payrollData['bonuses'] = 0;
-                    $payrollData['transport'] = 0;
-                    $payrollData['others'] = 0;
-                    $generatedCount++;
+                $employees = Employee::with('user')->get();
+
+                if ($employees->isEmpty()) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'No employees found'
+                    ], 200);
                 }
 
-                Payroll::updateOrCreate(
-                    [
-                        'employee_id' => $employee->id,
-                        'pay_period_start' => $startDate,
-                        'pay_period_end' => $endDate
+                $generatedCount = 0;
+                $updatedCount = 0;
+                $errors = [];
+
+                foreach ($employees as $employee) {
+                    try {
+                        // Skip employees without salary
+                        if (empty($employee->salary_amount)) {
+                            $errors[] = "Skipped: Employee {$employee->user->name} has no salary amount set";
+                            continue;
+                        }
+
+                        // 1. Calculate working days
+                        $totalWorkingDays = $this->calculateWorkingDays($startDate, $endDate);
+
+                        // 2. Process leaves
+                        $leaveData = $this->processLeaves($employee, $startDate, $endDate);
+                        $leaveDaysCount = $leaveData['leaveDays'];
+                        $lwpDaysCount = $leaveData['lwpDays'];
+
+                        // 3. Calculate attendance
+                        $attendanceCount = Attendance::where('employee_id', $employee->id)
+                            ->whereBetween('date', [$startDate, $endDate])
+                            ->whereNotNull('check_in')
+                            ->whereRaw('WEEKDAY(date) < 5')
+                            ->count();
+
+                        // 4. Calculate deductions
+                        $effectivePresentDays = $attendanceCount + $leaveDaysCount;
+                        $absentDays = max(0, $totalWorkingDays - $effectivePresentDays - $lwpDaysCount);
+                        // $perDaySalary = $totalWorkingDays > 0 ? $employee->salary_amount / $totalWorkingDays : 0;
+                        $perDaySalary = $employee->salary_amount / 30; // Always divide by 30 days
+                        $deduction = ($absentDays + $lwpDaysCount) * $perDaySalary;
+
+                        // 5. Calculate commission
+                        $totalCommission = $this->calculateCommission($employee, $startDate, $endDate, $currencyRates);
+
+                        // 6. Calculate net salary
+                        $netSalary = $employee->salary_amount + $totalCommission - $deduction;
+
+                        // 7. Prepare payroll data
+                        $payrollData = [
+                            'year' => $selectedMonth->year,
+                            'month' => $selectedMonth->month,
+                            'employee_id' => $employee->id,
+                            'base_salary' => $employee->salary_amount,
+                            'commission' => $totalCommission,
+                            'deductions' => $deduction,
+                            'net_salary' => $netSalary,
+                            'payment_status' => 'pending',
+                            'pay_period_start' => $startDate->format('Y-m-d'),
+                            'pay_period_end' => $endDate->format('Y-m-d'),
+                            'bonuses' => 0,
+                            'transport' => 0,
+                            'others' => 0
+                        ];
+
+                        // 8. Update or create payroll record
+                        $existing = Payroll::where('employee_id', $employee->id)
+                            ->where('pay_period_start', $startDate->format('Y-m-d'))
+                            ->where('pay_period_end', $endDate->format('Y-m-d'))
+                            ->first();
+
+                        if ($existing) {
+                            // Preserve existing values
+                            $payrollData['bonuses'] = $existing->bonuses;
+                            $payrollData['transport'] = $existing->transport;
+                            $payrollData['others'] = $existing->others;
+                            $payrollData['payment_status'] = $existing->payment_status;
+                            $payrollData['payment_date'] = $existing->payment_date;
+                            $updatedCount++;
+                        } else {
+                            $generatedCount++;
+                        }
+
+                        $result = Payroll::updateOrCreate(
+                            [
+                                'employee_id' => $employee->id,
+                                'pay_period_start' => $startDate->format('Y-m-d'),
+                                'pay_period_end' => $endDate->format('Y-m-d')
+                            ],
+                            $payrollData
+                        );
+
+                        if (!$result->wasRecentlyCreated && !$result->wasChanged()) {
+                            $errors[] = "No changes for {$employee->user->name}";
+                        }
+
+                    } catch (\Exception $e) {
+                        $errors[] = "Error processing {$employee->user->name}: " . $e->getMessage();
+                        \Log::error("Payroll error for {$employee->id}: " . $e->getMessage());
+                        continue;
+                    }
+                }
+
+                return response()->json([
+                    'success' => true,
+                    'message' => "Payroll processed successfully",
+                    'details' => [
+                        'generated' => $generatedCount,
+                        'updated' => $updatedCount,
+                        'errors' => count($errors),
+                        'total_employees' => count($employees)
                     ],
-                    $payrollData
-                );
+                    'warnings' => $errors
+                ]);
 
             } catch (\Exception $e) {
-                $errors[] = "Error processing {$employee->user->name}: " . $e->getMessage();
-                continue;
+                \Log::error("Payroll system error: " . $e->getMessage());
+                return response()->json([
+                    'success' => false,
+                    'message' => 'System error: ' . $e->getMessage()
+                ], 500);
             }
         }
 
-        return response()->json([
-            'success' => true,
-            'message' => "Payroll processed successfully",
-            'details' => [
-                'generated' => $generatedCount,
-                'updated' => $updatedCount,
-                'errors' => count($errors),
-                'total_employees' => count($employees)
-            ],
-            'warnings' => $errors
-        ]);
+        // Helper methods
+        private function calculateWorkingDays(Carbon $start, Carbon $end): int
+        {
+            $days = 0;
+            $current = $start->copy();
+            
+            while ($current <= $end) {
+                if ($current->isWeekday()) {
+                    $days++;
+                }
+                $current->addDay();
+            }
+            return $days;
+        }
 
-    } catch (\Exception $e) {
-        return response()->json([
-            'success' => false,
-            'message' => 'System error: ' . $e->getMessage()
-        ], 500);
-    }
-}
-    
+        private function processLeaves(Employee $employee, Carbon $start, Carbon $end): array
+        {
+            $leaves = Leave::with('status')
+                ->where('employee_id', $employee->id)
+                ->where('approved', 1)
+                ->where(function($query) use ($start, $end) {
+                    $query->whereBetween('start_date', [$start, $end])
+                        ->orWhereBetween('end_date', [$start, $end])
+                        ->orWhere(function($q) use ($start, $end) {
+                            $q->where('start_date', '<=', $start)
+                                ->where('end_date', '>=', $end);
+                        });
+                })
+                ->get();
+
+            $leaveDays = 0;
+            $lwpDays = 0;
+
+            foreach ($leaves as $leave) {
+                $periodStart = max($leave->start_date, $start);
+                $periodEnd = min($leave->end_date, $end);
+                
+                $current = $periodStart->copy();
+                while ($current <= $periodEnd) {
+                    if ($current->isWeekday()) {
+                        $leave->status->name === 'LWP' ? $lwpDays++ : $leaveDays++;
+                    }
+                    $current->addDay();
+                }
+            }
+
+            return ['leaveDays' => $leaveDays, 'lwpDays' => $lwpDays];
+        }
+
+        private function calculateCommission(Employee $employee, Carbon $start, Carbon $end, array $rates): float
+        {
+            $commission = DivanjCommission::where('employee_id', $employee->id)
+                ->whereBetween('start_date', [$start, $end])
+                ->get()
+                ->sum(function($record) use ($employee, $rates) {
+                    $client = ClientCondition::where('client_id', $employee->client_id)->first();
+                    $currency = $client->currency ?? 'AUD';
+                    $rate = $rates[strtoupper($currency)] ?? 1;
+                    return $record->commission_amount * $rate;
+                });
+
+            return (float)$commission;
+        }
+
+
+  
+
+        public function showDeductions(Payroll $payroll)
+        {
+            // Calculate working days
+            $start = Carbon::parse($payroll->pay_period_start);
+            $end = Carbon::parse($payroll->pay_period_end);
+            
+            $workingDays = 0;
+            $current = $start->copy();
+            while ($current <= $end) {
+                if ($current->isWeekday()) {
+                    $workingDays++;
+                }
+                $current->addDay();
+            }
+            
+            // Get attendance data
+            $attendanceCount = Attendance::where('employee_id', $payroll->employee_id)
+                ->whereBetween('date', [$start, $end])
+                ->whereNotNull('check_in')
+                ->whereRaw('WEEKDAY(date) < 5')
+                ->count();
+            
+            // Get approved leaves
+            $leaves = Leave::with('status')
+                ->where('employee_id', $payroll->employee_id)
+                ->where('approved', 1)
+                ->where(function($query) use ($start, $end) {
+                    $query->whereBetween('start_date', [$start, $end])
+                        ->orWhereBetween('end_date', [$start, $end]);
+                })
+                ->get();
+            
+            // Calculate leave days
+            $lwpDays = 0;
+            $paidLeaveDays = 0;
+            $leaveDetails = [];
+            
+            foreach ($leaves as $leave) {
+                $periodStart = max($leave->start_date, $start);
+                $periodEnd = min($leave->end_date, $end);
+                $days = 0;
+                
+                $currentDay = $periodStart->copy();
+                while ($currentDay <= $periodEnd) {
+                    if ($currentDay->isWeekday()) {
+                        $days++;
+                        $leave->status->name === 'LWP' ? $lwpDays++ : $paidLeaveDays++;
+                    }
+                    $currentDay->addDay();
+                }
+                
+                $leaveDetails[] = [
+                    'type' => $leave->status->name,
+                    'start' => $leave->start_date->format('d M Y'),
+                    'end' => $leave->end_date->format('d M Y'),
+                    'days' => $days,
+                    'status' => $leave->status->name === 'LWP' ? 'Unpaid' : 'Paid'
+                ];
+            }
+            
+            // Calculate deductions
+            // $perDaySalary = $workingDays > 0 ? $payroll->base_salary / $workingDays : 0;
+            $perDaySalary = $payroll->base_salary / 30; // Always divide by 30 days
+            $effectivePresentDays = $attendanceCount + $paidLeaveDays;
+            $absentDays = max(0, $workingDays - $effectivePresentDays - $lwpDays);
+            
+            $deductionBreakdown = [
+                'lwp_deduction' => $lwpDays * $perDaySalary,
+                'absence_deduction' => $absentDays * $perDaySalary,
+                'total_deduction' => $payroll->deductions
+            ];
+            
+            return view('payroll.deductions', compact(
+                'payroll',
+                'workingDays',
+                'attendanceCount',
+                'leaveDetails',
+                'lwpDays',
+                'paidLeaveDays',
+                'absentDays',
+                'perDaySalary',
+                'deductionBreakdown'
+            ));
+        }
+
+
+
 
     public function salarySheet(Request $request)
     {

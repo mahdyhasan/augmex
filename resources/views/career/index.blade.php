@@ -116,7 +116,7 @@
                                     </small>
                                 </td>
                                 <td>
-                                    <span class="d-block">{{ $applicant->created_at->format('d M Y') }}</span>
+                                    <span class="d-block">{{ $applicant->created_at->format('Y-m-d') }}</span>
                                     <small class="text-muted">{{ $applicant->created_at->diffForHumans() }}</small>
                                 </td>
                                 <td class="text-center">
@@ -138,45 +138,22 @@
                                     </span>
                                 </td>
                                 <td class="text-end">
-                                    <div class="dropdown">
-                                        <button class="btn btn-sm btn-light dropdown-toggle" type="button" 
-                                                data-bs-toggle="dropdown">
-                                            Actions
+                                    <div class="d-flex gap-2 justify-content-end">
+                                        <!-- View Details Button -->
+                                        <button class="btn btn-sm btn-outline-primary" 
+                                                data-bs-toggle="offcanvas" 
+                                                data-bs-target="#offcanvas_applicant_{{ $applicant->id }}"
+                                                title="View Details">
+                                            <i class="fas fa-eye"></i>
                                         </button>
-                                        <ul class="dropdown-menu dropdown-menu-end">
-                                            <li>
-                                                <button class="dropdown-item" 
-                                                        data-bs-toggle="offcanvas" 
-                                                        data-bs-target="#offcanvas_applicant_{{ $applicant->id }}">
-                                                    <i class="fas fa-eye me-2"></i> View Details
-                                                </button>
-                                            </li>
-                                            <li>
-                                                <a class="dropdown-item" 
-                                                   href="{{ asset('storage/app/public/' . $applicant->resume_upload) }}" 
-                                                   target="_blank">
-                                                    <i class="fas fa-file-pdf me-2"></i> View Resume
-                                                </a>
-                                            </li>
-                                            <li>
-                                                <form id="shortlistForm_{{ $applicant->id }}" action="{{ route('career-applicants.update-status', $applicant->id) }}" method="POST" class="d-inline">
-                                                    @csrf
-                                                    <input type="hidden" name="status" value="1">
-                                                    <button type="button" class="dropdown-item text-success" onclick="updateStatus('shortlistForm_{{ $applicant->id }}')">
-                                                        <i class="fas fa-check-circle me-2"></i> Shortlist
-                                                    </button>
-                                                </form>
-                                            </li>
-                                            <li>
-                                                <form id="rejectForm_{{ $applicant->id }}" action="{{ route('career-applicants.update-status', $applicant->id) }}" method="POST" class="d-inline">
-                                                    @csrf
-                                                    <input type="hidden" name="status" value="2">
-                                                    <button type="button" class="dropdown-item text-danger" onclick="updateStatus('rejectForm_{{ $applicant->id }}')">
-                                                        <i class="fas fa-times-circle me-2"></i> Reject
-                                                    </button>
-                                                </form>
-                                            </li>
-                                        </ul>
+                                        
+                                        <!-- View Resume Button -->
+                                        <a class="btn btn-sm btn-outline-danger" 
+                                        href="{{ Str::startsWith($applicant->resume_upload, ['http://', 'https://']) ? $applicant->resume_upload : asset('storage/app/public/' . $applicant->resume_upload) }}" 
+                                        target="_blank"
+                                        title="View Resume">
+                                            <i class="fas fa-file-pdf"></i>
+                                        </a>
                                     </div>
                                 </td>
                             </tr>
@@ -190,6 +167,12 @@
     </div>
 </div>
 
+
+
+
+
+
+
 <!-- Applicant Detail Offcanvas -->
 @foreach($applicants as $applicant)
 <div class="offcanvas offcanvas-end offcanvas-large" tabindex="-1" id="offcanvas_applicant_{{ $applicant->id }}">
@@ -197,7 +180,41 @@
         <div>
             <h5 class="offcanvas-title fw-bold">{{ $applicant->name }}</h5>
             <p class="mb-0 text-muted">Applied for: {{ $applicant->position }}</p>
-            <div class="mt-2">
+            <!-- <div class="mt-2">
+                @switch($applicant->shortlisted)
+                    @case(1)
+                        <span class="badge bg-success bg-opacity-15 text-white">
+                            <i class="fas fa-check me-1"></i> Shortlisted
+                        </span>
+                        @break
+                    @case(2)
+                        <span class="badge bg-danger bg-opacity-15 text-white">
+                            <i class="fas fa-times me-1"></i> Rejected
+                        </span>
+                        @break
+                    @case(3)
+                        <span class="badge bg-info bg-opacity-15 text-white">
+                            <i class="fas fa-comments me-1"></i> Initial Interview
+                        </span>
+                        @break
+                    @case(4)
+                        <span class="badge bg-purple bg-opacity-15 text-white">
+                            <i class="fas fa-phone me-1"></i> Mock Calls
+                        </span>
+                        @break
+                    @case(5)
+                        <span class="badge bg-primary bg-opacity-15 text-white">
+                            <i class="fas fa-trophy me-1"></i> Hired
+                        </span>
+                        @break
+                    @default
+                        <span class="badge bg-warning bg-opacity-15 text-white">
+                            <i class="fas fa-clock me-1"></i> New
+                        </span>
+                @endswitch
+            </div> -->
+
+            <div class="mt-2" id="statusBadgeContainer_{{ $applicant->id }}">
                 @switch($applicant->shortlisted)
                     @case(1)
                         <span class="badge bg-success bg-opacity-15 text-white">
@@ -230,10 +247,94 @@
                         </span>
                 @endswitch
             </div>
+
+
+
+
         </div>
         <button type="button" class="btn-close" data-bs-dismiss="offcanvas"></button>
     </div>
     <div class="offcanvas-body">
+        <!-- Status Actions Section - Moved to top -->
+        <div class="status-actions-section border-bottom pb-3 mb-3" 
+            data-update-status-url="{{ route('career-applicants.update-status', ['id' => '__ID__']) }}">
+            <h6 class="fw-bold mb-3"><i class="fas fa-tasks me-2"></i> Update Status</h6>
+            <div class="d-flex flex-wrap gap-2 mb-3">
+                <button type="button" 
+                        class="btn btn-success btn-sm {{ $applicant->status == 1 ? 'active' : '' }}"
+                        onclick="updateStatus({{ $applicant->id }}, 1)"
+                        data-status="1"
+                        {{ $applicant->status == 1 ? 'disabled' : '' }}>
+                    <i class="fas fa-check me-2"></i> Shortlist
+                </button>
+                
+                <button type="button" 
+                        class="btn btn-outline-danger btn-sm {{ $applicant->status == 2 ? 'active' : '' }}"
+                        onclick="updateStatus({{ $applicant->id }}, 2)"
+                        data-status="2"
+                        {{ $applicant->status == 2 ? 'disabled' : '' }}>
+                    <i class="fas fa-times me-2"></i> Reject
+                </button>
+                
+                <button type="button" 
+                        class="btn btn-outline-info btn-sm {{ $applicant->status == 3 ? 'active' : '' }}"
+                        onclick="updateStatus({{ $applicant->id }}, 3)"
+                        data-status="3"
+                        {{ $applicant->status == 3 ? 'disabled' : '' }}>
+                    <i class="fas fa-comments me-2"></i> Initial Interview
+                </button>
+                
+                <button type="button" 
+                        class="btn btn-outline-purple btn-sm {{ $applicant->status == 4 ? 'active' : '' }}"
+                        onclick="updateStatus({{ $applicant->id }}, 4)"
+                        data-status="4"
+                        {{ $applicant->status == 4 ? 'disabled' : '' }}>
+                    <i class="fas fa-phone me-2"></i> Mock Calls
+                </button>
+                
+                <button type="button" 
+                        class="btn btn-outline-primary btn-sm {{ $applicant->status == 5 ? 'active' : '' }}"
+                        onclick="updateStatus({{ $applicant->id }}, 5)"
+                        data-status="5"
+                        {{ $applicant->status == 5 ? 'disabled' : '' }}>
+                    <i class="fas fa-trophy me-2"></i> Hired
+                </button>
+            </div>
+        </div>
+
+        <!-- Notes Section - Moved to top -->
+        <div class="notes-section mb-4" data-save-note-url="{{ route('career-applicants.add-note', ['id' => '__ID__']) }}">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <h6 class="fw-bold mb-0"><i class="fas fa-comment me-2"></i> Notes</h6>
+                <button class="btn btn-link btn-sm p-0" onclick="toggleNotes({{ $applicant->id }})">
+                    <i class="fas fa-edit"></i> {{ $applicant->notes ? 'Edit' : 'Add' }} Notes
+                </button>
+            </div>
+            
+            @if($applicant->notes)
+                <div class="mb-3 p-3 bg-light rounded" id="noteContent_{{ $applicant->id }}">
+                    <p class="mb-0">{{ $applicant->notes }}</p>
+                </div>
+            @endif
+            
+            <div id="notesForm_{{ $applicant->id }}" style="display: {{ $applicant->notes ? 'none' : 'block' }};">
+                <form id="noteForm_{{ $applicant->id }}">
+                    @csrf
+                    <div class="mb-3">
+                        <textarea name="note" class="form-control" rows="3" 
+                                placeholder="Add your notes about this applicant...">{{ old('note', $applicant->notes) }}</textarea>
+                        <div id="noteError_{{ $applicant->id }}" class="text-danger small mt-1" style="display: none;"></div>
+                    </div>
+                    <div class="d-flex justify-content-end gap-2">
+                        <button type="button" class="btn btn-light btn-sm" onclick="toggleNotes({{ $applicant->id }})">Cancel</button>
+                        <button type="button" class="btn btn-primary btn-sm" onclick="saveNote({{ $applicant->id }})">
+                            <span class="button-text">Save Note</span>
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
         <!-- Basic Information Section -->
         <div class="mb-4">
             <h6 class="fw-bold mb-3"><i class="fas fa-user me-2"></i> Basic Information</h6>
@@ -254,10 +355,6 @@
                     <label class="form-label text-muted small mb-1">Area</label>
                     <p class="mb-0">{{ $applicant->area }}</p>
                 </div>
-                <!-- <div class="col-12">
-                    <label class="form-label text-muted small mb-1">Address</label>
-                    <p class="mb-0">{{ $applicant->address ?? 'N/A' }}</p>
-                </div> -->
             </div>
         </div>
 
@@ -286,16 +383,19 @@
 
         <!-- Application Documents Section -->
         <div class="mb-4">
-            <h6 class="fw-bold mb-3"><i class="fas fa-file-alt me-2"></i> Application Documents</h6>
+            <h6 class="fw-bold mb-3"><i class="fas fa-file-alt me-2"></i> Resume</h6>
             <div class="d-flex gap-2">
-                <a href="{{ asset('storage/app/public/' . $applicant->resume_upload) }}" 
-                   target="_blank" 
-                   class="btn btn-outline-primary btn-sm">
+                <!-- View Resume Button -->
+                <a href="{{ Str::startsWith($applicant->resume_upload, ['http://', 'https://']) ? $applicant->resume_upload : asset('storage/app/public/' . $applicant->resume_upload) }}" 
+                target="_blank" 
+                class="btn btn-outline-primary btn-sm">
                     <i class="fas fa-file-pdf me-2"></i> View Resume
                 </a>
-                <a href="{{ asset('storage/app/public/' . $applicant->resume_upload) }}" 
-                   download 
-                   class="btn btn-outline-secondary btn-sm">
+                
+                <!-- Download Button -->
+                <a href="{{ Str::startsWith($applicant->resume_upload, ['http://', 'https://']) ? $applicant->resume_upload : asset('storage/app/public/' . $applicant->resume_upload) }}" 
+                download="{{ !Str::startsWith($applicant->resume_upload, ['http://', 'https://']) ? basename($applicant->resume_upload) : '' }}" 
+                class="btn btn-outline-secondary btn-sm" target="_blank" >
                     <i class="fas fa-download me-2"></i> Download
                 </a>
             </div>
@@ -321,89 +421,12 @@
                         <p class="text-muted small mb-0">{{ $applicant->updated_at->format('M d, Y h:i A') }}</p>
                     </div>
                 </div>
-                <!-- You can add more timeline items here for status changes -->
-            </div>
-        </div>
-
-        <!-- Status Actions Section -->
-        <div class="border-top pt-3 mt-4">
-            <h6 class="fw-bold mb-3"><i class="fas fa-tasks me-2"></i> Update Status</h6>
-            <div class="d-flex flex-wrap gap-2 mb-3">
-                <form action="{{ route('career-applicants.update-status', $applicant->id) }}" method="POST">
-                    @csrf
-                    <input type="hidden" name="status" value="1">
-                    <button type="submit" class="btn btn-success btn-sm">
-                        <i class="fas fa-check me-2"></i> Shortlist
-                    </button>
-                </form>
-                <form action="{{ route('career-applicants.update-status', $applicant->id) }}" method="POST">
-                    @csrf
-                    <input type="hidden" name="status" value="2">
-                    <button type="submit" class="btn btn-outline-danger btn-sm">
-                        <i class="fas fa-times me-2"></i> Reject
-                    </button>
-                </form>
-                <form action="{{ route('career-applicants.update-status', $applicant->id) }}" method="POST">
-                    @csrf
-                    <input type="hidden" name="status" value="3">
-                    <button type="submit" class="btn btn-outline-info btn-sm">
-                        <i class="fas fa-comments me-2"></i> Initial Interview
-                    </button>
-                </form>
-                <form action="{{ route('career-applicants.update-status', $applicant->id) }}" method="POST">
-                    @csrf
-                    <input type="hidden" name="status" value="4">
-                    <button type="submit" class="btn btn-outline-purple btn-sm">
-                        <i class="fas fa-phone me-2"></i> Mock Calls
-                    </button>
-                </form>
-                <form action="{{ route('career-applicants.update-status', $applicant->id) }}" method="POST">
-                    @csrf
-                    <input type="hidden" name="status" value="5">
-                    <button type="submit" class="btn btn-outline-primary btn-sm">
-                        <i class="fas fa-trophy me-2"></i> Hired
-                    </button>
-                </form>
-            </div>
-
-            <!-- Notes Section -->
-            <div class="notes-section">
-                <div class="d-flex justify-content-between align-items-center mb-2">
-                    <h6 class="fw-bold mb-0"><i class="fas fa-comment me-2"></i> Notes</h6>
-                    <button class="btn btn-link btn-sm p-0" onclick="toggleNotes({{ $applicant->id }})">
-                        <i class="fas fa-edit"></i> {{ $applicant->notes ? 'Edit' : 'Add' }} Notes
-                    </button>
-                </div>
-                
-                @if($applicant->notes)
-                    <div class="mb-3 p-3 bg-light rounded">
-                        <p class="mb-0">{{ $applicant->notes }}</p>
-                    </div>
-                @endif
-                
-                <div id="notesForm_{{ $applicant->id }}" style="display: {{ $applicant->notes ? 'none' : 'block' }};">
-                    <form action="{{ route('career-applicants.add-note', $applicant->id) }}" method="POST">
-                        @csrf
-                        <div class="mb-3">
-                            <textarea name="note" class="form-control" rows="3" 
-                                    placeholder="Add your notes about this applicant...">{{ old('note', $applicant->notes) }}</textarea>
-                        </div>
-                        <div class="d-flex justify-content-end gap-2">
-                            <button type="button" class="btn btn-light btn-sm" 
-                                    onclick="toggleNotes({{ $applicant->id }})">
-                                Cancel
-                            </button>
-                            <button type="submit" class="btn btn-primary btn-sm">
-                                Save Note
-                            </button>
-                        </div>
-                    </form>
-                </div>
             </div>
         </div>
     </div>
 </div>
 @endforeach
+
 
 
 <!-- Filter Modal -->
@@ -673,6 +696,7 @@
 }
 
 </style>
+<meta name="csrf-token" content="{{ csrf_token() }}">
 
 @endsection
 
@@ -684,6 +708,7 @@
 <script src="https://cdn.datatables.net/buttons/2.3.6/js/buttons.bootstrap5.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <script src="https://cdn.datatables.net/buttons/2.3.6/js/buttons.html5.min.js"></script>
+<meta name="csrf-token" content="{{ csrf_token() }}">
 
 <script>
     $(document).ready(function () {
@@ -714,20 +739,7 @@
         });
     });
 
-    function toggleNotes(applicantId) {
-        const notesForm = document.getElementById(`notesForm_${applicantId}`);
-        notesForm.style.display = notesForm.style.display === 'none' ? 'block' : 'none';
-    }
-
-    // Initialize all notes forms to be hidden if they have existing notes
-    document.addEventListener('DOMContentLoaded', function() {
-        @foreach($applicants as $applicant)
-            @if($applicant->notes)
-                document.getElementById('notesForm_{{ $applicant->id }}').style.display = 'none';
-            @endif
-        @endforeach
-    });
-
+   
     // Set status for an applicant via fetch API
     function setStatus(applicantId, status) {
         if (confirm("Are you sure you want to update this applicant's status?")) {
@@ -752,47 +764,47 @@
 
 
 
-    function updateStatus(formId) {
-    if (confirm('Are you sure you want to update this applicant\'s status?')) {
-        const form = document.getElementById(formId);
-        const formData = new FormData(form);
-        const submitBtn = form.querySelector('button[type="button"]');
+//     function updateStatus(formId) {
+//     if (confirm('Are you sure you want to update this applicant\'s status?')) {
+//         const form = document.getElementById(formId);
+//         const formData = new FormData(form);
+//         const submitBtn = form.querySelector('button[type="button"]');
         
-        // Store original button HTML
-        const originalHtml = submitBtn.innerHTML;
+//         // Store original button HTML
+//         const originalHtml = submitBtn.innerHTML;
         
-        // Show loading state
-        submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Processing...';
-        submitBtn.disabled = true;
+//         // Show loading state
+//         submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Processing...';
+//         submitBtn.disabled = true;
         
-        fetch(form.action, {
-            method: 'POST',
-            body: formData,
-            headers: {
-                'Accept': 'application/json',
-                'X-Requested-With': 'XMLHttpRequest'
-            }
-        })
-        .then(response => {
-            if (response.redirected) {
-                window.location.href = response.url;
-            } else {
-                return response.json().then(data => {
-                    if (data.success) {
-                        window.location.reload();
-                    } else {
-                        throw new Error(data.message || 'Failed to update status');
-                    }
-                });
-            }
-        })
-        .catch(error => {
-            alert('Error: ' + error.message);
-            submitBtn.innerHTML = originalHtml;
-            submitBtn.disabled = false;
-        });
-    }
-}
+//         fetch(form.action, {
+//             method: 'POST',
+//             body: formData,
+//             headers: {
+//                 'Accept': 'application/json',
+//                 'X-Requested-With': 'XMLHttpRequest'
+//             }
+//         })
+//         .then(response => {
+//             if (response.redirected) {
+//                 window.location.href = response.url;
+//             } else {
+//                 return response.json().then(data => {
+//                     if (data.success) {
+//                         window.location.reload();
+//                     } else {
+//                         throw new Error(data.message || 'Failed to update status');
+//                     }
+//                 });
+//             }
+//         })
+//         .catch(error => {
+//             alert('Error: ' + error.message);
+//             submitBtn.innerHTML = originalHtml;
+//             submitBtn.disabled = false;
+//         });
+//     }
+// }
 
 
 $(document).ready(function() {
@@ -848,4 +860,322 @@ $(document).ready(function() {
 
 </script>
 
+
+
+
+<script>
+    function toggleNotes(applicantId) {
+        const notesForm = document.getElementById(`notesForm_${applicantId}`);
+        const noteContent = document.getElementById(`noteContent_${applicantId}`);
+        const editButton = document.querySelector(`button[onclick="toggleNotes(${applicantId})"]`);
+        
+        // Determine current state
+        const isFormVisible = notesForm.style.display !== 'none';
+        
+        // Toggle visibility
+        notesForm.style.display = isFormVisible ? 'none' : 'block';
+        
+        if (noteContent) {
+            noteContent.style.display = isFormVisible ? 'block' : 'none';
+            
+            // When showing form, update textarea with current note
+            if (!isFormVisible) {
+                const textarea = notesForm.querySelector('textarea[name="note"]');
+                const noteText = noteContent.querySelector('p').textContent;
+                textarea.value = noteText;
+            }
+        }
+        
+        // Update button text
+        if (editButton) {
+            editButton.innerHTML = isFormVisible 
+                ? '<i class="fas fa-edit"></i> Edit Notes' 
+                : '<i class="fas fa-edit"></i> Cancel Edit';
+        }
+    }
+
+    function escapeHtml(unsafe) {
+        return unsafe
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#039;");
+    }
+
+    function saveNote(applicantId) {
+        const form = document.getElementById(`noteForm_${applicantId}`);
+        const formData = new FormData(form);
+        const noteContent = document.getElementById(`noteContent_${applicantId}`);
+        const errorDiv = document.getElementById(`noteError_${applicantId}`);
+        const button = form.querySelector('button[type="button"].btn-primary');
+        const buttonText = button.querySelector('.button-text');
+        const originalText = buttonText.textContent;
+        const saveUrl = document.querySelector('.notes-section').dataset.saveNoteUrl.replace('__ID__', applicantId);
+
+        // Disable button and show loading state
+        button.disabled = true;
+        buttonText.textContent = 'Saving...';
+        errorDiv.style.display = 'none';
+
+        fetch(saveUrl, {
+            method: 'POST',
+            headers: {
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+            },
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                const noteText = escapeHtml(data.note);
+                
+                if (noteContent) {
+                    noteContent.innerHTML = `<p class="mb-0">${noteText}</p>`;
+                    noteContent.style.display = 'block';
+                } else {
+                    const newContent = document.createElement('div');
+                    newContent.classList.add('mb-3', 'p-3', 'bg-light', 'rounded');
+                    newContent.id = `noteContent_${applicantId}`;
+                    newContent.innerHTML = `<p class="mb-0">${noteText}</p>`;
+                    form.parentNode.insertBefore(newContent, form);
+                }
+                
+                // Update the edit button text
+                const editButton = document.querySelector(`.notes-section button[onclick="toggleNotes(${applicantId})"]`);
+                if (editButton) {
+                    editButton.innerHTML = '<i class="fas fa-edit"></i> Edit Notes';
+                }
+                
+                // Update the textarea value
+                const textarea = form.querySelector('textarea[name="note"]');
+                if (textarea) {
+                    textarea.value = data.note;
+                }
+                
+                // Keep the form hidden but show the note content
+                form.style.display = 'none';
+                if (noteContent) {
+                    noteContent.style.display = 'block';
+                }
+                
+                // Clear any previous errors
+                errorDiv.style.display = 'none';
+            } else {
+                errorDiv.textContent = data.message || 'Failed to save note. Please try again.';
+                errorDiv.style.display = 'block';
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            errorDiv.textContent = 'An error occurred while saving the note.';
+            errorDiv.style.display = 'block';
+        })
+        .finally(() => {
+            // Re-enable button and restore text
+            button.disabled = false;
+            buttonText.textContent = originalText;
+        });
+    }
+</script>
+
+
+
+
+
+<script>
+
+// function updateStatus(applicantId, status) {
+//     const statusSection = document.querySelector('.status-actions-section');
+//     const saveUrl = statusSection.dataset.updateStatusUrl.replace('__ID__', applicantId);
+//     const button = event.currentTarget;
+//     const originalHtml = button.innerHTML;
+//     const allButtons = statusSection.querySelectorAll('button');
+    
+//     // Disable all buttons during the update
+//     allButtons.forEach(btn => btn.disabled = true);
+    
+//     // Show loading state on clicked button
+//     button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Updating...';
+
+//     const formData = new FormData();
+//     formData.append('status', status);
+    
+//     fetch(saveUrl, {
+//         method: 'POST',
+//         headers: {
+//             'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+//         },
+//         body: formData
+//     })
+//     .then(response => response.json())
+//     .then(data => {
+//         if (data.success) {
+//             // Update status badge if it exists
+//             const statusBadge = document.getElementById('applicantStatusBadge');
+//             if (statusBadge) {
+//                 statusBadge.className = `badge ${getStatusBadgeClass(status)}`;
+//                 statusBadge.textContent = getStatusText(status);
+//             }
+            
+//             // Show success message
+//             showNotification('Status updated successfully', 'success');
+            
+//             // Update button states
+//             updateButtonStates(status);
+//         } else {
+//             showNotification(data.message || 'Failed to update status', 'error');
+//         }
+//     })
+//     .catch(error => {
+//         console.error('Error:', error);
+//         showNotification('An error occurred while updating the status', 'error');
+//     })
+//     .finally(() => {
+//         // Re-enable all buttons and restore original button text
+//         allButtons.forEach(btn => btn.disabled = false);
+//         button.innerHTML = originalHtml;
+//     });
+// }
+
+// function getStatusBadgeClass(status) {
+//     const statusClasses = {
+//         1: 'bg-success',        // Shortlisted
+//         2: 'bg-danger',         // Rejected
+//         3: 'bg-info',           // Initial Interview
+//         4: 'bg-purple',         // Mock Calls
+//         5: 'bg-primary'         // Hired
+//     };
+//     return statusClasses[status] || 'bg-secondary';
+// }
+
+// function getStatusText(status) {
+//     const statusTexts = {
+//         1: 'Shortlisted',
+//         2: 'Rejected',
+//         3: 'Initial Interview',
+//         4: 'Mock Calls',
+//         5: 'Hired'
+//     };
+//     return statusTexts[status] || 'Unknown';
+// }
+
+// function updateButtonStates(currentStatus) {
+//     const buttons = document.querySelectorAll('.status-actions-section button');
+//     buttons.forEach(button => {
+//         const status = button.dataset.status;
+//         if (status == currentStatus) {
+//             button.classList.add('active');
+//             button.setAttribute('disabled', 'disabled');
+//         } else {
+//             button.classList.remove('active');
+//             button.removeAttribute('disabled');
+//         }
+//     });
+// }
+
+// function showNotification(message, type = 'success') {
+//     // You can implement this based on your preferred notification system
+//     // For example, using toastr or a custom notification
+//     if (typeof toastr !== 'undefined') {
+//         toastr[type](message);
+//     } else {
+//         alert(message);
+//     }
+// }
+function updateStatus(applicantId, status) {
+    const statusSection = document.querySelector(`#offcanvas_applicant_${applicantId} .status-actions-section`);
+    const saveUrl = statusSection.dataset.updateStatusUrl.replace('__ID__', applicantId);
+    const button = event.currentTarget;
+    const originalHtml = button.innerHTML;
+    const allButtons = statusSection.querySelectorAll('button');
+    
+    // Disable all buttons during the update
+    allButtons.forEach(btn => btn.disabled = true);
+    
+    // Show loading state on clicked button
+    button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Updating...';
+
+    const formData = new FormData();
+    formData.append('status', status);
+    
+    fetch(saveUrl, {
+        method: 'POST',
+        headers: {
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+        },
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Update status badge
+            updateStatusBadge(applicantId, status);
+            
+            // Show success message
+            showNotification('Status updated successfully', 'success');
+            
+            // Update button states
+            updateButtonStates(applicantId, status);
+        } else {
+            showNotification(data.message || 'Failed to update status', 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showNotification('An error occurred while updating the status', 'error');
+    })
+    .finally(() => {
+        // Re-enable all buttons and restore original button text
+        allButtons.forEach(btn => btn.disabled = false);
+        button.innerHTML = originalHtml;
+    });
+}
+
+function updateStatusBadge(applicantId, status) {
+    const badgeContainer = document.getElementById(`statusBadgeContainer_${applicantId}`);
+    if (!badgeContainer) return;
+
+    const statusData = {
+        1: { class: 'bg-success bg-opacity-15 text-white', icon: 'fa-check', text: 'Shortlisted' },
+        2: { class: 'bg-danger bg-opacity-15 text-white', icon: 'fa-times', text: 'Rejected' },
+        3: { class: 'bg-info bg-opacity-15 text-white', icon: 'fa-comments', text: 'Initial Interview' },
+        4: { class: 'bg-purple bg-opacity-15 text-white', icon: 'fa-phone', text: 'Mock Calls' },
+        5: { class: 'bg-primary bg-opacity-15 text-white', icon: 'fa-trophy', text: 'Hired' },
+        default: { class: 'bg-warning bg-opacity-15 text-white', icon: 'fa-clock', text: 'New' }
+    };
+
+    const statusInfo = statusData[status] || statusData.default;
+    
+    badgeContainer.innerHTML = `
+        <span class="badge ${statusInfo.class}">
+            <i class="fas ${statusInfo.icon} me-1"></i> ${statusInfo.text}
+        </span>
+    `;
+}
+
+function updateButtonStates(applicantId, currentStatus) {
+    const buttons = document.querySelectorAll(`#offcanvas_applicant_${applicantId} .status-actions-section button`);
+    buttons.forEach(button => {
+        const status = button.dataset.status;
+        if (status == currentStatus) {
+            button.classList.add('active');
+            button.disabled = true;
+        } else {
+            button.classList.remove('active');
+            button.disabled = false;
+        }
+    });
+}
+
+function showNotification(message, type = 'success') {
+    // Implement your preferred notification system here
+    // For example, using toastr:
+    if (typeof toastr !== 'undefined') {
+        toastr[type](message);
+    } else {
+        alert(message);
+    }
+}
+</script>
 @endsection

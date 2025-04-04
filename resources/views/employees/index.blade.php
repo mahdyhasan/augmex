@@ -176,17 +176,27 @@
                                         <div class="form-floating">
                                             <select class="form-select" id="gender" name="gender">
                                                 <option value="">Select Gender</option>
-                                                <option value="male" @selected(old('gender') == 'male')>Male</option>
-                                                <option value="female" @selected(old('gender') == 'female')>Female</option>
-                                                <option value="other" @selected(old('gender') == 'other')>Other</option>
+                                                <option value="Male" @selected(old('gender') == 'male')>Male</option>
+                                                <option value="Female" @selected(old('gender') == 'female')>Female</option>
+                                                <option value="Other" @selected(old('gender') == 'other')>Other</option>
                                             </select>
                                             <label for="gender">Gender</label>
                                         </div>
                                     </div>
-                                    <div class="col-12">
-                                        <div class="form-check">
-                                            <input class="form-check-input" type="checkbox" id="married" name="married" value="1" @checked(old('married'))>
-                                            <label class="form-check-label" for="married">Married</label>
+                                    <div class="col-md-6">
+                                        <div class="form-floating">
+                                            <select class="form-select" id="married" name="married">
+                                                <option value="">Select Marital Status</option>
+                                                <option value="Yes" @selected(old('married') == 'Yes')>Yes</option>
+                                                <option value="No" @selected(old('married') == 'No')>No</option>
+                                            </select>
+                                            <label for="married">Married?</label>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="form-floating">
+                                            <input type="text" class="form-control" id="nid_number" name="nid_number" value="{{ old('nid_number') }}">
+                                            <label for="nid_number">NID Number</label>
                                         </div>
                                     </div>
                                 </div>
@@ -210,7 +220,15 @@
                                     </div>
                                     <div class="col-md-6">
                                         <div class="form-floating">
-                                            <input type="text" class="form-control" id="department" name="department" value="{{ old('department') }}" required>
+                                        <select class="form-control" id="department" name="department" required>
+                                            <option value="">Select Department</option>
+                                            <option value="Management">Management</option>
+                                            <option value="HR">HR</option>
+                                            <option value="IT">IT</option>
+                                            <option value="Finance">Finance</option>
+                                            <option value="Sales">Sales</option>
+                                            <option value="Operations">Operations</option>
+                                        </select>
                                             <label for="department">Department</label>
                                             @error('department')
                                                 <div class="invalid-feedback d-block">{{ $message }}</div>
@@ -219,7 +237,15 @@
                                     </div>
                                     <div class="col-md-6">
                                         <div class="form-floating">
-                                            <input type="text" class="form-control" id="position" name="position" value="{{ old('position') }}" required>
+                                        <select class="form-control" id="position" name="position" required>
+                                            <option value="">Select Position</option>
+                                            <option value="Manager">Manager</option>
+                                            <option value="Asst. Manager">Asst. Manager</option>
+                                            <option value="Team Leader">Team Leader</option>
+                                            <option value="Sr. Executive">Sr. Executive</option>
+                                            <option value="Executive">Executive</option>
+                                            <option value="Jr. Executive">Jr. Executive</option>
+                                        </select>
                                             <label for="position">Position</label>
                                             @error('position')
                                                 <div class="invalid-feedback d-block">{{ $message }}</div>
@@ -260,19 +286,13 @@
                             <!-- Contact Info Tab -->
                             <div class="tab-pane fade" id="contact" role="tabpanel">
                                 <div class="row g-3">
-                                    <div class="col-md-6">
-                                        <div class="form-floating">
-                                            <input type="text" class="form-control" id="nid_number" name="nid_number" value="{{ old('nid_number') }}">
-                                            <label for="nid_number">NID Number</label>
-                                        </div>
-                                    </div>
-                                    <div class="col-12">
+                                    <div class="col-6">
                                         <div class="form-floating">
                                             <input type="text" class="form-control" id="address_line_1" name="address_line_1" value="{{ old('address_line_1') }}">
                                             <label for="address_line_1">Address Line 1</label>
                                         </div>
                                     </div>
-                                    <div class="col-12">
+                                    <div class="col-6">
                                         <div class="form-floating">
                                             <input type="text" class="form-control" id="address_line_2" name="address_line_2" value="{{ old('address_line_2') }}">
                                             <label for="address_line_2">Address Line 2</label>
@@ -296,19 +316,26 @@
                                             <label for="country">Country</label>
                                         </div>
                                     </div>
-                                    <div class="col-md-6">
+                                    <div class="col-md-4">
                                         <div class="form-floating">
                                             <input type="text" class="form-control" id="emergency_contact_name" name="emergency_contact_name" value="{{ old('emergency_contact_name') }}">
                                             <label for="emergency_contact_name">Emergency Contact Name</label>
                                         </div>
                                     </div>
-                                    <div class="col-md-6">
+                                    <div class="col-md-4">
                                         <div class="form-floating">
-                                            <input type="text" class="form-control" id="emergency_contact_relationship" name="emergency_contact_relationship" value="{{ old('emergency_contact_relationship') }}">
+                                        <select class="form-control" id="emergency_contact_relationship" name="emergency_contact_relationship">
+                                            <option value="">Select Relationship</option>
+                                            <option value="Parent">Parent</option>
+                                            <option value="Spouse">Spouse</option>
+                                            <option value="Sibling">Sibling</option>
+                                            <option value="Friend">Friend</option>
+                                            <option value="Other">Other</option>
+                                        </select>
                                             <label for="emergency_contact_relationship">Relationship</label>
                                         </div>
                                     </div>
-                                    <div class="col-md-6">
+                                    <div class="col-md-4">
                                         <div class="form-floating">
                                             <input type="text" class="form-control" id="emergency_contact_phone" name="emergency_contact_phone" value="{{ old('emergency_contact_phone') }}">
                                             <label for="emergency_contact_phone">Emergency Contact Phone</label>
@@ -500,20 +527,20 @@
                                 <div class="card-header bg-light d-flex justify-content-between align-items-center">
                                     <h5 class="mb-0"><i class="fas fa-calendar-check me-2"></i>Attendance Records</h5>
                                     <div class="dropdown">
-    <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
-        <i class="fas fa-filter me-1"></i> Filter
-    </button>
-    <ul class="dropdown-menu dropdown-menu-end">
-        <li><a class="dropdown-item" href="#" data-filter="all">All Records</a></li>
-        <li><a class="dropdown-item" href="#" data-filter="month">This Month</a></li>
-        <li><a class="dropdown-item" href="#" data-filter="late">Late Arrivals</a></li>
-        <li><a class="dropdown-item" href="#" data-filter="absent">Absences</a></li>
-    </ul>
-</div>
+                                        <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                                            <i class="fas fa-filter me-1"></i> Filter
+                                        </button>
+                                        <ul class="dropdown-menu dropdown-menu-end">
+                                            <li><a class="dropdown-item" href="#" data-filter="all">All Records</a></li>
+                                            <li><a class="dropdown-item" href="#" data-filter="month">This Month</a></li>
+                                            <li><a class="dropdown-item" href="#" data-filter="late">Late Arrivals</a></li>
+                                            <li><a class="dropdown-item" href="#" data-filter="absent">Absences</a></li>
+                                        </ul>
+                                    </div>
                                 </div>
                                 <div class="card-body">
                                     <div class="table-responsive">
-                                        <table class="table table-sm table-hover">
+                                        <table id = "attendanceTable" class="table table-sm table-hover">
                                             <thead class="table-light">
                                                 <tr>
                                                     <th>Date</th>

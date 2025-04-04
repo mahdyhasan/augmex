@@ -63,6 +63,9 @@ class Employee extends Model
         return $this->hasMany(EmployeeSales::class);
     }
 
-
+    public function leaves()
+    {
+        return $this->hasMany(Leave::class);
+    }
 
 }

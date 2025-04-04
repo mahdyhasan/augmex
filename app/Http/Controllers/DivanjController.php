@@ -276,141 +276,265 @@ class DivanjController extends Controller
 
 
     
-    //Sales Summary for Dillon
-    public function salesSummaryDivanj (Request $request)
-    {
+    // //Sales Summary for Dillon
+    // public function salesSummaryDivanj (Request $request)
+    // {
 
-        // Allow only admins
-        if (!Auth::check() || !Auth::user()->isSuperAdmin()) {
-            // Redirect non-admins to user dashboard
-            return redirect()->route('dashboard');
+    //     // Allow only admins
+    //     if (!Auth::check() || !Auth::user()->isSuperAdmin()) {
+    //         // Redirect non-admins to user dashboard
+    //         return redirect()->route('dashboard');
             
-            // Or show 403 forbidden
-            // abort(403, 'Unauthorized action.');
-        }
+    //         // Or show 403 forbidden
+    //         // abort(403, 'Unauthorized action.');
+    //     }
         
-        $startDate = $request->input('start_date', now()->toDateString());
-        $endDate = $request->input('end_date', now()->toDateString());
+    //     $startDate = $request->input('start_date', now()->toDateString());
+    //     $endDate = $request->input('end_date', now()->toDateString());
 
-        $employees = Employee::with('user')
-            ->where('client_id', 1)
-            ->get();
+    //     $employees = Employee::with('user')
+    //         ->where('client_id', 1)
+    //         ->where('date_of_termination', NULL)
+    //         ->get();
 
-        // Get absent status ID
-        $absentStatusId = AttendanceStatus::where('name', 'Absent')->first()?->id;
+    //     // Get absent status ID
+    //     $absentStatusId = AttendanceStatus::where('name', 'Absent')->first()?->id;
 
-        // Get attendance
-        $attendance = Attendance::whereIn('employee_id', $employees->pluck('id'))
-            ->whereBetween('date', [$startDate, $endDate])
-            ->with('employee.user')
-            ->get();
+    //     // Get attendance
+    //     $attendance = Attendance::whereIn('employee_id', $employees->pluck('id'))
+    //         ->whereBetween('date', [$startDate, $endDate])
+    //         ->with('employee.user')
+    //         ->get();
 
-        // Group attendance by date
-        $attendanceByDate = [];
-        foreach ($attendance as $record) {
-            $date = $record->date;
+    //     // Group attendance by date
+    //     $attendanceByDate = [];
+    //     foreach ($attendance as $record) {
+    //         $date = $record->date;
 
-            $checkIn = $record->check_in ? Carbon::parse($record->check_in)->timezone('Australia/Melbourne') : null;
-            $checkOut = $record->check_out ? Carbon::parse($record->check_out)->timezone('Australia/Melbourne') : null;
+    //         $checkIn = $record->check_in ? Carbon::parse($record->check_in)->timezone('Australia/Melbourne') : null;
+    //         $checkOut = $record->check_out ? Carbon::parse($record->check_out)->timezone('Australia/Melbourne') : null;
 
-            $hours = 0;
-            if ($checkIn && $checkOut) {
-                $diff = $checkIn->floatDiffInHours($checkOut);
-                $hours = min(round($diff * 2) / 2, 8); // round to nearest 0.5, max 8 hours
-            }
+    //         $hours = 0;
+    //         if ($checkIn && $checkOut) {
+    //             $diff = $checkIn->floatDiffInHours($checkOut);
+    //             $hours = min(round($diff * 2) / 2, 8); // round to nearest 0.5, max 8 hours
+    //         }
 
-            $dateString = $date->format('Y-m-d');
+    //         $dateString = $date->format('Y-m-d');
 
-            $attendanceByDate[$dateString][] = [
-                'employee' => $record->employee,
-                'check_in' => $checkIn?->format('H:i'),
-                'check_out' => $checkOut?->format('H:i'),
-                'hours' => $hours,
-                'status_id' => $record->status_id,
-            ];
-        }
+    //         $attendanceByDate[$dateString][] = [
+    //             'employee' => $record->employee,
+    //             'check_in' => $checkIn?->format('H:i'),
+    //             'check_out' => $checkOut?->format('H:i'),
+    //             'hours' => $hours,
+    //             'status_id' => $record->status_id,
+    //         ];
+    //     }
 
-        // Absent employees by date
-        $absentEmployeesByDate = [];
-        foreach ($employees as $employee) {
-            $attendanceDates = $attendance->where('employee_id', $employee->id)->pluck('date')->toArray();
+    //     // Absent employees by date
+    //     $absentEmployeesByDate = [];
+    //     foreach ($employees as $employee) {
+    //         $attendanceDates = $attendance->where('employee_id', $employee->id)->pluck('date')->toArray();
 
-            $period = Carbon::parse($startDate)->toPeriod($endDate);
-            foreach ($period as $day) {
-                $d = $day->toDateString();
-                if (!in_array($d, $attendanceDates)) {
-                    $absentEmployeesByDate[$d][] = $employee;
-                }
-            }
-        }
+    //         $period = Carbon::parse($startDate)->toPeriod($endDate);
+    //         foreach ($period as $day) {
+    //             $d = $day->toDateString();
+    //             if (!in_array($d, $attendanceDates)) {
+    //                 $absentEmployeesByDate[$d][] = $employee;
+    //             }
+    //         }
+    //     }
 
-        // Sales records from DivanjSale table
-        $sales = DivanjSale::whereIn('employee_id', $employees->pluck('id'))
+    //     // Sales records from DivanjSale table
+    //     $sales = DivanjSale::whereIn('employee_id', $employees->pluck('id'))
+    //     ->whereBetween('date', [$startDate, $endDate])
+    //     ->with('employee.user')
+    //     ->get();
+
+
+    //     // Group sales by date
+    //     // $salesByDate = [];
+    //     // $totalCases = 0;
+    //     // $totalSales = 0;
+
+    //     // foreach ($sales->groupBy(['date', 'employee_id']) as $date => $groupedEmployees) {
+    //     //     foreach ($groupedEmployees as $employeeId => $salesGroup) {
+    //     //         $employee = $salesGroup->first()->employee;
+    //     //         $cases = $salesGroup->sum('quantity');
+    //     //         $amount = $salesGroup->sum('total');
+        
+    //     //         $salesByDate[$date][] = [
+    //     //             'employee' => $employee,
+    //     //             'cases' => $cases,
+    //     //             'amount' => $amount,
+    //     //         ];
+        
+    //     //         $totalCases += $cases;
+    //     //         $totalSales += $amount;
+    //     //     }
+    //     // }
+
+    //     // Group sales by date
+    //     $salesByDate = [];
+    //     $totalCases = 0;
+    //     $totalSales = 0;
+
+    //     foreach ($sales as $sale) {
+    //         $dateString = Carbon::parse($sale->date)->format('Y-m-d');
+            
+    //         if (!isset($salesByDate[$dateString])) {
+    //             $salesByDate[$dateString] = [];
+    //         }
+
+    //         // Initialize employee data if not exists
+    //         $employeeId = $sale->employee_id;
+    //         if (!isset($salesByDate[$dateString][$employeeId])) {
+    //             $salesByDate[$dateString][$employeeId] = [
+    //                 'employee' => $sale->employee,
+    //                 'cases' => 0,
+    //                 'amount' => 0,
+    //             ];
+    //         }
+
+    //         // Accumulate values
+    //         $salesByDate[$dateString][$employeeId]['cases'] += $sale->quantity;
+    //         $salesByDate[$dateString][$employeeId]['amount'] += $sale->total;
+
+    //         $totalCases += $sale->quantity;
+    //         $totalSales += $sale->total;
+    //     }
+
+    //     return view('divanj.sales_summary', compact(
+    //          'employees', 'startDate', 'endDate',
+    //         'attendanceByDate', 'salesByDate', 'absentEmployeesByDate',
+    //         'totalCases', 'totalSales', 'absentStatusId'
+    //     ));
+    // }
+
+
+public function salesSummaryDivanj(Request $request)
+{
+    // Ensure only super admins can access this functionality.
+    if (!Auth::check() || !Auth::user()->isSuperAdmin()) {
+        // Redirect non-admin users to the dashboard.
+        return redirect()->route('dashboard');
+        // Alternatively, you can abort with a 403 status:
+        // abort(403, 'Unauthorized action.');
+    }
+
+    // Retrieve the start and end dates from the request, defaulting to today.
+    $startDate = $request->input('start_date', now()->toDateString());
+    $endDate   = $request->input('end_date', now()->toDateString());
+
+    // Fetch active employees for client with ID 1.
+    $employees = Employee::with('user')
+        ->where('client_id', 1)
+        ->whereNull('date_of_termination')
+        ->get();
+
+    // Get the ID for the "Absent" status.
+    $absentStatusId = AttendanceStatus::where('name', 'Absent')->first()?->id;
+
+    // Retrieve attendance records for the selected employees within the date range.
+    $attendance = Attendance::whereIn('employee_id', $employees->pluck('id'))
         ->whereBetween('date', [$startDate, $endDate])
         ->with('employee.user')
         ->get();
 
+    // Process and group attendance records by date.
+    $attendanceByDate = [];
+    foreach ($attendance as $record) {
+        $dateString = Carbon::parse($record->date)->format('Y-m-d');
 
-        // Group sales by date
-        // $salesByDate = [];
-        // $totalCases = 0;
-        // $totalSales = 0;
+        $checkIn = $record->check_in
+            ? Carbon::parse($record->check_in)->timezone('Australia/Melbourne')
+            : null;
+        $checkOut = $record->check_out
+            ? Carbon::parse($record->check_out)->timezone('Australia/Melbourne')
+            : null;
 
-        // foreach ($sales->groupBy(['date', 'employee_id']) as $date => $groupedEmployees) {
-        //     foreach ($groupedEmployees as $employeeId => $salesGroup) {
-        //         $employee = $salesGroup->first()->employee;
-        //         $cases = $salesGroup->sum('quantity');
-        //         $amount = $salesGroup->sum('total');
-        
-        //         $salesByDate[$date][] = [
-        //             'employee' => $employee,
-        //             'cases' => $cases,
-        //             'amount' => $amount,
-        //         ];
-        
-        //         $totalCases += $cases;
-        //         $totalSales += $amount;
-        //     }
-        // }
-
-        // Group sales by date
-        $salesByDate = [];
-        $totalCases = 0;
-        $totalSales = 0;
-
-        foreach ($sales as $sale) {
-            $dateString = Carbon::parse($sale->date)->format('Y-m-d');
-            
-            if (!isset($salesByDate[$dateString])) {
-                $salesByDate[$dateString] = [];
-            }
-
-            // Initialize employee data if not exists
-            $employeeId = $sale->employee_id;
-            if (!isset($salesByDate[$dateString][$employeeId])) {
-                $salesByDate[$dateString][$employeeId] = [
-                    'employee' => $sale->employee,
-                    'cases' => 0,
-                    'amount' => 0,
-                ];
-            }
-
-            // Accumulate values
-            $salesByDate[$dateString][$employeeId]['cases'] += $sale->quantity;
-            $salesByDate[$dateString][$employeeId]['amount'] += $sale->total;
-
-            $totalCases += $sale->quantity;
-            $totalSales += $sale->total;
+        $hours = 0;
+        if ($checkIn && $checkOut) {
+            $diff = $checkIn->floatDiffInHours($checkOut);
+            $hours = min(round($diff * 2) / 2, 8); // Round to the nearest 0.5 hour, capped at 8 hours.
         }
 
-        return view('divanj.sales_summary', compact(
-             'employees', 'startDate', 'endDate',
-            'attendanceByDate', 'salesByDate', 'absentEmployeesByDate',
-            'totalCases', 'totalSales', 'absentStatusId'
-        ));
+        $attendanceByDate[$dateString][] = [
+            'employee'  => $record->employee,
+            'check_in'  => $checkIn ? $checkIn->format('H:i') : null,
+            'check_out' => $checkOut ? $checkOut->format('H:i') : null,
+            'hours'     => $hours,
+            'status_id' => $record->status_id,
+        ];
     }
 
+    // Identify absent employees for each day in the period.
+    $absentEmployeesByDate = [];
+    foreach ($employees as $employee) {
+        // Gather all attendance dates for this employee.
+        $attendanceDates = $attendance->where('employee_id', $employee->id)
+            ->pluck('date')
+            ->map(fn($date) => Carbon::parse($date)->toDateString())
+            ->toArray();
 
+        // Check each day within the range.
+        $period = Carbon::parse($startDate)->toPeriod($endDate);
+        foreach ($period as $day) {
+            $dateStr = $day->toDateString();
+            if (!in_array($dateStr, $attendanceDates)) {
+                $absentEmployeesByDate[$dateStr][] = $employee;
+            }
+        }
+    }
+
+    // Retrieve sales records for the employees within the date range.
+    $sales = DivanjSale::whereIn('employee_id', $employees->pluck('id'))
+        ->whereBetween('date', [$startDate, $endDate])
+        ->with('employee.user')
+        ->get();
+
+    // Process and group sales records by date and employee.
+    $salesByDate = [];
+    $totalCases  = 0;
+    $totalSales  = 0;
+    foreach ($sales as $sale) {
+        $dateString = Carbon::parse($sale->date)->format('Y-m-d');
+
+        // Initialize the date group if not already set.
+        if (!isset($salesByDate[$dateString])) {
+            $salesByDate[$dateString] = [];
+        }
+
+        $employeeId = $sale->employee_id;
+        // Initialize the employee group for this date if needed.
+        if (!isset($salesByDate[$dateString][$employeeId])) {
+            $salesByDate[$dateString][$employeeId] = [
+                'employee' => $sale->employee,
+                'cases'    => 0,
+                'amount'   => 0,
+            ];
+        }
+
+        // Accumulate the sales data.
+        $salesByDate[$dateString][$employeeId]['cases']  += $sale->quantity;
+        $salesByDate[$dateString][$employeeId]['amount'] += $sale->total;
+        $totalCases  += $sale->quantity;
+        $totalSales  += $sale->total;
+    }
+
+    // Pass all data to the view.
+    return view('divanj.sales_summary', compact(
+        'employees',
+        'startDate',
+        'endDate',
+        'attendanceByDate',
+        'salesByDate',
+        'absentEmployeesByDate',
+        'totalCases',
+        'totalSales',
+        'absentStatusId'
+    ));
+}
 
 
     // IMPORT SALES REPORT    

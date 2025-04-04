@@ -91,6 +91,7 @@
                             <li><a href="{{ route('employees.index') }}">Employees</a></li>
                             <li><a href="{{ route('payrolls.index') }}">Payroll</a></li>
                             <li><a href="{{ route('attendance.index') }}">Attendance Sheet</a></li>
+                            <li><a href="{{ route('attendance.leaves') }}">Leave Management</a></li>
                             <hr>
                             <li><a href="{{ route('career-applicants.index') }}">Applicants</a></li>
 
@@ -107,6 +108,7 @@
                         </a>
                         <ul>
                             <li><a href="{{ route('attendance.index') }}">Attendance</a></li>
+                            <li><a href="{{ route('attendance.leaves') }}">Leaves</a></li>
                             <li><a href="{{ route('divanj.sales.report') }}">Sales Report</a></li>
                             <li><a href="{{ route('divanj.narrative.report') }}">Narrative Report</a></li>
                             <li><a href="{{ route('divanj.agent.commission.history') }}">Commission History</a></li>

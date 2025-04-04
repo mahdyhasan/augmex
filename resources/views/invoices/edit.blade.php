@@ -72,7 +72,7 @@
                                     <input type="number" class="form-control hours-field" 
                                            name="items[{{ $index }}][hours_worked]" 
                                            value="{{ $item->hours_worked }}" 
-                                           min="0" step="0.01" required readonly>
+                                           min="0" step="0.01" required>
                                 </td>
                                 <td>
                                     <input type="number" class="form-control rate-field" 
@@ -96,7 +96,7 @@
                                     <input type="number" class="form-control amount-field" 
                                            name="items[{{ $index }}][amount]" 
                                            value="{{ $item->amount }}" 
-                                           min="0" step="0.01" required readonly>
+                                           min="0" step="0.01" required>
                                 </td>
                             </tr>
                             @endforeach

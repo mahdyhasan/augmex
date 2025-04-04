@@ -98,8 +98,8 @@
                                         <div><small class="text-muted">Commission:</small> {{ number_format($payroll->commission, 2) }}</div>
                                         <div><small class="text-muted">Transport:</small> {{ number_format($payroll->transport, 2) }}</div>
                                     </td>
-                                    <td class="text-danger text-end">
-                                        {{ number_format($payroll->deductions, 2) }}
+                                    <td class="deduction-cell text-end" data-payroll-id="{{ $payroll->id }}" style="cursor: pointer; color: #dc3545;">
+                                    {{ number_format($payroll->deductions, 2) }}
                                         @if($payroll->deductions > 0)
                                             <div class="text-muted small">Absence/Late</div>
                                         @endif
@@ -326,6 +326,17 @@ $(document).ready(function() {
         }
     });
 });
+
+
+// Make deduction cells clickable
+$(document).on('click', '.deduction-cell', function() {
+    const payrollId = $(this).data('payroll-id');
+    if (payrollId) {
+        window.location.href = `payroll/${payrollId}/deductions`;
+    }
+});
+
+
 
 
 </script>

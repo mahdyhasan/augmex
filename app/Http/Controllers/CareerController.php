@@ -125,29 +125,52 @@ class CareerController extends Controller
 
     public function updateStatus(Request $request, $id)
     {
-        $applicant = CareerApplicant::findOrFail($id);
-        $applicant->shortlisted = $request->status;
-        $applicant->save();
+        try {
+            $request->validate([
+                'status' => 'required|integer|between:1,5'
+            ]);
     
-        if ($request->ajax()) {
-            return response()->json(['success' => true]);
+            $applicant = CareerApplicant::findOrFail($id);
+            $applicant->shortlisted = $request->status;
+            $applicant->save();
+    
+            return response()->json([
+                'success' => true,
+                'message' => 'Status updated successfully'
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage()
+            ], 500);
         }
+    }
     
-        return back()->with('success', 'Applicant status updated successfully');
-    }
+   // Add this to your CareerApplicantController
 
-    public function addNote(Request $request, $id)
+   public function addNote(Request $request, $id)
     {
-        $request->validate([
-            'note' => 'required|string|max:500'
-        ]);
+        try {
+            $request->validate([
+                'note' => 'required|string|max:500'
+            ]);
 
-        $applicant = CareerApplicant::findOrFail($id);
-        $applicant->notes = $request->note;
-        $applicant->save();
+            $applicant = CareerApplicant::findOrFail($id);
+            $applicant->notes = $request->note;
+            $applicant->save();
 
-        return back()->with('success', 'Note added successfully');
+            return response()->json([
+                'success' => true,
+                'note' => $applicant->notes
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage()
+            ], 500);
+        }
     }
+
 
 
     // public function export(Request $request)

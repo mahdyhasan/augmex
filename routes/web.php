@@ -16,6 +16,7 @@ use App\Http\Controllers\PayrollController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\DivanjController;
 use App\Http\Controllers\CareerController;
+use App\Http\Controllers\PredictionController;
 
 
 /*
@@ -250,6 +251,7 @@ Route::group(['middleware' => 'auth'], function () {
         Route::get('/sales-report', [DivanjController::class, 'salesReport'])->name('divanj.sales.report');
         Route::post('/sales-report', [DivanjController::class, 'importSalesDivanj'])->name('divanj.sales.import');
         Route::get('/dashboard', [DivanjController::class, 'divanjDashboard'])->name('divanj.dashboard');
+        Route::get('/predictive-report', [PredictionController::class, 'salesPredictionReport'])->name('divanj.predictive.report');
 
     });
 

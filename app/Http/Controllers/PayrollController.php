@@ -185,7 +185,8 @@ class PayrollController extends Controller
                         $deduction = ($absentDays + $lwpDaysCount) * $perDaySalary;
 
                         // 5. Calculate commission
-                        $totalCommission = $this->calculateCommission($employee, $startDate, $endDate, $currencyRates);
+                        // $totalCommission = $this->calculateCommission($employee, $startDate, $endDate, $currencyRates);
+                        $totalCommission = 0;
 
                         // 6. Calculate net salary
                         $netSalary = $employee->salary_amount + $totalCommission - $deduction;
@@ -333,90 +334,90 @@ class PayrollController extends Controller
 
   
 
-        public function showDeductions(Payroll $payroll)
-        {
-            // Calculate working days
-            $start = Carbon::parse($payroll->pay_period_start);
-            $end = Carbon::parse($payroll->pay_period_end);
-            
-            $workingDays = 0;
-            $current = $start->copy();
-            while ($current <= $end) {
-                if ($current->isWeekday()) {
-                    $workingDays++;
-                }
-                $current->addDay();
+    public function showDeductions(Payroll $payroll)
+    {
+        // Calculate working days
+        $start = Carbon::parse($payroll->pay_period_start);
+        $end = Carbon::parse($payroll->pay_period_end);
+        
+        $workingDays = 0;
+        $current = $start->copy();
+        while ($current <= $end) {
+            if ($current->isWeekday()) {
+                $workingDays++;
             }
-            
-            // Get attendance data
-            $attendanceCount = Attendance::where('employee_id', $payroll->employee_id)
-                ->whereBetween('date', [$start, $end])
-                ->whereNotNull('check_in')
-                ->whereRaw('WEEKDAY(date) < 5')
-                ->count();
-            
-            // Get approved leaves
-            $leaves = Leave::with('status')
-                ->where('employee_id', $payroll->employee_id)
-                ->where('approved', 1)
-                ->where(function($query) use ($start, $end) {
-                    $query->whereBetween('start_date', [$start, $end])
-                        ->orWhereBetween('end_date', [$start, $end]);
-                })
-                ->get();
-            
-            // Calculate leave days
-            $lwpDays = 0;
-            $paidLeaveDays = 0;
-            $leaveDetails = [];
-            
-            foreach ($leaves as $leave) {
-                $periodStart = max($leave->start_date, $start);
-                $periodEnd = min($leave->end_date, $end);
-                $days = 0;
-                
-                $currentDay = $periodStart->copy();
-                while ($currentDay <= $periodEnd) {
-                    if ($currentDay->isWeekday()) {
-                        $days++;
-                        $leave->status->name === 'LWP' ? $lwpDays++ : $paidLeaveDays++;
-                    }
-                    $currentDay->addDay();
-                }
-                
-                $leaveDetails[] = [
-                    'type' => $leave->status->name,
-                    'start' => $leave->start_date->format('d M Y'),
-                    'end' => $leave->end_date->format('d M Y'),
-                    'days' => $days,
-                    'status' => $leave->status->name === 'LWP' ? 'Unpaid' : 'Paid'
-                ];
-            }
-            
-            // Calculate deductions
-            // $perDaySalary = $workingDays > 0 ? $payroll->base_salary / $workingDays : 0;
-            $perDaySalary = $payroll->base_salary / 30; // Always divide by 30 days
-            $effectivePresentDays = $attendanceCount + $paidLeaveDays;
-            $absentDays = max(0, $workingDays - $effectivePresentDays - $lwpDays);
-            
-            $deductionBreakdown = [
-                'lwp_deduction' => $lwpDays * $perDaySalary,
-                'absence_deduction' => $absentDays * $perDaySalary,
-                'total_deduction' => $payroll->deductions
-            ];
-            
-            return view('payroll.deductions', compact(
-                'payroll',
-                'workingDays',
-                'attendanceCount',
-                'leaveDetails',
-                'lwpDays',
-                'paidLeaveDays',
-                'absentDays',
-                'perDaySalary',
-                'deductionBreakdown'
-            ));
+            $current->addDay();
         }
+        
+        // Get attendance data
+        $attendanceCount = Attendance::where('employee_id', $payroll->employee_id)
+            ->whereBetween('date', [$start, $end])
+            ->whereNotNull('check_in')
+            ->whereRaw('WEEKDAY(date) < 5')
+            ->count();
+        
+        // Get approved leaves
+        $leaves = Leave::with('status')
+            ->where('employee_id', $payroll->employee_id)
+            ->where('approved', 1)
+            ->where(function($query) use ($start, $end) {
+                $query->whereBetween('start_date', [$start, $end])
+                    ->orWhereBetween('end_date', [$start, $end]);
+            })
+            ->get();
+        
+        // Calculate leave days
+        $lwpDays = 0;
+        $paidLeaveDays = 0;
+        $leaveDetails = [];
+        
+        foreach ($leaves as $leave) {
+            $periodStart = max($leave->start_date, $start);
+            $periodEnd = min($leave->end_date, $end);
+            $days = 0;
+            
+            $currentDay = $periodStart->copy();
+            while ($currentDay <= $periodEnd) {
+                if ($currentDay->isWeekday()) {
+                    $days++;
+                    $leave->status->name === 'LWP' ? $lwpDays++ : $paidLeaveDays++;
+                }
+                $currentDay->addDay();
+            }
+            
+            $leaveDetails[] = [
+                'type' => $leave->status->name,
+                'start' => $leave->start_date->format('d M Y'),
+                'end' => $leave->end_date->format('d M Y'),
+                'days' => $days,
+                'status' => $leave->status->name === 'LWP' ? 'Unpaid' : 'Paid'
+            ];
+        }
+        
+        // Calculate deductions
+        // $perDaySalary = $workingDays > 0 ? $payroll->base_salary / $workingDays : 0;
+        $perDaySalary = $payroll->base_salary / 30; // Always divide by 30 days
+        $effectivePresentDays = $attendanceCount + $paidLeaveDays;
+        $absentDays = max(0, $workingDays - $effectivePresentDays - $lwpDays);
+        
+        $deductionBreakdown = [
+            'lwp_deduction' => $lwpDays * $perDaySalary,
+            'absence_deduction' => $absentDays * $perDaySalary,
+            'total_deduction' => $payroll->deductions
+        ];
+        
+        return view('payroll.deductions', compact(
+            'payroll',
+            'workingDays',
+            'attendanceCount',
+            'leaveDetails',
+            'lwpDays',
+            'paidLeaveDays',
+            'absentDays',
+            'perDaySalary',
+            'deductionBreakdown'
+        ));
+    }
 
 
 

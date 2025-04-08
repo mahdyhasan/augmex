@@ -3,7 +3,12 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Carbon\Carbon; 
+
+
 
 class Employee extends Model
 {
@@ -58,14 +63,47 @@ class Employee extends Model
     }
 
 
-    public function sales()
+    public function sales(): HasMany
     {
-        return $this->hasMany(EmployeeSales::class);
+        return $this->hasMany(DivanjSale::class);
     }
-
+    
+    
     public function leaves()
     {
         return $this->hasMany(Leave::class);
+    }
+
+
+
+    public function getHireDateAttribute()
+    {
+        return $this->date_of_hire ? \Carbon\Carbon::parse($this->date_of_hire) : null;
+    }
+
+
+
+    public function getFilteredSales(Carbon $start, Carbon $end)
+    {
+        return $this->sales()
+            ->whereBetween('date', [$start, $end])
+            ->get();
+    }
+    
+
+
+    // Scope for active employees
+    public function scopeActiveForClient(Builder $query, int $clientId): Builder
+    {
+        return $query->where('client_id', $clientId)
+            ->whereNull('date_of_termination');
+    }
+
+    // Relationship with date filtering
+    public function filteredSales(Carbon $start, Carbon $end): HasMany
+    {
+        return $this->hasMany(DivanjSale::class)
+            ->whereBetween('date', [$start, $end]);
     }
 
 }

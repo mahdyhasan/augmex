@@ -71,470 +71,573 @@ class DivanjController extends Controller
             // abort(403, 'Unauthorized action.');
         }        
 
-        
+         $employees = Employee::where('client_id', 1)->get();
+         
          $commissions = DivanjCommission::with('employee')
              ->orderBy('start_date', 'desc')
              ->get();
      
-         return view('divanj.commission_index', compact('commissions'));
+         return view('divanj.commission_index', compact('commissions', 'employees'));
      }
      
      
      
-     
-         // COMMISISON FOR DIVANJ
-     
-         public function generateCommissionDivanj(Request $request)
-         {
-             $request->validate([
-                 'start_date' => 'required|date',
-                 'end_date'   => 'required|date|after_or_equal:start_date',
-             ]);
-         
-             $start = Carbon::parse($request->start_date)->startOfDay();
-             $end = Carbon::parse($request->end_date)->endOfDay();
-         
-             // Process week by week
-             $currentStart = $start->copy();
-             while ($currentStart <= $end) {
-                 $currentEnd = $currentStart->copy()->endOfWeek(); // Sunday end of day
-                 
-                 // Don't process beyond the requested end date
-                 if ($currentEnd > $end) {
-                     $currentEnd = $end;
-                 }
-         
-                 $this->processCommissionForWeek($currentStart, $currentEnd);
-         
-                 // Move to next week
-                 $currentStart = $currentEnd->copy()->addDay()->startOfDay();
-             }
-         
-             return redirect()->route('divanj.commission.index')->with('success', 'Commission generated successfully.');
-         }
-         
-         protected function processCommissionForWeek($weekStart, $weekEnd)
-         {
-            $employees = Employee::where('client_id', 1)->get();
-         
-             foreach ($employees as $employee) {
-                 $hiring_date = Carbon::parse($employee->date_of_hire);
-                 $months_with_company = $hiring_date->diffInMonths($weekStart);
-                 $target = $months_with_company <= 2 ? 15 : 25;
-             
-                 $sales = DivanjSale::where('employee_id', $employee->id)
-                     ->whereBetween('date', [$weekStart, $weekEnd])
-                     ->get();
-             
-                 $weekday_qty = 0;
-                 $weekday_amount = 0;
-                 $weekend_qty = 0;
-                 $weekend_amount = 0;
-             
-                 foreach ($sales as $sale) {
-                     $saleDate = Carbon::parse($sale->date);
-                     if ($saleDate->isWeekday()) {
-                         $weekday_qty += $sale->quantity;
-                         $weekday_amount += $sale->total;
-                     } else {
-                         $weekend_qty += $sale->quantity;
-                         $weekend_amount += $sale->total;
-                     }
-                 }
-             
-                 $total_qty = $weekday_qty + $weekend_qty;
-                 $total_amount = $weekday_amount + $weekend_amount;
-                 
-                 // Calculate base commission based on slabs
-                 $base_commission = $this->calculateBaseCommission($total_qty, $total_amount);
-                 
-                 // Option A: Base + Weekend Bonus (6% of weekend sales)
-                 $optionA = $base_commission + ($weekend_amount * 0.06);
-                 
-                 // Option B: Mixed (use weekend units to meet target if needed)
-                 $optionB = $this->calculateMixedOption($weekday_qty, $weekday_amount, $weekend_qty, $weekend_amount, $target, $total_amount);
-                 
-                 // Option C: Weekend Only (6% of all weekend sales)
-                 $optionC = $weekend_amount * 0.06;
-                 
-                 // Determine the best option
-                 $commission_options = [
-                     'fixed' => $optionA,
-                     'mixed' => $optionB,
-                     'weekend' => $optionC
-                 ];
-                 
-                 $max_type = array_keys($commission_options, max($commission_options))[0];
-                 $final_commission = $commission_options[$max_type];
-                 
-                 // Save to DB
-                 DivanjCommission::updateOrCreate(
-                     [
-                         'employee_id' => $employee->id,
-                         'start_date'  => $weekStart->toDateString(),
-                         'end_date'    => $weekEnd->toDateString(),
-                     ],
-                     [
-                         'target' => $target,
-                         'achieved_qty' => $total_qty,
-                         'weekday_sales_qty' => $weekday_qty,
-                         'weekday_sales_amount' => $weekday_amount,
-                         'weekend_sales_qty' => $weekend_qty,
-                         'weekend_sales_amount' => $weekend_amount,
-                         'base_commission' => $base_commission,
-                         'option_a_amount' => $optionA,
-                         'option_b_amount' => $optionB,
-                         'option_c_amount' => $optionC,
-                         'commission_type' => $max_type,
-                         'commission_amount' => $final_commission,
-                     ]
-                 );
-             }
-         }
-         
-         protected function calculateBaseCommission($total_qty, $total_amount)
-         {
-             if ($total_qty < 15) {
-                 return 0; // No commission if target not met
-             } elseif ($total_qty < 35) {
-                 return 50; // Base commission
-             } elseif ($total_qty < 50) {
-                 return 75; // 35-45 units
-             } elseif ($total_qty < 60) {
-                 return max(100, $total_amount * 0.03); // 50-55 units
-             } else {
-                 return max(125, $total_amount * 0.04); // 60+ units
-             }
-         }
-         
-         protected function calculateMixedOption($weekday_qty, $weekday_amount, $weekend_qty, $weekend_amount, $target, $total_amount)
-         {
-             $shortfall = max(0, $target - $weekday_qty);
-             
-             if ($shortfall == 0) {
-                 // If weekday sales meet target, same as Option A
-                 $base_commission = $this->calculateBaseCommission($weekday_qty, $total_amount);
-                 return $base_commission + ($weekend_amount * 0.06);
-             }
-             
-             // Calculate how much weekend units we need to take to meet target
-             $weekend_units_used = min($shortfall, $weekend_qty);
-             $remaining_weekend_qty = $weekend_qty - $weekend_units_used;
-             
-             // Calculate base commission with the combined units
-             $combined_qty = $weekday_qty + $weekend_units_used;
-             $base_commission = $this->calculateBaseCommission($combined_qty, $total_amount);
-             
-             // Calculate 6% of remaining weekend sales
-             if ($remaining_weekend_qty > 0 && $weekend_amount > 0) {
-                 $weekend_unit_price = $weekend_amount / $weekend_qty;
-                 $remaining_weekend_amount = $remaining_weekend_qty * $weekend_unit_price;
-                 $weekend_bonus = $remaining_weekend_amount * 0.06;
-             } else {
-                 $weekend_bonus = 0;
-             }
-             
-             return $base_commission + $weekend_bonus;
-         }         
-         
-        //  public function editDivanjCommission($id)
-        //  {
-        //      $commission = DivanjCommission::with('employee')->findOrFail($id);
-        //      return view('divanj.commission_edit', compact('commission'));
-        //  }
-             
-         
-        //  public function updateDivanjCommission(Request $request, $id)
-        //  {
-        //      $request->validate([
-        //          'commission_amount' => 'required|numeric|min:0',
-        //          'commission_type'   => 'required|string|in:fixed,mixed,weekend',
-        //      ]);
-     
-        //      $commission = DivanjCommission::findOrFail($id);
-     
-        //      $commission->commission_amount = $request->commission_amount;
-        //      $commission->commission_type = $request->commission_type;
-        //      $commission->save();
-     
-        //      return redirect()->route('divanj.commission.index')->with('success', 'Commission updated successfully.');
-        //  }
-     
 
-        public function salesCommissionForAgent()
-        {
-            // Get commissions for the currently authenticated agent who belongs to client_id = 1
-            $commissions = DivanjCommission::whereHas('employee', function($query) {
-                                $query->where('client_id', 1);
-                            })
-                            ->where('employee_id', auth()->user()->id)
-                            ->orderBy('start_date', 'desc')
-                            ->get();
-        
-            return view('divanj.commission_table', compact('commissions'));
+    /**
+     * Generates commission for Divanj employees within a date range
+     * Processes data week by week to calculate commissions
+     */
+    public function generateCommissionDivanj(Request $request)
+    {
+        $validated = $request->validate([
+            'start_date' => 'required|date',
+            'end_date'   => 'required|date|after_or_equal:start_date',
+        ]);
+
+        $start = Carbon::parse($validated['start_date'])->startOfDay();
+        $end   = Carbon::parse($validated['end_date'])->endOfDay();
+
+        $currentStart = $start->copy();
+        while ($currentStart <= $end) {
+            $currentEnd = $currentStart->copy()->endOfWeek();
+            if ($currentEnd > $end) {
+                $currentEnd = $end;
+            }
+
+            $this->processCommissionForWeek($currentStart, $currentEnd);
+            $currentStart = $currentEnd->copy()->addDay()->startOfDay();
         }
 
-
-    
-    // //Sales Summary for Dillon
-    // public function salesSummaryDivanj (Request $request)
-    // {
-
-    //     // Allow only admins
-    //     if (!Auth::check() || !Auth::user()->isSuperAdmin()) {
-    //         // Redirect non-admins to user dashboard
-    //         return redirect()->route('dashboard');
-            
-    //         // Or show 403 forbidden
-    //         // abort(403, 'Unauthorized action.');
-    //     }
-        
-    //     $startDate = $request->input('start_date', now()->toDateString());
-    //     $endDate = $request->input('end_date', now()->toDateString());
-
-    //     $employees = Employee::with('user')
-    //         ->where('client_id', 1)
-    //         ->where('date_of_termination', NULL)
-    //         ->get();
-
-    //     // Get absent status ID
-    //     $absentStatusId = AttendanceStatus::where('name', 'Absent')->first()?->id;
-
-    //     // Get attendance
-    //     $attendance = Attendance::whereIn('employee_id', $employees->pluck('id'))
-    //         ->whereBetween('date', [$startDate, $endDate])
-    //         ->with('employee.user')
-    //         ->get();
-
-    //     // Group attendance by date
-    //     $attendanceByDate = [];
-    //     foreach ($attendance as $record) {
-    //         $date = $record->date;
-
-    //         $checkIn = $record->check_in ? Carbon::parse($record->check_in)->timezone('Australia/Melbourne') : null;
-    //         $checkOut = $record->check_out ? Carbon::parse($record->check_out)->timezone('Australia/Melbourne') : null;
-
-    //         $hours = 0;
-    //         if ($checkIn && $checkOut) {
-    //             $diff = $checkIn->floatDiffInHours($checkOut);
-    //             $hours = min(round($diff * 2) / 2, 8); // round to nearest 0.5, max 8 hours
-    //         }
-
-    //         $dateString = $date->format('Y-m-d');
-
-    //         $attendanceByDate[$dateString][] = [
-    //             'employee' => $record->employee,
-    //             'check_in' => $checkIn?->format('H:i'),
-    //             'check_out' => $checkOut?->format('H:i'),
-    //             'hours' => $hours,
-    //             'status_id' => $record->status_id,
-    //         ];
-    //     }
-
-    //     // Absent employees by date
-    //     $absentEmployeesByDate = [];
-    //     foreach ($employees as $employee) {
-    //         $attendanceDates = $attendance->where('employee_id', $employee->id)->pluck('date')->toArray();
-
-    //         $period = Carbon::parse($startDate)->toPeriod($endDate);
-    //         foreach ($period as $day) {
-    //             $d = $day->toDateString();
-    //             if (!in_array($d, $attendanceDates)) {
-    //                 $absentEmployeesByDate[$d][] = $employee;
-    //             }
-    //         }
-    //     }
-
-    //     // Sales records from DivanjSale table
-    //     $sales = DivanjSale::whereIn('employee_id', $employees->pluck('id'))
-    //     ->whereBetween('date', [$startDate, $endDate])
-    //     ->with('employee.user')
-    //     ->get();
-
-
-    //     // Group sales by date
-    //     // $salesByDate = [];
-    //     // $totalCases = 0;
-    //     // $totalSales = 0;
-
-    //     // foreach ($sales->groupBy(['date', 'employee_id']) as $date => $groupedEmployees) {
-    //     //     foreach ($groupedEmployees as $employeeId => $salesGroup) {
-    //     //         $employee = $salesGroup->first()->employee;
-    //     //         $cases = $salesGroup->sum('quantity');
-    //     //         $amount = $salesGroup->sum('total');
-        
-    //     //         $salesByDate[$date][] = [
-    //     //             'employee' => $employee,
-    //     //             'cases' => $cases,
-    //     //             'amount' => $amount,
-    //     //         ];
-        
-    //     //         $totalCases += $cases;
-    //     //         $totalSales += $amount;
-    //     //     }
-    //     // }
-
-    //     // Group sales by date
-    //     $salesByDate = [];
-    //     $totalCases = 0;
-    //     $totalSales = 0;
-
-    //     foreach ($sales as $sale) {
-    //         $dateString = Carbon::parse($sale->date)->format('Y-m-d');
-            
-    //         if (!isset($salesByDate[$dateString])) {
-    //             $salesByDate[$dateString] = [];
-    //         }
-
-    //         // Initialize employee data if not exists
-    //         $employeeId = $sale->employee_id;
-    //         if (!isset($salesByDate[$dateString][$employeeId])) {
-    //             $salesByDate[$dateString][$employeeId] = [
-    //                 'employee' => $sale->employee,
-    //                 'cases' => 0,
-    //                 'amount' => 0,
-    //             ];
-    //         }
-
-    //         // Accumulate values
-    //         $salesByDate[$dateString][$employeeId]['cases'] += $sale->quantity;
-    //         $salesByDate[$dateString][$employeeId]['amount'] += $sale->total;
-
-    //         $totalCases += $sale->quantity;
-    //         $totalSales += $sale->total;
-    //     }
-
-    //     return view('divanj.sales_summary', compact(
-    //          'employees', 'startDate', 'endDate',
-    //         'attendanceByDate', 'salesByDate', 'absentEmployeesByDate',
-    //         'totalCases', 'totalSales', 'absentStatusId'
-    //     ));
-    // }
-
-
-public function salesSummaryDivanj(Request $request)
-{
-    // Ensure only super admins can access this functionality.
-    if (!Auth::check() || !Auth::user()->isSuperAdmin()) {
-        // Redirect non-admin users to the dashboard.
-        return redirect()->route('dashboard');
-        // Alternatively, you can abort with a 403 status:
-        // abort(403, 'Unauthorized action.');
+        return redirect()
+            ->route('divanj.commission.index')
+            ->with('success', 'Commission generated successfully.');
     }
 
-    // Retrieve the start and end dates from the request, defaulting to today.
-    $startDate = $request->input('start_date', now()->toDateString());
-    $endDate   = $request->input('end_date', now()->toDateString());
+    /**
+     * Process commission calculations for each employee for a week.
+     */
+    protected function processCommissionForWeek(Carbon $weekStart, Carbon $weekEnd): void
+    {
+        Employee::activeForClient(1)
+            ->get()
+            ->each(function (Employee $employee) use ($weekStart, $weekEnd) {
+                $sales = $employee->getFilteredSales($weekStart, $weekEnd);
+                $this->processEmployeeCommission($employee, $sales, $weekStart, $weekEnd);
+            });
+    }
 
-    // Fetch active employees for client with ID 1.
-    $employees = Employee::with('user')
-        ->where('client_id', 1)
-        ->whereNull('date_of_termination')
-        ->get();
+    /**
+     * Process commission for a single employee.
+     */
+    protected function processEmployeeCommission(
+        Employee $employee,
+        $sales,
+        Carbon $weekStart,
+        Carbon $weekEnd
+    ): void {
+        $hiringDate = Carbon::parse($employee->date_of_hire);
+        // Use the difference in days between the hiring date and the week start
+        $daysWithCompany = $hiringDate->diffInDays($weekStart);
+        $target = $daysWithCompany < 60 ? 15 : 25;
+    
+        // Categorize sales into weekday and weekend totals
+        list($weekdayQty, $weekdayAmount, $weekendQty, $weekendAmount) = $this->categorizeSales($sales);
+    
+        // Pass the days difference along to commission option calculations
+        $commissionData = $this->calculateCommissionOptions(
+            $weekdayQty,
+            $weekdayAmount,
+            $weekendQty,
+            $weekendAmount,
+            $target,
+            $employee,
+            $weekStart,
+            $weekEnd,
+            $daysWithCompany
+        );
+    
+        // Save commission record with the best option selected
+        $this->saveCommissionRecord($employee, $weekStart, $weekEnd, $target, $commissionData);
+    }
+     
+    
 
-    // Get the ID for the "Absent" status.
-    $absentStatusId = AttendanceStatus::where('name', 'Absent')->first()?->id;
+ 
+     /**
+      * Categorize sales into weekday/weekend totals
+      */
+      protected function calculateTarget(int $monthsWithCompany): int
+      {
+          return $monthsWithCompany <= 2 ? 15 : 25;
+      }
+  
+    /**
+     * Categorize sales into weekday and weekend totals.
+     */
+    protected function categorizeSales($sales): array
+    {
+        $weekdaySales = $sales->filter(fn($sale) => Carbon::parse($sale->date)->isWeekday());
+        $weekendSales = $sales->filter(fn($sale) => !Carbon::parse($sale->date)->isWeekday());
 
-    // Retrieve attendance records for the selected employees within the date range.
-    $attendance = Attendance::whereIn('employee_id', $employees->pluck('id'))
-        ->whereBetween('date', [$startDate, $endDate])
-        ->with('employee.user')
-        ->get();
+        return [
+            $weekdaySales->sum('quantity'),
+            $weekdaySales->sum('total'),
+            $weekendSales->sum('quantity'),
+            $weekendSales->sum('total'),
+        ];
+    }      
+      
 
-    // Process and group attendance records by date.
-    $attendanceByDate = [];
-    foreach ($attendance as $record) {
-        $dateString = Carbon::parse($record->date)->format('Y-m-d');
 
-        $checkIn = $record->check_in
-            ? Carbon::parse($record->check_in)->timezone('Australia/Melbourne')
-            : null;
-        $checkOut = $record->check_out
-            ? Carbon::parse($record->check_out)->timezone('Australia/Melbourne')
-            : null;
+    /**
+     * Calculate commission options and include the days difference for commission slab selection.
+     */
+    protected function calculateCommissionOptions(
+        int $weekdayQty,
+        float $weekdayAmount,
+        int $weekendQty,
+        float $weekendAmount,
+        int $target,
+        Employee $employee,
+        Carbon $weekStart,
+        Carbon $weekEnd,
+        int $daysWithCompany
+    ): array {
+        $totalQty    = $weekdayQty + $weekendQty;
+        $totalAmount = $weekdayAmount + $weekendAmount;
 
-        $hours = 0;
-        if ($checkIn && $checkOut) {
-            $diff = $checkIn->floatDiffInHours($checkOut);
-            $hours = min(round($diff * 2) / 2, 8); // Round to the nearest 0.5 hour, capped at 8 hours.
+        return [
+            'base'           => $this->calculateBaseCommission($totalQty, $totalAmount, $daysWithCompany),
+            'option_a'       => $this->calculateOptionA($weekdayQty, $weekdayAmount, $weekendAmount, $target, $daysWithCompany),
+            'option_b'       => $this->calculateOptionB(
+                                    $weekdayQty,
+                                    $weekdayAmount,
+                                    $weekendQty,
+                                    $weekendAmount,
+                                    $target,
+                                    $employee,
+                                    $weekStart,
+                                    $weekEnd,
+                                    $daysWithCompany
+                                ),
+            'option_c'       => $this->calculateOptionC($weekendAmount),
+            'total_qty'      => $totalQty,
+            'total_amount'   => $totalAmount,
+            'weekday_qty'    => $weekdayQty,
+            'weekday_amount' => $weekdayAmount,
+            'weekend_qty'    => $weekendQty,
+            'weekend_amount' => $weekendAmount,
+        ];
+    }    
+    
+    /**
+     * Calculate the base commission using commission slabs based on days with company.
+     */
+    protected function calculateBaseCommission(int $totalQty, float $totalAmount, int $daysWithCompany): float
+    {
+        $slabs = $this->getCommissionSlabs($daysWithCompany);
+
+        foreach ($slabs as [$min, $max, $fixed, $percent]) {
+            if ($totalQty >= $min && (is_null($max) || $totalQty <= $max)) {
+                $calculated = $percent ? max($fixed, $totalAmount * $percent) : $fixed;
+                return $totalQty >= $slabs[0][0] ? $calculated : 0;
+            }
         }
 
-        $attendanceByDate[$dateString][] = [
-            'employee'  => $record->employee,
-            'check_in'  => $checkIn ? $checkIn->format('H:i') : null,
-            'check_out' => $checkOut ? $checkOut->format('H:i') : null,
-            'hours'     => $hours,
-            'status_id' => $record->status_id,
+        return 0;
+    }
+    
+
+    /**
+     * Get commission slab configuration based on days with company.
+     * If less than 60 days, use the lower target and corresponding slabs.
+     */
+    protected function getCommissionSlabs(int $daysWithCompany): array
+    {
+        if ($daysWithCompany < 60) {
+            return [
+                [15, 34, 50, null],
+                [35, 49, 75, null],
+                [50, 59, 100, 0.03],
+                [60, null, 125, 0.04],
+            ];
+        } else {
+            return [
+                [25, 34, 50, null],
+                [35, 49, 75, null],
+                [50, 59, 100, 0.03],
+                [60, null, 125, 0.04],
+            ];
+        }
+    }
+
+        
+    /**
+     * Option A (Fixed): If weekday sales meet the target, add 6% of all weekend sales.
+     */
+    protected function calculateOptionA(
+        int $weekdayQty,
+        float $weekdayAmount,
+        float $weekendAmount,
+        int $target,
+        int $daysWithCompany
+    ): float {
+        if ($weekdayQty >= $target) {
+            $base = $this->calculateBaseCommission($weekdayQty, $weekdayAmount, $daysWithCompany);
+            return $base + ($weekendAmount * 0.06);
+        }
+        return 0.0;
+    }
+
+    /**
+     * Option B (Mixed): Use a portion of weekend sales to meet the target, then commission the surplus at 6%.
+     */
+    protected function calculateOptionB(
+        int $weekdayQty,
+        float $weekdayAmount,
+        int $weekendQty,
+        float $weekendAmount,
+        int $target,
+        Employee $employee,
+        Carbon $weekStart,
+        Carbon $weekEnd,
+        int $daysWithCompany
+    ): float {
+        // Ensure total sales (weekday + weekend) meet the target
+        if (($weekdayQty + $weekendQty) < $target) return 0.0;
+        
+        $needed = max(0, $target - $weekdayQty);
+        // Retrieve weekend sales sorted in ascending order by total amount
+        $weekendSales = $this->getSortedWeekendSales($employee, $weekStart, $weekEnd);
+        
+        // Calculate how much weekend sale amount is used to reach the target and the surplus amount
+        list($usedAmount, $remainingAmount) = $this->calculateUsedWeekendSales($weekendSales, $needed);
+
+        // Combine weekday sales amount with the used weekend sales amount for base commission
+        $combinedAmount = $weekdayAmount + $usedAmount;
+        $base = $this->calculateBaseCommission($target, $combinedAmount, $daysWithCompany);
+        
+        return $base + ($remainingAmount * 0.06);
+    }
+
+
+    /**
+     * Option C (Weekend Only): 6% commission on all weekend sales.
+     */
+    protected function calculateOptionC(float $weekendAmount): float
+    {
+        return $weekendAmount * 0.06;
+    }
+
+ 
+    /**
+     * Retrieve sorted weekend sales (ascending by total).
+     */
+    protected function getSortedWeekendSales(Employee $employee, Carbon $start, Carbon $end)
+    {
+        return DivanjSale::where('employee_id', $employee->id)
+            ->betweenDates($start, $end)
+            ->weekend()
+            ->orderBy('total')
+            ->get();
+    }
+
+
+    /**
+     * Calculate used and remaining weekend sales amounts based on needed units.
+     * (Assumes each sale record represents one unit; adjust if needed.)
+     */
+    protected function calculateUsedWeekendSales($weekendSales, int $needed): array
+    {
+        $usedAmount = 0;
+        $remainingAmount = 0;
+        $casesCounted = 0;
+
+        foreach ($weekendSales as $sale) {
+            if ($casesCounted < $needed) {
+                $usedAmount += $sale->total;
+                $casesCounted++;
+            } else {
+                $remainingAmount += $sale->total;
+            }
+        }
+
+        return [$usedAmount, $remainingAmount];
+    }
+
+
+
+
+
+    /**
+     * Determine the best commission option.
+     */
+    protected function determineBestOption(
+        float $optionA,
+        float $optionB,
+        float $optionC,
+        int $weekdayQty,
+        int $target
+    ): array {
+        $options = [
+            'fixed'   => $weekdayQty >= $target ? $optionA : 0,
+            'mixed'   => $weekdayQty < $target ? $optionB : 0,
+            'weekend' => $optionC,
+        ];
+
+        $maxType = array_keys($options, max($options))[0];
+        return [
+            'type'   => $maxType,
+            'amount' => $options[$maxType],
         ];
     }
 
-    // Identify absent employees for each day in the period.
-    $absentEmployeesByDate = [];
-    foreach ($employees as $employee) {
-        // Gather all attendance dates for this employee.
-        $attendanceDates = $attendance->where('employee_id', $employee->id)
-            ->pluck('date')
-            ->map(fn($date) => Carbon::parse($date)->toDateString())
-            ->toArray();
+    /**
+     * Save commission record to the database.
+     */
+    protected function saveCommissionRecord(
+        Employee $employee,
+        Carbon $weekStart,
+        Carbon $weekEnd,
+        int $target,
+        array $commissionData
+    ) {
+        $bestOption = $this->determineBestOption(
+            $commissionData['option_a'],
+            $commissionData['option_b'],
+            $commissionData['option_c'],
+            $commissionData['weekday_qty'],
+            $target
+        );
 
-        // Check each day within the range.
-        $period = Carbon::parse($startDate)->toPeriod($endDate);
-        foreach ($period as $day) {
-            $dateStr = $day->toDateString();
-            if (!in_array($dateStr, $attendanceDates)) {
-                $absentEmployeesByDate[$dateStr][] = $employee;
-            }
-        }
+        DivanjCommission::updateOrCreate(
+            [
+                'employee_id' => $employee->id,
+                'start_date'  => $weekStart->toDateString(),
+                'end_date'    => $weekEnd->toDateString(),
+            ],
+            [
+                'target'                => $target,
+                'achieved_qty'          => $commissionData['total_qty'],
+                'weekday_sales_qty'     => $commissionData['weekday_qty'],
+                'weekday_sales_amount'  => $commissionData['weekday_amount'],
+                'weekend_sales_qty'     => $commissionData['weekend_qty'],
+                'weekend_sales_amount'  => $commissionData['weekend_amount'],
+                'base_commission'       => $commissionData['base'],
+                'option_a_amount'       => $commissionData['option_a'],
+                'option_b_amount'       => $commissionData['option_b'],
+                'option_c_amount'       => $commissionData['option_c'],
+                'commission_type'       => $bestOption['type'],
+                'commission_amount'     => $bestOption['amount'],
+            ]
+        );
     }
 
-    // Retrieve sales records for the employees within the date range.
-    $sales = DivanjSale::whereIn('employee_id', $employees->pluck('id'))
-        ->whereBetween('date', [$startDate, $endDate])
-        ->with('employee.user')
-        ->get();
+     
+    
+    
+        // FOR AGENT 
+        public function salesCommissionForAgent()
+        {
+            // Retrieve the employee record for the logged-in user.
+            $employee = auth()->user()->employee;
+            
+            // Get commissions for the authenticated employee who belongs to client_id = 1.
+            $commissions = DivanjCommission::whereHas('employee', function($query) {
+                                    $query->where('client_id', 1);
+                                })
+                                ->where('employee_id', $employee->id)
+                                ->orderBy('start_date', 'desc')
+                                ->get();
+        
+            return view('divanj.commission_table', compact('commissions'));
+        }
+        
 
-    // Process and group sales records by date and employee.
-    $salesByDate = [];
-    $totalCases  = 0;
-    $totalSales  = 0;
-    foreach ($sales as $sale) {
-        $dateString = Carbon::parse($sale->date)->format('Y-m-d');
-
-        // Initialize the date group if not already set.
-        if (!isset($salesByDate[$dateString])) {
-            $salesByDate[$dateString] = [];
+    
+    public function salesSummaryDivanj(Request $request)
+    {
+        // Ensure only super admins can access this functionality.
+        if (!Auth::check() || !Auth::user()->isSuperAdmin()) {
+            // Redirect non-admin users to the dashboard.
+            return redirect()->route('dashboard');
+            // Alternatively, you can abort with a 403 status:
+            // abort(403, 'Unauthorized action.');
         }
 
-        $employeeId = $sale->employee_id;
-        // Initialize the employee group for this date if needed.
-        if (!isset($salesByDate[$dateString][$employeeId])) {
-            $salesByDate[$dateString][$employeeId] = [
-                'employee' => $sale->employee,
-                'cases'    => 0,
-                'amount'   => 0,
+        // Retrieve the start and end dates from the request, defaulting to today.
+        $startDate = $request->input('start_date', now()->toDateString());
+        $endDate   = $request->input('end_date', now()->toDateString());
+
+        // Fetch active employees for client with ID 1.
+        $employees = Employee::with('user')
+            ->where('client_id', 1)
+            ->whereNull('date_of_termination')
+            ->get();
+
+        // Get the ID for the "Absent" status.
+        $absentStatusId = AttendanceStatus::where('name', 'Absent')->first()?->id ?? null;
+
+        // Retrieve attendance records for the selected employees within the date range.
+        $attendance = Attendance::whereIn('employee_id', $employees->pluck('id'))
+            ->whereBetween('date', [$startDate, $endDate])
+            ->with('employee.user')
+            ->get();
+
+        // Process and group attendance records by date.
+        $attendanceByDate = [];
+        foreach ($attendance as $record) {
+            $dateString = Carbon::parse($record->date)->format('Y-m-d');
+
+            $checkIn = $record->check_in
+                ? Carbon::parse($record->check_in)->timezone('Australia/Melbourne')
+                : null;
+            $checkOut = $record->check_out
+                ? Carbon::parse($record->check_out)->timezone('Australia/Melbourne')
+                : null;
+
+            $hours = 0;
+            if ($checkIn && $checkOut) {
+                $diff = $checkIn->floatDiffInHours($checkOut);
+                $hours = min(round($diff * 2) / 2, 8); // Round to the nearest 0.5 hour, capped at 8 hours.
+            }
+
+            $attendanceByDate[$dateString][] = [
+                'employee'  => $record->employee,
+                'check_in'  => $checkIn ? $checkIn->format('H:i') : null,
+                'check_out' => $checkOut ? $checkOut->format('H:i') : null,
+                'hours'     => $hours,
+                'status_id' => $record->status_id,
             ];
         }
 
-        // Accumulate the sales data.
-        $salesByDate[$dateString][$employeeId]['cases']  += $sale->quantity;
-        $salesByDate[$dateString][$employeeId]['amount'] += $sale->total;
-        $totalCases  += $sale->quantity;
-        $totalSales  += $sale->total;
+        // Identify absent employees for each day in the period.
+        $absentEmployeesByDate = [];
+        foreach ($employees as $employee) {
+            // Gather all attendance dates for this employee.
+            $attendanceDates = $attendance->where('employee_id', $employee->id)
+                ->pluck('date')
+                ->map(fn($date) => Carbon::parse($date)->toDateString())
+                ->toArray();
+
+            // Check each day within the range.
+            $period = Carbon::parse($startDate)->toPeriod($endDate);
+            foreach ($period as $day) {
+                $dateStr = $day->toDateString();
+                if (!in_array($dateStr, $attendanceDates)) {
+                    $absentEmployeesByDate[$dateStr][] = $employee;
+                }
+            }
+        }
+
+        // Retrieve sales records for the employees within the date range.
+        $sales = DivanjSale::whereIn('employee_id', $employees->pluck('id'))
+            ->whereBetween('date', [$startDate, $endDate])
+            ->with('employee.user')
+            ->get();
+
+        // Process and group sales records by date and employee.
+        $salesByDate = [];
+        $totalCases  = 0;
+        $totalSales  = 0;
+        foreach ($sales as $sale) {
+            $dateString = Carbon::parse($sale->date)->format('Y-m-d');
+
+            // Initialize the date group if not already set.
+            if (!isset($salesByDate[$dateString])) {
+                $salesByDate[$dateString] = [];
+            }
+
+            $employeeId = $sale->employee_id;
+            // Initialize the employee group for this date if needed.
+            if (!isset($salesByDate[$dateString][$employeeId])) {
+                $salesByDate[$dateString][$employeeId] = [
+                    'employee' => $sale->employee,
+                    'cases'    => 0,
+                    'amount'   => 0,
+                ];
+            }
+
+            // Accumulate the sales data.
+            $salesByDate[$dateString][$employeeId]['cases']  += $sale->quantity;
+            $salesByDate[$dateString][$employeeId]['amount'] += $sale->total;
+            $totalCases  += $sale->quantity;
+            $totalSales  += $sale->total;
+        }
+        
+        
+            // Generate employee summaries
+            $employeeSummaries = $employees->map(function ($employee) use ($attendanceByDate, $salesByDate, $absentEmployeesByDate, $absentStatusId) {  
+                $employeeId = $employee->id;
+                $presentDays = 0;
+                $absentDays = 0;
+                $incompleteDays = 0;
+                $totalHoursWorked = 0.0; // Changed from 8 hours per day to cumulative hours calculation
+                $totalCases = 0;
+                $totalSales = 0;
+            
+                foreach ($attendanceByDate as $date => $records) {
+                    // Check if the current date is a weekend (Saturday or Sunday)
+                    $dayOfWeek = \Carbon\Carbon::parse($date)->dayOfWeek;
+                    $isWeekend = ($dayOfWeek === \Carbon\Carbon::SATURDAY || $dayOfWeek === \Carbon\Carbon::SUNDAY);
+            
+                    $employeeRecord = collect($records)->firstWhere('employee.id', $employeeId);
+            
+                    if (!$isWeekend) { // Only count attendance on weekdays
+                        if ($employeeRecord) {
+                            if (isset($employeeRecord['status_id']) && $employeeRecord['status_id'] == $absentStatusId) {
+                                $absentDays++;
+                            } elseif ($employeeRecord['check_in'] && $employeeRecord['check_out']) {
+                                $presentDays++;
+                                $totalHoursWorked += $employeeRecord['hours']; // Sum actual hours worked for that day
+                            } else {
+                                $incompleteDays++;
+                            }
+                        } else {
+                            $absentDays++;
+                        }
+                    }
+            
+                    // Always count sales, even on weekends
+                    if (isset($salesByDate[$date][$employeeId])) {
+                        $totalCases += $salesByDate[$date][$employeeId]['cases'];
+                        $totalSales += $salesByDate[$date][$employeeId]['amount'];
+                    }
+                }
+            
+                return (object)[
+                    'stage_name'     => $employee->stage_name,
+                    'present_days'   => $presentDays,
+                    'absent_days'    => $absentDays,
+                    'incomplete_days'=> $incompleteDays,
+                    'total_hours_worked' => $totalHoursWorked, // Store the actual total hours worked
+                    'total_cases'    => $totalCases,
+                    'total_sales'    => $totalSales,
+                ];
+            });
+
+
+        
+        // Pass all data to the view.
+        return view('divanj.sales_summary', compact(
+            'employees',
+            'startDate',
+            'endDate',
+            'attendanceByDate',
+            'salesByDate',
+            'absentEmployeesByDate',
+            'totalCases',
+            'totalSales',
+            'absentStatusId',
+            'employeeSummaries' // This is the new variable passed to the view
+        ));
+
     }
 
-    // Pass all data to the view.
-    return view('divanj.sales_summary', compact(
-        'employees',
-        'startDate',
-        'endDate',
-        'attendanceByDate',
-        'salesByDate',
-        'absentEmployeesByDate',
-        'totalCases',
-        'totalSales',
-        'absentStatusId'
-    ));
-}
+
+
+
+
 
 
     // IMPORT SALES REPORT    
@@ -595,6 +698,9 @@ public function salesSummaryDivanj(Request $request)
             'employees' => $employees,
         ]);
     }
+
+
+
 
 
 
@@ -778,7 +884,6 @@ public function salesSummaryDivanj(Request $request)
             'mostSoldProduct'
         ));
     }
-                
     
     // NARRATIVE REPORT FOR ALL AGENTS
     public function narrativeReportForAll(Request $request)
@@ -1005,5 +1110,17 @@ public function salesSummaryDivanj(Request $request)
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+    
 
 }

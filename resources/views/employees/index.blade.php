@@ -36,7 +36,7 @@
                                 <th>Employee</th>
                                 <th>Contact</th>
                                 <th>Position</th>
-                                <th>Department</th>
+                                <th>Hiring Date</th>
                                 <th>Client</th>
                                 <th>Status</th>
                                 <th>Actions</th>
@@ -63,8 +63,24 @@
                                         <div><i class="fas fa-envelope me-2 text-muted"></i>{{ $employee->user?->email ?? 'N/A' }}</div>
                                         <div><i class="fas fa-phone me-2 text-muted"></i>{{ $employee->user?->phone ?? 'N/A' }}</div>
                                     </td>
-                                    <td>{{ $employee->position }}</td>
-                                    <td>{{ $employee->department }}</td>
+                                    <td>
+                                        <h6 class="mb-0">{{ $employee->position ?? 'N/A' }}</h6>
+                                        <small class="text-muted">{{ $employee->department ?? 'N/A'}}</small>
+                                    </td>
+                                    <td>
+                                        @if($employee->hire_date)
+                                            @php
+                                                $diffInMonths = $employee->hire_date->diffInMonths(now());
+                                                $diffInWeeks = $employee->hire_date->diffInWeeks(now());
+                                            @endphp
+                                            
+                                            <h6 class="mb-0">{{ $diffInMonths }} Months (~{{ $diffInWeeks }} weeks)</h6>
+                                            <small class="text-muted">Employed since {{ $employee->hire_date->format('M d, Y') }}</small>
+                                        @else
+                                            <h6 class="mb-0">N/A</h6>
+                                            <small class="text-muted">Hire date not available</small>
+                                        @endif
+                                    </td>
                                     <td>
                                         @if($employee->client)
                                             <span class="badge bg-light text-dark">

@@ -101,7 +101,7 @@
                                 <i class="fas fa-trophy me-2"></i>Top Performing Wine
                             </h5>
                             <h3 class="text-white">{{ $topWineType['wine_type'] }}</h3>
-                            <p class="text-white display-6 mb-1">{{ $topWineType['total_qty'] }} bottles sold</p>
+                            <p class="text-white display-6 mb-1">{{ $topWineType['total_qty'] }} cases sold</p>
                             @if(!empty($topWineType['examples']))
                             <p class="small text-grey mt-2 mb-0">
                                 <i class="fas fa-wine-bottle me-1"></i> 

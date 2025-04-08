@@ -83,6 +83,7 @@
                                                 <li><a href="{{ route('divanj.commission.index') }}">Commission</a></li>
                                                 <li><a href="{{ route('divanj.narrative.report') }}">Narrative Report</a></li>
                                                 <li><a href="{{ route('divanj.sales.report') }}">Sales Report</a></li>
+                                                <li><a href="{{ route('divanj.predictive.report') }}">AI Insights</a></li>
 
                                             </ul>
                                         </li>
@@ -143,6 +144,7 @@
                                         <li><a href="{{ route('divanj.sales.report') }}">Sales Report</a></li>
                                         <li><a href="{{ route('divanj.narrative.report') }}">Narrative Report</a></li>
                                         <li><a href="{{ route('divanj.agent.commission.history') }}">Commission History</a></li>
+                                        <li><a href="{{ route('divanj.predictive.report') }}">AI Insights</a></li>
                                     </ul>
                                 </li>
                                 @endif
@@ -194,6 +196,9 @@
                 </a>
                 <div class="dropdown-menu menu-drop-user">
                     <div class="profilename">
+                        @if (auth()->user()->isAccountant())
+                        <a class="dropdown-item"> Welcome, {{ $employee->user->name }}! </a>
+                        @endif
                         <a class="dropdown-item" href="{{ route('dashboard') }}"> <i class="ti ti-layout-2"></i> Dashboard </a>
                         <a class="dropdown-item" href="{{ route('employees.profile') }}"> <i class="ti ti-user-pin"></i> My Profile </a>
                         <a class="dropdown-item" href="{{ route('user.passwordChange') }}"> <i class="ti ti-unlock"></i> Change Password </a>

@@ -16,7 +16,7 @@ class Invoice extends Model
     // ];
 
     protected $fillable = [
-        'client_id', 'invoice_date', 'work_start_date', 'work_end_date', 'total_amount', 'invoice_no'
+        'client_id', 'invoice_date', 'work_start_date', 'work_end_date', 'total_amount', 'invoice_no', 'status'
     ];
 
     // Relationship with Client

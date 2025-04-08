@@ -114,7 +114,7 @@
                                     $groupTotal = $group->sum('total');
                                 @endphp
                                 <tr>
-                                    <td>{{ $groupDate }}</td>
+                                    <td>{{ $groupDate->format('Y-m-d (D)') }}</td>
                                     <td>{{ $employeeStageName }}</td>
                                     <td>{{ $groupQuantity }}</td>
                                     <td>{{ number_format($groupTotal, 2) }}</td>
@@ -180,7 +180,8 @@
             "searching": true,
             "ordering": true,
             "info": true,
-            "responsive": true
+            "responsive": true,
+            "order": [[0, 'desc']] 
         });
     });
 </script>

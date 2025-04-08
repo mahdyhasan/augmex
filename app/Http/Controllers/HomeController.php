@@ -75,6 +75,8 @@ class HomeController extends Controller
     // If no request is passed, use the current request
     $request = $request ?? request();
 
+    $employee = Employee::with('user')->get();
+
     // Default date range (e.g., last 30 days)
     $startDate = $request->input('start_date', Carbon::now()->subDays(30)->toDateString());
     $endDate = $request->input('end_date', Carbon::now()->toDateString());
@@ -137,7 +139,7 @@ class HomeController extends Controller
         ->get();
 
     return view('dashboards.admin', compact(
-        'totalEmployees', 'totalClients', 'totalTransactions', 'totalInvoices',
+        'employee', 'totalEmployees', 'totalClients', 'totalTransactions', 'totalInvoices',
         'totalEarnings', 'totalExpenses', 'bankBalance', 'monthlyEarnings',
         'monthlyExpenses', 'depositCount', 'withdrawalCount', 'invoiceCount',
         'recentTransactions', 'recentInvoices', 'expenseSummary',

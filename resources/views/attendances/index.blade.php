@@ -87,7 +87,7 @@
                                 <tr>
                                     <td>{{ $attendance->id }}</td>
                                     <td>{{ $attendance->employee->user->name ?? 'N/A' }}</td>
-                                    <td>{{ $attendance->date->format('j F Y') }}</td>
+                                    <td>{{ $attendance->date->format('Y-m-d (D)') }}</td>
                                     <td>{{ $attendance->check_in }}</td>
                                     <td>{{ $attendance->check_out }}</td>
                                     <td>
@@ -224,7 +224,9 @@
             "searching": true,
             "ordering": true,
             "info": true,
-            "responsive": true
+            "responsive": true,
+            "order": [[2, 'desc']] // Default sort by date
+
         });
 
         // Submit filter form on change

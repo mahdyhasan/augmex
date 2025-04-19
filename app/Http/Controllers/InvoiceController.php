@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Carbon\Carbon;
 use Auth;
+use DB;
 
 use DataTables;
 use Excel;
@@ -315,9 +316,19 @@ public function invoicesUpdate(Request $request, $id)
 
 
 
-
-
-
+        public function markInvoicePaid(Request $request, $id)
+        {
+            try {
+                $invoice = Invoice::findOrFail($id);
+        
+                $invoice->status = 'paid';
+                $invoice->save();
+        
+                return redirect()->route('invoices.index')->with('success', 'Mark as paid successfully.');
+            } catch (\Exception $e) {
+                return redirect()->route('invoices.index')->with('error', 'Error: ' . $e->getMessage());
+            }
+        }
 
 
 

@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Carbon\Carbon;
 use Auth;
+use DB;
 
 use DataTables;
 use Excel;
@@ -143,24 +144,29 @@ class ClientController extends Controller
     public function clientPaymentsIndex()
     {
         $clientPayments = ClientPayment::with('invoice')->orderBy('payment_date', 'desc')->get();
-        $invoices = Invoice::all();
+        $invoices = Invoice::with('client')->get();
         return view('client_payments.index', compact('clientPayments', 'invoices'));
     }
+
 
     // Store a new client payment
     public function clientPaymentsStore(Request $request)
     {
-        // $request->validate([
-        //     'invoice_id' => 'required|exists:invoices,id',
-        //     'amount' => 'required|numeric|min:0',
-        //     'payment_date' => 'required|date',
-        //     'method' => 'required|string|max:50',
-        // ]);
-
-        ClientPayment::create($request->all());
-
-        return redirect()->route('client_payments.index')->with('success', 'Client payment recorded successfully.');
+        DB::transaction(function () use ($request) {
+            // Create payment
+            ClientPayment::create($request->all());
+            
+            // Update invoice status using the invoice_id from the form
+            Invoice::where('id', $request->invoice_id)->update([
+                'status' => 'paid',
+            ]);
+        });
+        
+        return redirect()->route('client_payments.index')
+               ->with('success', 'Client payment recorded successfully.');
     }
+
+
 
     // Edit client payment record
     public function clientPaymentsEdit($id)

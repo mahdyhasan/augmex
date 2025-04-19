@@ -17,6 +17,7 @@ use App\Http\Controllers\ReportController;
 use App\Http\Controllers\DivanjController;
 use App\Http\Controllers\CareerController;
 use App\Http\Controllers\PredictionController;
+use App\Http\Controllers\EmployeeIncentiveFineController;
 
 
 /*
@@ -162,6 +163,7 @@ Route::group(['middleware' => 'auth'], function () {
         Route::get('/{id}/edit', [InvoiceController::class, 'invoicesEdit'])->name('invoices.edit');
         Route::put('/{id}', [InvoiceController::class, 'invoicesUpdate'])->name('invoices.update');
         Route::get('/{id}', [InvoiceController::class, 'viewInvoice'])->name('invoices.view');
+        Route::post('/{id}/mark-as-paid', [InvoiceController::class, 'markInvoicePaid'])->name('invoices.markInvoicePaid');
     });
     
     
@@ -248,10 +250,16 @@ Route::group(['middleware' => 'auth'], function () {
         Route::get('/sales-summary', [DivanjController::class, 'salesSummaryDivanj'])->name('divanj.sales.summary');
         Route::get('/narrative-report', [DivanjController::class, 'narrativeReport'])->name('divanj.narrative.report');
         Route::get('/narrative-report-all', [DivanjController::class, 'narrativeReportForAll'])->name('divanj.narrative.report.all');
-        Route::get('/sales-report', [DivanjController::class, 'salesReport'])->name('divanj.sales.report');
-        Route::post('/sales-report', [DivanjController::class, 'importSalesDivanj'])->name('divanj.sales.import');
+        Route::get('/sales-report', [DivanjController::class, 'salesReport'])->name('divanj.sales.report');        
         Route::get('/dashboard', [DivanjController::class, 'divanjDashboard'])->name('divanj.dashboard');
         Route::get('/predictive-report', [PredictionController::class, 'salesPredictionReport'])->name('divanj.predictive.report');
+
+        Route::post('/sales-report', [DivanjController::class, 'importSalesDivanj'])->name('divanj.sales.import');
+        Route::post('/sales-report/admin', [DivanjController::class, 'importSalesDivanjAdmin'])->name('divanj.admin.sales.import');
+        Route::post('/sales/preview-import', [DivanjController::class, 'previewSalesImport'])->name('divanj.sales.preview-import');
+        Route::post('/sales/process-import', [DivanjController::class, 'processSalesImport'])->name('divanj.sales.process-import');
+        Route::get('/sales/preview', [DivanjController::class, 'showSalesPreview'])->name('divanj.show.sales.preview');
+        
 
     });
 
@@ -259,6 +267,16 @@ Route::group(['middleware' => 'auth'], function () {
         Route::get('/commission-history', [DivanjController::class, 'salesCommissionForAgent'])->name('divanj.agent.commission.history');
 
    
+    });
+
+
+
+    Route::prefix('incentives-fines')->middleware(['auth'])->group(function () {
+        Route::get('/', [EmployeeIncentiveFineController::class, 'index'])->name('employees.incentives.fines');
+        Route::get('/create', [EmployeeIncentiveFineController::class, 'create'])->name('employees.incentives.fines.create');
+        Route::post('/store', [EmployeeIncentiveFineController::class, 'store'])->name('employees.incentives.fines.store');
+        Route::get('/summary', [EmployeeIncentiveFineController::class, 'summary'])->name('employees.incentives.fines.summary');
+
     });
 
 

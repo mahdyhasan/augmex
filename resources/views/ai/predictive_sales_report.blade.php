@@ -3,481 +3,410 @@
 @section('title', 'Predictive Sales Report')
 
 @section('css')
+<link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/flowbite@2.4.1/dist/flowbite.min.css" rel="stylesheet">
 <style>
-    .report-container {
-        background-color: #f8f9fa;
-        padding: 2rem 0;
-    }
-    .card {
-        border: none;
-        border-radius: 10px;
-        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
-        margin-bottom: 1.5rem;
-        transition: transform 0.3s ease, box-shadow 0.3s ease;
-    }
-    .card:hover {
-        transform: translateY(-5px);
-        box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
-    }
-    .card-header {
-        background-color: transparent;
-        border-bottom: 1px solid rgba(0, 0, 0, 0.05);
-        padding: 1.25rem 1.5rem;
-    }
-    .card-title {
-        font-weight: 600;
-        color: #2c3e50;
-        margin-bottom: 0;
-    }
-    .metric-card {
-        border-left: 4px solid #3b7ddd;
-        padding: 1rem;
-        height: 100%;
-    }
-    .metric-value {
-        font-size: 1.75rem;
-        font-weight: 700;
-        color: #2c3e50;
-    }
-    .metric-label {
-        font-size: 0.875rem;
-        color: #7f8c8d;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-    }
-    .trend-up {
-        color: #27ae60;
-    }
-    .trend-down {
-        color: #e74c3c;
-    }
-    .trend-neutral {
-        color: #7f8c8d;
-    }
     .chart-container {
         position: relative;
         height: 300px;
     }
-    .prediction-card {
-        background-color: #f8f9fa;
-        border-left: 4px solid #3498db;
+    .target-met {
+        background-color: #ecfdf5;
+        color: #059669;
     }
-    .form-control {
-        border-radius: 8px;
-        border: 1px solid #e0e0e0;
+    .target-missed {
+        background-color: #fef2f2;
+        color: #dc2626;
     }
-    .btn-primary {
-        background-color: #3b7ddd;
-        border: none;
-        border-radius: 8px;
-        padding: 0.5rem 1rem;
+    .performance-card {
+        transition: all 0.3s ease;
     }
-    .badge-indicator {
-        font-size: 0.75rem;
-        padding: 0.35em 0.65em;
-        border-radius: 50px;
+    .performance-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+    }
+    .weekday-highlight {
+        border-left: 4px solid #3b82f6;
+    }
+    .weekend-highlight {
+        border-left: 4px solid #8b5cf6;
+    }
+    .motivation-card {
+        border-left: 4px solid #10b981;
     }
 </style>
 @endsection
 
 @section('content')
-<div class="report-container">
-    <div class="container-fluid">
-        <!-- Selection Form -->
-        <div class="card mb-4">
-            <div class="card-header">
-                <h3 class="card-title">Select Employee and Date Range</h3>
-            </div>
-            <div class="card-body">
-                <form method="GET" action="{{ route('divanj.predictive.report') }}" id="reportForm">
-                    <div class="row g-3">
-                        <div class="col-md-4">
-                            <label for="employee_id" class="form-label">Employee</label>
-                            <select name="employee_id" id="employee_id" class="form-control" required>
-                                <option value="">Choose an employee</option>
-                                @foreach($employees as $emp)
-                                    <option value="{{ $emp['id'] }}" @selected(($employee['id'] ?? null) == $emp['id'])>
-                                        {{ $emp['user']['name'] }}
-                                    </option>
-                                @endforeach
-                            </select>
-                        </div>
-                        <div class="col-md-3">
-                            <label for="start_date" class="form-label">Start Date</label>
-                            <input type="date" name="start_date" id="start_date" class="form-control" 
-                                   value="{{ $startDate }}" required max="{{ now()->format('Y-m-d') }}">
-                        </div>
-                        <div class="col-md-3">
-                            <label for="end_date" class="form-label">End Date</label>
-                            <input type="date" name="end_date" id="end_date" class="form-control" 
-                                   value="{{ $endDate }}" required max="{{ now()->format('Y-m-d') }}">
-                        </div>
-                        <div class="col-md-2 d-flex align-items-end">
-                            <button type="submit" class="btn btn-primary w-100">
-                                <i class="fas fa-chart-line me-1"></i> Generate
-                            </button>
-                        </div>
+<div class="bg-gray-50 min-h-screen py-6">
+    <div class="container mx-auto px-4 sm:px-6 lg:px-8">
+        <!-- Header -->
+        <div class="mb-8">
+            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                <div>
+                    <h1 class="text-2xl sm:text-3xl font-bold text-gray-900">Sales Performance Dashboard</h1>
+                    @isset($employee)
+                    <div class="mt-2 flex items-center gap-2">
+                        <span class="text-sm text-gray-600">For</span>
+                        <span class="font-medium text-blue-600">{{ $employee->stage_name }}</span>
+                        <span class="text-sm text-gray-500">| Last updated: {{ now()->format('M j, g:i a') }}</span>
+                        @if($currentWeekSales > 25)
+                            <span class="text-sm bg-green-100 text-green-800 px-2 py-1 rounded-full">Top Performer</span>
+                        @endif
                     </div>
-                </form>
+                    @endisset
+                </div>
+                @isset($employee)
+                <div class="flex gap-3">
+                    <button onclick="exportReport()" class="inline-flex items-center px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50">
+                        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                        </svg>
+                        Export
+                    </button>
+                    <button onclick="window.print()" class="inline-flex items-center px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50">
+                        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path>
+                        </svg>
+                        Print
+                    </button>
+                </div>
+                @endisset
             </div>
         </div>
 
+        <!-- Motivation Message -->
         @isset($employee)
-            <!-- Report Header -->
-            <div class="card mb-4">
-                <div class="card-header">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <h3 class="card-title mb-1">Sales Report for {{ $employee['user']['name'] }}</h3>
-                            <p class="text-muted mb-0">{{ \Carbon\Carbon::parse($startDate)->format('M d, Y') }} to {{ \Carbon\Carbon::parse($endDate)->format('M d, Y') }}</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
+        @if($motivation)
+        <div class="bg-white rounded-xl shadow-lg p-6 mb-8 motivation-card">
+            <h2 class="text-xl font-semibold text-gray-900 mb-4">Motivation Boost</h2>
+            <p class="text-gray-700">{{ $motivation }}</p>
+        </div>
+        @endif
+        @endisset
 
-            <!-- Key Metrics -->
-            <div class="row mb-4">
-                <div class="col-md-3">
-                    <div class="card metric-card">
-                        <div class="metric-label">Total Cases Sold</div>
-                        <div class="metric-value">{{ number_format($performanceSummary['totalCasesSold']) }}</div>
-                        <div class="mt-2">
-                            <!-- <span class="badge badge-indicator bg-success">+12% vs last period</span> -->
-                        </div>
-                    </div>
+        <!-- Employee Selection -->
+        <div class="bg-white rounded-xl shadow-lg p-6 mb-8">
+            <form method="GET" action="{{ route('divanj.predictive.report') }}" class="max-w-md">
+                <label for="employee_id" class="block text-sm font-medium text-gray-700 mb-2">Select Employee</label>
+                <div class="flex gap-2">
+                    <select name="employee_id" id="employee_id" class="flex-grow rounded-lg border-gray-300 focus:border-blue-500 focus:ring-blue-500">
+                        <option value="">Choose an employee</option>
+                        @foreach($employees as $emp)
+                            <option value="{{ $emp->id }}" @selected(($employee->id ?? null) == $emp->id)>{{ $emp->stage_name }}</option>
+                        @endforeach
+                    </select>
+                    <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg">
+                        View Report
+                    </button>
                 </div>
-                <div class="col-md-3">
-                    <div class="card metric-card">
-                        <div class="metric-label">Total Revenue</div>
-                        <div class="metric-value">${{ number_format($performanceSummary['totalRevenue'], 2) }}</div>
-                        <div class="mt-2">
-                            <!-- <span class="badge badge-indicator bg-success">+8% vs last period</span> -->
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-3">
-                    <div class="card metric-card">
-                        <div class="metric-label">Best Day</div>
-                        <div class="metric-value">{{ $performanceSummary['bestDate'] }}</div>
-                        <div class="mt-2">
-                            <span class="badge badge-indicator bg-success">{{ number_format($performanceSummary['bestDaySales'] ?? 0) }} cases</span>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-3">
-                    <div class="card metric-card">
-                        <div class="metric-label">Worst Day</div>
-                        <div class="metric-value">{{ $performanceSummary['worstDate'] }}</div>
-                        <div class="mt-2">
-                            <span class="badge badge-indicator bg-danger">{{ number_format($performanceSummary['worstDaySales'] ?? 0) }} cases</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
+            </form>
+        </div>
 
-            <!-- Sales Chart -->
-            <div class="card mb-4">
-                <div class="card-header">
-                    <h4 class="card-title">Sales Performance</h4>
-                </div>
-                <div class="card-body">
+        @isset($employee)
+        <!-- Main Dashboard -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <!-- Left Column -->
+            <div class="lg:col-span-2 space-y-6">
+                <!-- Performance Overview -->
+                <div class="bg-white rounded-xl shadow-lg p-6">
+                    <h2 class="text-xl font-semibold text-gray-900 mb-4">Performance Overview</h2>
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+                        <div class="performance-card bg-gray-50 p-4 rounded-lg">
+                            <p class="text-sm text-gray-600">Weekly Target</p>
+                            <p class="text-2xl font-bold text-gray-900">25 cases</p>
+                        </div>
+                        <div class="performance-card bg-gray-50 p-4 rounded-lg">
+                            <p class="text-sm text-gray-600">Cases This Week</p>
+                            <p class="text-2xl font-bold text-gray-900">{{ $currentWeekSales }} cases</p>
+                        </div>
+                        <div class="performance-card bg-gray-50 p-4 rounded-lg">
+                            <p class="text-sm text-gray-600">Daily Target</p>
+                            <p class="text-2xl font-bold {{ $dailyTarget >= 5 ? 'text-green-600' : 'text-red-600' }}">
+                                {{ $dailyTarget }} cases
+                            </p>
+                        </div>
+                    </div>
+                    
+                    <!-- Sales Chart -->
                     <div class="chart-container">
-                        <canvas id="salesChart"></canvas>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Performance Details -->
-            <div class="row mb-4">
-                <!-- Attendance -->
-                <div class="col-md-4">
-                    <div class="card">
-                        <div class="card-header">
-                            <h4 class="card-title">Attendance</h4>
-                        </div>
-                        <div class="card-body">
-                            <div class="d-flex justify-content-between mb-3">
-                                <div>
-                                    <div class="metric-label">Late Days</div>
-                                    <div class="metric-value">{{ $attendance['lateDays'] }}</div>
-                                </div>
-                                <div class="text-end">
-                                    <span class="badge badge-indicator @if($attendance['lateDays'] > 0) bg-warning text-dark @else bg-success @endif">
-                                        @if($attendance['lateDays'] > 0) Needs improvement @else On track @endif
-                                    </span>
-                                </div>
-                            </div>
-                            <div class="d-flex justify-content-between">
-                                <div>
-                                    <div class="metric-label">Absent Days</div>
-                                    <div class="metric-value">{{ $attendance['absentDays'] }}</div>
-                                </div>
-                                <div class="text-end">
-                                    <span class="badge badge-indicator @if($attendance['absentDays'] > 0) bg-danger @else bg-success @endif">
-                                        @if($attendance['absentDays'] > 0) High @else Low @endif
-                                    </span>
-                                </div>
-                            </div>
-                        </div>
+                        <canvas id="salesTrendChart"></canvas>
                     </div>
                 </div>
 
-                <!-- Top Selling Category -->
-                <div class="col-md-4">
-                    <div class="card">
-                        <div class="card-header">
-                            <h4 class="card-title">Top Selling Category</h4>
+                <!-- Weekday Predictions -->
+                <div class="bg-white rounded-xl shadow-lg p-6">
+                    <div class="flex justify-between items-center mb-4">
+                        <h2 class="text-xl font-semibold text-gray-900">Weekday Sales Plan</h2>
+                        <span class="text-sm bg-blue-100 text-blue-800 px-3 py-1 rounded-full">
+                            {{ count($weekdayPredictions['days']) }} days
+                        </span>
+                    </div>
+                    
+                    @if(isset($weekdayPredictions['error']))
+                        <div class="bg-red-50 border-l-4 border-red-500 p-4 mb-4">
+                            <p class="text-red-700">{{ $weekdayPredictions['error'] }}</p>
                         </div>
-                        <div class="card-body">
-                            <div class="mb-3">
-                                <div class="metric-label">Wine Type</div>
-                                <div class="metric-value">{{ $topCategory['wineType'] }}</div>
-                            </div>
-                            <div class="mb-3">
-                                <div class="metric-label">Cases Sold</div>
-                                <div class="metric-value">{{ number_format($topCategory['cases']) }}</div>
-                            </div>
-                            <div>
-                                <div class="metric-label">Best 3 Wines</div>
-                                <ul class="list-unstyled mb-0">
-                                    @foreach($topCategory['bestWines'] as $wine)
-                                        <li class="py-1">{{ $wine }}</li>
+                    @else
+                        <div class="overflow-x-auto">
+                            <table class="min-w-full divide-y divide-gray-200">
+                                <thead class="bg-gray-50">
+                                    <tr>
+                                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
+                                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Day</th>
+                                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Projected</th>
+                                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Target</th>
+                                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="bg-white divide-y divide-gray-200">
+                                    @foreach($weekdayPredictions['days'] as $day)
+                                    <tr class="weekday-highlight">
+                                        <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-900">{{ $day['date'] }}</td>
+                                        <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-900">{{ $day['day'] }}</td>
+                                        <td class="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">{{ $day['predicted'] }}</td>
+                                        <td class="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">{{ $dailyTarget }}</td>
+                                        <td class="px-4 py-3 whitespace-nowrap">
+                                            <span class="px-2 py-1 text-xs font-medium rounded-full {{ $day['predicted'] >= $dailyTarget ? 'target-met' : 'target-missed' }}">
+                                                {{ $day['predicted'] >= $dailyTarget ? 'On Track' : 'Focus Needed' }}
+                                            </span>
+                                        </td>
+                                    </tr>
                                     @endforeach
-                                </ul>
-                            </div>
+                                </tbody>
+                            </table>
                         </div>
-                    </div>
-                </div>
-
-                <!-- Performance Indicators -->
-                <div class="col-md-4">
-                    <div class="card">
-                        <div class="card-header">
-                            <h4 class="card-title">Performance Indicators</h4>
+                        <div class="mt-4 text-sm text-gray-600">
+                            <p><strong>Strategy Tip:</strong> {{ $employee->stage_name }}, follow the script always to maximize results.</p>
                         </div>
-                        <div class="card-body">
-                            <div class="mb-3">
-                                <div class="metric-label">Best Day of Week</div>
-                                <div class="metric-value">{{ $salesPerformance['bestDay'] }}</div>
-                                <div class="mt-1">
-                                    <!-- <span class="badge badge-indicator bg-success">+22% above average</span> -->
-                                </div>
-                            </div>
-                            <div class="mb-3">
-                                <div class="metric-label">Worst Day of Week</div>
-                                <div class="metric-value">{{ $salesPerformance['worstDay'] }}</div>
-                                <div class="mt-1">
-                                    <!-- <span class="badge badge-indicator bg-danger">-15% below average</span> -->
-                                </div>
-                            </div>
-                            <div>
-                                <div class="metric-label">Best Time to Sell</div>
-                                <div class="metric-value">{{ $salesPerformance['bestTime'] }}</div>
-                            </div>
-                        </div>
-                    </div>
+                    @endif
                 </div>
             </div>
 
-            <!-- Predictions Section -->
-            <div class="row">
-                <!-- AI Insights -->
-                <div class="col-md-8">
-                    <div class="card">
-                        <div class="card-header">
-                            <h4 class="card-title">AI Sales Predictions</h4>
+            <!-- Right Column -->
+            <div class="space-y-6">
+                <!-- Recent Performance -->
+                <div class="bg-white rounded-xl shadow-lg p-6">
+                    <h2 class="text-xl font-semibold text-gray-900 mb-4">Recent Performance</h2>
+                    <div class="space-y-4">
+                        <div>
+                            <p class="text-sm text-gray-600 mb-1">Last 14 Days Sales</p>
+                            <p class="text-2xl font-bold text-gray-900">{{ array_sum(array_column($daywiseSales, 'total_qty')) }} cases</p>
                         </div>
-                        <div class="card-body">
-                            <div class="row">
-                                <div class="col-md-6">
-                                    <div class="card prediction-card mb-3">
-                                        <div class="card-body">
-                                            <div class="metric-label">Next Day Prediction</div>
-                                            <div class="metric-value">{{ number_format($aiInsights['nextDayPrediction']) }} cases</div>
-                                            <div class="mt-2">
-                                                @php
-                                                    $trend = $aiInsights['nextDayTrend'] ?? 'neutral';
-                                                    $change = $aiInsights['nextDayChange'] ?? 0;
-                                                @endphp
-                                                <span class="badge badge-indicator @if($trend === 'up') bg-success @elseif($trend === 'down') bg-danger @else bg-secondary @endif">
-                                                    @if($trend === 'up') <i class="fas fa-arrow-up"></i> @elseif($trend === 'down') <i class="fas fa-arrow-down"></i> @else <i class="fas fa-minus"></i> @endif
-                                                    {{ $change }}%
-                                                </span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="col-md-6">
-                                    <div class="card prediction-card mb-3">
-                                        <div class="card-body">
-                                            <div class="metric-label">Next Week Same Day</div>
-                                            <div class="metric-value">{{ number_format($aiInsights['nextWeekSameDayPrediction']) }} cases</div>
-                                            <div class="mt-2">
-                                                @php
-                                                    $trend = $aiInsights['nextWeekTrend'] ?? 'neutral';
-                                                    $change = $aiInsights['nextWeekChange'] ?? 0;
-                                                @endphp
-                                                <span class="badge badge-indicator @if($trend === 'up') bg-success @elseif($trend === 'down') bg-danger @else bg-secondary @endif">
-                                                    @if($trend === 'up') <i class="fas fa-arrow-up"></i> @elseif($trend === 'down') <i class="fas fa-arrow-down"></i> @else <i class="fas fa-minus"></i> @endif
-                                                    {{ $change }}%
-                                                </span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="mt-3">
-                                <div class="metric-label">Sales Forecast</div>
-                                <p class="mb-2">{{ $aiInsights['salesForecast'] }}</p>
-                                <div class="metric-label mt-2">Trend Analysis</div>
-                                <p class="mb-0">
-                                    Trend: 
-                                    <span class="@if(strtolower($aiInsights['trend'] ?? '') === 'up') text-success @elseif(strtolower($aiInsights['trend'] ?? '') === 'down') text-danger @else text-secondary @endif">
-                                        {{ $aiInsights['trend'] ?? 'Neutral' }}
-                                        @if(strtolower($aiInsights['trend'] ?? '') === 'up')
-                                            <i class="fas fa-arrow-up"></i>
-                                        @elseif(strtolower($aiInsights['trend'] ?? '') === 'down')
-                                            <i class="fas fa-arrow-down"></i>
-                                        @else
-                                            <i class="fas fa-minus"></i>
-                                        @endif
-                                    </span>
-                                </p>
-                            </div>
+                        <div>
+                            <p class="text-sm text-gray-600 mb-1">Best Day</p>
+                            <p class="text-lg font-medium text-gray-900">
+                                @if($bestDay)
+                                    {{ \Carbon\Carbon::parse($bestDay)->format('M j') }} - 
+                                    <span class="text-blue-600">{{ $maxSale }} cases</span>
+                                @else
+                                    N/A
+                                @endif
+                            </p>
+                        </div>
+                        <div>
+                            <p class="text-sm text-gray-600 mb-1">Average Daily Sales</p>
+                            <p class="text-lg font-medium text-gray-900">
+                                {{ count($daywiseSales) > 0 ? round(array_sum(array_column($daywiseSales, 'total_qty')) / count($daywiseSales), 1) : 0 }} cases
+                            </p>
                         </div>
                     </div>
                 </div>
 
-                <!-- Commission Insights -->
-                <div class="col-md-4">
-                    <div class="card">
-                        <div class="card-header">
-                            <h4 class="card-title">Commission Insights</h4>
+                <!-- Top Products -->
+                <div class="bg-white rounded-xl shadow-lg p-6">
+                    <h2 class="text-xl font-semibold text-gray-900 mb-4">Top Performing Products</h2>
+                    <div class="space-y-3">
+                        @forelse($topSellingProducts as $product => $quantity)
+                        <div class="flex justify-between items-center">
+                            <span class="text-sm font-medium text-gray-700 truncate">{{ $product }}</span>
+                            <span class="text-sm bg-blue-100 text-blue-800 px-2 py-1 rounded-full">{{ $quantity }} cases</span>
                         </div>
-                        <div class="card-body">
-                            <div class="mb-4">
-                                <div class="metric-label">Current Week</div>
-                                <div class="metric-value">${{ number_format($commissionInsights['currentWeek'] ?? 0, 2) }}</div>
-                                <div class="mt-2">
-                                    @php
-                                        $currentTrend = $commissionInsights['currentWeekTrend'] ?? 'neutral';
-                                        $currentChange = $commissionInsights['currentWeekChange'] ?? 0;
-                                    @endphp
-                                    <span class="badge badge-indicator @if($currentTrend === 'up') bg-success @elseif($currentTrend === 'down') bg-danger @else bg-secondary @endif">
-                                        @if($currentTrend === 'up') <i class="fas fa-arrow-up"></i> @elseif($currentTrend === 'down') <i class="fas fa-arrow-down"></i> @else <i class="fas fa-minus"></i> @endif
-                                        {{ $currentChange }}%
-                                    </span>
-                                </div>
-                            </div>
-                            <div>
-                                <div class="metric-label">Next Week Prediction</div>
-                                <div class="metric-value">${{ number_format($commissionInsights['nextWeek'] ?? 0, 2) }}</div>
-                                <div class="mt-2">
-                                    @php
-                                        $nextTrend = $commissionInsights['nextWeekTrend'] ?? 'neutral';
-                                        $nextChange = $commissionInsights['nextWeekChange'] ?? 0;
-                                    @endphp
-                                    <span class="badge badge-indicator @if($nextTrend === 'up') bg-success @elseif($nextTrend === 'down') bg-danger @else bg-secondary @endif">
-                                        @if($nextTrend === 'up') <i class="fas fa-arrow-up"></i> @elseif($nextTrend === 'down') <i class="fas fa-arrow-down"></i> @else <i class="fas fa-minus"></i> @endif
-                                        {{ $nextChange }}%
-                                    </span>
-                                </div>
-                            </div>
-                        </div>
+                        @empty
+                        <p class="text-sm text-gray-500">No product data available</p>
+                        @endforelse
                     </div>
                 </div>
+
+                <!-- Weekend Predictions -->
+                <div class="bg-white rounded-xl shadow-lg p-6">
+                    <div class="flex justify-between items-center mb-4">
+                        <h2 class="text-xl font-semibold text-gray-900">Weekend Opportunities</h2>
+                        <span class="text-sm bg-purple-100 text-purple-800 px-3 py-1 rounded-full">
+                            {{ count($weekendPredictions['days']) }} days
+                        </span>
+                    </div>
+                    
+                    @if(isset($weekendPredictions['error']))
+                        <div class="bg-red-50 border-l-4 border-red-500 p-4">
+                            <p class="text-red-700">{{ $weekendPredictions['error'] }}</p>
+                        </div>
+                    @else
+                        <div class="space-y-3">
+                            @foreach($weekendPredictions['days'] as $day)
+                            <div class="weekend-highlight bg-gray-50 p-3 rounded-lg">
+                                <div class="flex justify-between items-center">
+                                    <div>
+                                        <p class="font-medium text-gray-900">{{ $day['day'] }}, {{ $day['date'] }}</p>
+                                        <p class="text-sm text-gray-600">Projected: {{ $day['predicted'] }} cases</p>
+                                    </div>
+                                    <span class="text-sm bg-purple-100 text-purple-800 px-2 py-1 rounded-full">
+                                        {{ $day['predicted'] >= 5 ? 'Strong' : 'Moderate' }}
+                                    </span>
+                                </div>
+                            </div>
+                            @endforeach
+                        </div>
+                        <div class="mt-4 text-sm text-gray-600">
+                            <p><strong>Weekend Tip:</strong> {{ $employee->stage_name }}, weekends often see different buying patterns - consider offering special bundles.</p>
+                        </div>
+                    @endif
+                </div>
             </div>
+        </div>
+        @else
+        <!-- Empty State -->
+        <div class="bg-white rounded-xl shadow-lg p-12 text-center">
+            <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+            </svg>
+            <h3 class="mt-2 text-lg font-medium text-gray-900">No employee selected</h3>
+            <p class="mt-1 text-sm text-gray-500">Choose an employee from the dropdown to view their sales performance report.</p>
+        </div>
         @endisset
     </div>
 </div>
 @endsection
 
 @section('js')
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
 <script>
-    document.addEventListener('DOMContentLoaded', function() {
-        // Date validation
-        document.getElementById('reportForm').addEventListener('submit', function(e) {
-            const startDate = new Date(document.getElementById('start_date').value);
-            const endDate = new Date(document.getElementById('end_date').value);
-            
-            if (startDate > endDate) {
-                alert('End date must be after start date');
-                e.preventDefault();
-            }
-        });
-
-        @isset($employee)
-            // Initialize sales chart
-            const ctx = document.getElementById('salesChart').getContext('2d');
-            const salesChart = new Chart(ctx, {
-                type: 'line',
-                data: {
-                    labels: @json($chartData['labels']),
-                    datasets: [{
-                        label: 'Cases Sold',
-                        data: @json($chartData['quantities']),
-                        borderColor: '#3b7ddd',
-                        backgroundColor: 'rgba(59, 125, 221, 0.1)',
-                        borderWidth: 2,
-                        tension: 0.1,
-                        fill: true,
-                        pointBackgroundColor: '#3b7ddd',
-                        pointBorderColor: '#fff',
-                        pointRadius: 4,
-                        pointHoverRadius: 6
-                    }]
+document.addEventListener('DOMContentLoaded', function() {
+    @isset($employee)
+    // Sales Trend Chart
+    const salesTrendCtx = document.getElementById('salesTrendChart').getContext('2d');
+    const salesTrendChart = new Chart(salesTrendCtx, {
+        type: 'bar',
+        data: {
+            labels: {!! json_encode($chartData['labels']) !!},
+            datasets: [{
+                label: 'Cases Sold',
+                data: {!! json_encode($chartData['quantities']) !!},
+                backgroundColor: function(context) {
+                    const value = context.raw;
+                    return value >= 5 ? 'rgba(16, 185, 129, 0.7)' : 'rgba(239, 68, 68, 0.7)';
                 },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: {
-                            display: true,
-                            position: 'top',
-                            labels: {
-                                usePointStyle: true,
-                                padding: 20
-                            }
-                        },
-                        tooltip: {
-                            backgroundColor: '#2c3e50',
-                            titleFont: {
-                                size: 14,
-                                weight: 'bold'
-                            },
-                            bodyFont: {
-                                size: 12
-                            },
-                            padding: 12,
-                            cornerRadius: 8,
-                            displayColors: false
+                borderColor: function(context) {
+                    const value = context.raw;
+                    return value >= 5 ? 'rgba(16, 185, 129, 1)' : 'rgba(239, 68, 68, 1)';
+                },
+                borderWidth: 1,
+                borderRadius: 4
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            return `${context.parsed.y} cases on ${context.label}`;
                         }
                     },
-                    scales: {
-                        y: {
-                            beginAtZero: true,
-                            grid: {
-                                drawBorder: false,
-                                color: 'rgba(0, 0, 0, 0.05)'
-                            },
-                            ticks: {
-                                padding: 10
-                            }
-                        },
-                        x: {
-                            grid: {
-                                display: false,
-                                drawBorder: false
-                            },
-                            ticks: {
-                                padding: 10
-                            }
-                        }
+                    backgroundColor: '#1f2937',
+                    titleFont: { size: 14, weight: 'bold' },
+                    bodyFont: { size: 12 },
+                    padding: 12,
+                    cornerRadius: 8
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    grid: { color: 'rgba(0, 0, 0, 0.05)' },
+                    title: { 
+                        display: true, 
+                        text: 'Cases Sold',
+                        font: { weight: 'bold' }
+                    }
+                },
+                x: {
+                    grid: { display: false },
+                    title: { 
+                        display: true,
+                        text: 'Date',
+                        font: { weight: 'bold' }
                     }
                 }
-            });
-        @endisset
+            }
+        }
     });
+
+    // Export Report
+    window.exportReport = function() {
+        const csvRows = [];
+        
+        // Header
+        csvRows.push('Sales Performance Report for {{ $employee->stage_name }}');
+        csvRows.push(`Generated on,${new Date().toLocaleString()}`);
+        csvRows.push('');
+        
+        // Performance Summary
+        csvRows.push('Performance Summary');
+        csvRows.push('Metric,Value');
+        csvRows.push(`Weekly Target,25 cases`);
+        csvRows.push(`Current Week Sales,{{ $currentWeekSales }} cases`);
+        csvRows.push(`Daily Target,{{ $dailyTarget }} cases/day`);
+        csvRows.push(`Last 14 Days Total,{{ array_sum(array_column($daywiseSales, 'total_qty')) }} cases`);
+        csvRows.push('');
+        
+        // Recent Sales
+        csvRows.push('Recent Sales (Last 14 Days)');
+        csvRows.push('Date,Day,Cases Sold');
+        @foreach($daywiseSales as $day)
+        csvRows.push(`{{ \Carbon\Carbon::parse($day['date'])->format('M j, Y') }},{{ $day['day_name'] }},{{ $day['total_qty'] }}`);
+        @endforeach
+        csvRows.push('');
+        
+        // Weekday Predictions
+        csvRows.push('Weekday Sales Plan');
+        csvRows.push('Date,Day,Projected Cases,Daily Target,Status');
+        @foreach($weekdayPredictions['days'] as $day)
+        csvRows.push(`{{ $day['date'] }},{{ $day['day'] }},{{ $day['predicted'] }},{{ $dailyTarget }},{{ $day['predicted'] >= $dailyTarget ? 'On Track' : 'Focus Needed' }}`);
+        @endforeach
+        csvRows.push('');
+        
+        // Weekend Predictions
+        csvRows.push('Weekend Opportunities');
+        csvRows.push('Date,Day,Projected Cases');
+        @foreach($weekendPredictions['days'] as $day)
+        csvRows.push(`{{ $day['date'] }},{{ $day['day'] }},{{ $day['predicted'] }}`);
+        @endforeach
+        csvRows.push('');
+        
+        // Top Products
+        csvRows.push('Top Performing Products');
+        csvRows.push('Product,Cases Sold');
+        @foreach($topSellingProducts as $product => $quantity)
+        csvRows.push(`"{{ $product }}",{{ $quantity }}`);
+        @endforeach
+        
+        // Motivation Message
+        csvRows.push('');
+        csvRows.push('Motivation Message');
+        csvRows.push(`"{{ $motivation }}"`);
+        
+        // Create and download CSV
+        const csvContent = csvRows.join('\n');
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = `Sales_Report_{{ $employee->stage_name }}_${new Date().toISOString().split('T')[0]}.csv`;
+        link.click();
+    }
+    @endisset
+});
 </script>
 @endsection

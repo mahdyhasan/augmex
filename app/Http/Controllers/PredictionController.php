@@ -5,70 +5,103 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Carbon\Carbon;
 use Auth;
-use Carbon\CarbonPeriod;
-use DateTimeZone;
-use DB;
 use App\Models\DivanjSale;
-use App\Models\DivanjCommission;
 use App\Models\Employee;
-use App\Models\Attendance;
 
 class PredictionController extends Controller
 {
     public function salesPredictionReport(Request $request)
     {
-        // Input validation and defaults
-        $startDateInput = $request->input('start_date', now()->subMonth()->startOfDay()->toDateString());
-        $endDateInput = $request->input('end_date', now()->endOfDay()->toDateString());
+        // Input validation
+        $request->validate([
+            'employee_id' => 'nullable|exists:employees,id',
+        ]);
+
         $employeeId = $request->input('employee_id');
 
-        $startDate = Carbon::parse($startDateInput);
-        $endDate = Carbon::parse($endDateInput);
-
-        // Validate date range
-        if ($startDate->gt($endDate)) {
-            return redirect()->back()->withErrors(['date_range' => 'End date must be after start date']);
-        }
-
-        // Fetch all employees for selection (admins see all, others see only themselves)
+        // Fetch employees based on user role
         $employees = Auth::user()->isSuperAdmin()
-            ? Employee::with('user')->get()->toArray()
-            : [Employee::with('user')->where('id', Auth::user()->employee->id)->first()->toArray()];
+            ? Employee::with('user')->get()
+            : [Employee::with('user')->where('id', Auth::user()->employee->id)->first()];
 
-        // If no employee is selected, show the selection form
+        // Show employee selection form if no employee is selected
         if (!$employeeId) {
             return view('ai.predictive_sales_report', [
                 'employees' => $employees,
-                'startDate' => $startDate->format('Y-m-d'),
-                'endDate' => $endDate->format('Y-m-d'),
             ]);
         }
 
         // Fetch the selected employee
         $employee = Employee::with('user')->findOrFail($employeeId);
 
-        // Get data
+        // Get last available date from sales data
+        $lastSaleDate = DivanjSale::where('employee_id', $employeeId)
+            ->max('date');
+
+        if (!$lastSaleDate) {
+            return view('ai.predictive_sales_report', [
+                'employees' => $employees,
+                'error' => 'No sales data found for this employee'
+            ]);
+        }
+
+        $endDate = Carbon::parse($lastSaleDate);
+        $startDate = $endDate->copy()->subDays(13); // Last 14 days
+
+        // Fetch historical sales data for last 14 days
         $salesData = $this->getSalesData($employeeId, $startDate, $endDate);
-        $performanceSummary = $this->getPerformanceSummary($salesData, $startDate, $endDate);
-        $attendance = $this->getAttendance($employeeId, $startDate, $endDate);
-        $topCategory = $this->getTopSellingCategory($employeeId, $startDate, $endDate);
-        $salesPerformance = $this->getSalesPerformance($salesData);
-        $aiInsights = $this->getAIInsights($salesData, $employeeId, $startDate, $endDate);
-        $commissionInsights = $this->getCommissionInsights($employeeId, $startDate, $endDate, $aiInsights);
-        $chartData = $this->prepareChartData($salesData);
+
+        // Calculate historical metrics
+        $daywiseSales = $this->getDaywiseSales($salesData, $startDate, $endDate);
+
+        // Calculate current week sales
+        $currentWeekStart = Carbon::today()->startOfWeek();
+        $currentWeekSales = DivanjSale::where('employee_id', $employeeId)
+            ->whereBetween('date', [$currentWeekStart, Carbon::today()])
+            ->sum('quantity');
+
+        // Calculate best day and max sale
+        $bestDay = null;
+        $maxSale = 0;
+        foreach ($daywiseSales as $day) {
+            if ($day['total_qty'] > $maxSale) {
+                $maxSale = $day['total_qty'];
+                $bestDay = $day['date'];
+            }
+        }
+
+        $topSellingProducts = $this->getTopSellingProducts($salesData);
+        $frequentSellingPrices = $this->getFrequentSellingPrices($salesData);
+
+        // Get predictions for next 10 weekdays (2 weeks)
+        $weekdayPredictions = $this->getWeekdayPredictions($employeeId);
+
+        // Get predictions for next 2 weekends
+        $weekendPredictions = $this->getWeekendPredictions($employeeId);
+
+        // Calculate daily target (25 cases per week = ~5 cases/day)
+        $dailyTarget = 5;
+
+        // Prepare chart data
+        $chartData = $this->prepareChartData($daywiseSales);
+
+        // Motivation message
+        $motivation = $this->getMotivationMessage($employee, $weekdayPredictions, $weekendPredictions);
 
         return view('ai.predictive_sales_report', [
             'employees' => $employees,
-            'employee' => $employee->toArray(),
-            'startDate' => $startDate->format('Y-m-d'),
-            'endDate' => $endDate->format('Y-m-d'),
-            'performanceSummary' => $performanceSummary,
-            'attendance' => $attendance,
-            'topCategory' => $topCategory,
-            'salesPerformance' => $salesPerformance,
-            'aiInsights' => $aiInsights,
-            'commissionInsights' => $commissionInsights,
-            'chartData' => $chartData
+            'employee' => $employee,
+            'daywiseSales' => $daywiseSales,
+            'currentWeekSales' => $currentWeekSales,
+            'bestDay' => $bestDay,
+            'maxSale' => $maxSale,
+            'topSellingProducts' => $topSellingProducts,
+            'frequentSellingPrices' => $frequentSellingPrices,
+            'weekdayPredictions' => $weekdayPredictions,
+            'weekendPredictions' => $weekendPredictions,
+            'dailyTarget' => $dailyTarget,
+            'chartData' => $chartData,
+            'motivation' => $motivation,
         ]);
     }
 
@@ -77,322 +110,309 @@ class PredictionController extends Controller
         return DivanjSale::where('employee_id', $employeeId)
             ->whereBetween('date', [$startDate, $endDate])
             ->orderBy('date')
-            ->get()
-            ->toArray();
+            ->get();
     }
 
-    private function getPerformanceSummary($sales, Carbon $startDate, Carbon $endDate)
+    private function getDaywiseSales($sales, Carbon $startDate, Carbon $endDate)
     {
         $dailySales = [];
-        foreach ($sales as $sale) {
-            $date = Carbon::parse($sale['date'])->format('Y-m-d');
-            if (!isset($dailySales[$date])) {
-                $dailySales[$date] = ['date' => $date, 'total_qty' => 0, 'total_amount' => 0];
-            }
-            $dailySales[$date]['total_qty'] += $sale['quantity'];
-            $dailySales[$date]['total_amount'] += $sale['total'];
-        }
+        $current = $startDate->copy();
 
-        $totalCasesSold = array_sum(array_column($dailySales, 'total_qty'));
-        $totalRevenue = array_sum(array_column($dailySales, 'total_amount'));
+        while ($current <= $endDate) {
+            $dateStr = $current->format('Y-m-d');
+            $totalQty = 0;
 
-        // Filter out days with 0 sales for best/worst day calculation
-        $nonZeroDays = array_filter($dailySales, fn($day) => $day['total_qty'] > 0);
-
-        if (empty($nonZeroDays)) {
-            $bestDay = $worstDay = 'No sales data';
-            $bestDaySales = $worstDaySales = 0;
-        } else {
-            usort($nonZeroDays, fn($a, $b) => $b['total_qty'] <=> $a['total_qty']);
-            $bestDay = Carbon::parse($nonZeroDays[0]['date'])->format('M d, Y');
-            $bestDaySales = $nonZeroDays[0]['total_qty'];
-            $worstDay = Carbon::parse(end($nonZeroDays)['date'])->format('M d, Y');
-            $worstDaySales = end($nonZeroDays)['total_qty'];
-        }
-
-        return [
-            'period' => $startDate->format('M d, Y') . ' - ' . $endDate->format('M d, Y'),
-            'totalCasesSold' => $totalCasesSold,
-            'totalRevenue' => round($totalRevenue, 2),
-            'bestDate' => $bestDay,
-            'worstDate' => $worstDay,
-            'bestDaySales' => $bestDaySales ?? 0,
-            'worstDaySales' => $worstDaySales ?? 0
-        ];
-    }
-
-    private function getAttendance($employeeId, Carbon $startDate, Carbon $endDate)
-    {
-        $attendance = Attendance::where('employee_id', $employeeId)
-            ->whereBetween('date', [$startDate, $endDate])
-            ->get()
-            ->toArray();
-
-        $lateDays = count(array_filter($attendance, fn($day) => $day['isLate'] == 1));
-        $absentDays = count(array_filter($attendance, fn($day) => $day['status_id'] == 2));
-
-        return [
-            'lateDays' => $lateDays,
-            'absentDays' => $absentDays
-        ];
-    }
-
-    private function getTopSellingCategory($employeeId, Carbon $startDate, Carbon $endDate)
-    {
-        $wineTypes = [
-            'Shiraz', 'Cabernet Sauvignon', 'Pinot Noir', 'Sauvignon Blanc',
-            'Merlot', 'Pinot Grigio', 'Malbec', 'Chardonnay', 'Cabernet',
-            'Rosé', 'Prosecco', 'Riesling', 'Zinfandel', 'Tempranillo'
-        ];
-
-        $sales = DivanjSale::where('employee_id', $employeeId)
-            ->whereBetween('date', [$startDate, $endDate])
-            ->get()
-            ->toArray();
-
-        if (empty($sales)) {
-            return [
-                'cases' => 0,
-                'wineType' => 'No data',
-                'bestWines' => ['No data', 'No data', 'No data'],
-                'expensiveWines' => ['No data', 'No data', 'No data']
-            ];
-        }
-
-        $categories = [];
-        foreach ($sales as $sale) {
-            $type = 'Other';
-            foreach ($wineTypes as $wine) {
-                if (stripos($sale['name'], $wine) !== false) {
-                    $type = $wine;
-                    break;
+            foreach ($sales as $sale) {
+                if (Carbon::parse($sale->date)->format('Y-m-d') === $dateStr) {
+                    $totalQty += $sale->quantity;
                 }
             }
-            if (!isset($categories[$type])) {
-                $categories[$type] = ['total_qty' => 0, 'products' => [], 'prices' => []];
-            }
-            $categories[$type]['total_qty'] += $sale['quantity'];
-            $categories[$type]['products'][$sale['name']] = ($categories[$type]['products'][$sale['name']] ?? 0) + $sale['quantity'];
-            $categories[$type]['prices'][$sale['name']] = $sale['price'];
+
+            $dailySales[] = [
+                'date' => $dateStr,
+                'day_name' => $current->format('l'),
+                'total_qty' => $totalQty,
+                'is_weekend' => $current->isWeekend(),
+            ];
+
+            $current->addDay();
         }
 
-        uasort($categories, fn($a, $b) => $b['total_qty'] <=> $a['total_qty']);
-        $topCategory = reset($categories) ?: ['total_qty' => 0, 'products' => [], 'prices' => []];
-        $topType = key($categories) ?: 'No data';
-
-        arsort($topCategory['products']);
-        $bestWines = array_slice(array_keys($topCategory['products'] + array_fill(0, 3, 'No data')), 0, 3);
-
-        arsort($topCategory['prices']);
-        $expensiveWines = array_slice(array_keys($topCategory['prices'] + array_fill(0, 3, 'No data')), 0, 3);
-
-        return [
-            'cases' => $topCategory['total_qty'],
-            'wineType' => $topType,
-            'bestWines' => $bestWines,
-            'expensiveWines' => $expensiveWines
-        ];
+        return $dailySales;
     }
 
-    private function getSalesPerformance($sales)
+    private function getTopSellingProducts($sales, $topN = 5)
     {
-        $weekdaySales = [
-            'Monday' => 0, 'Tuesday' => 0, 'Wednesday' => 0,
-            'Thursday' => 0, 'Friday' => 0, 'Saturday' => 0, 'Sunday' => 0
-        ];
-    
-        // Initialize hourly sales with all 24 hours (0-23) as integers
-        $hourlySales = array_fill(0, 24, 0);
-    
+        $productSales = [];
+
         foreach ($sales as $sale) {
-            $day = Carbon::parse($sale['date'])->format('l');
-            $hour = (int)Carbon::parse($sale['time'])->format('H'); // Convert to integer
-            
-            // Ensure hour is within valid range
-            $hour = max(0, min(23, $hour));
-            
-            $weekdaySales[$day] += $sale['quantity'];
-            $hourlySales[$hour] += $sale['quantity']; // Now using integer index
+            $product = $sale->name;
+            $productSales[$product] = ($productSales[$product] ?? 0) + $sale->quantity;
         }
-    
-        // Rest of the method remains the same...
-        $weekdaySalesFiltered = array_intersect_key($weekdaySales, array_flip(['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday']));
-        
-        arsort($weekdaySalesFiltered);
-        $bestDay = key($weekdaySalesFiltered) ?: 'No data';
-        $worstDay = array_key_last($weekdaySalesFiltered) ?: 'No data';
-    
-        arsort($hourlySales);
-        $bestHour = key($hourlySales);
-        $bestTime = $bestHour !== null ? Carbon::createFromTime($bestHour)->format('g A') : 'No data';
-    
-        return [
-            'bestDay' => $bestDay,
-            'worstDay' => $worstDay,
-            'bestTime' => $bestTime,
-            'weekdaySales' => $weekdaySalesFiltered
-        ];
-    }
-    
 
-    private function getAIInsights($sales, $employeeId, Carbon $startDate, Carbon $endDate)
+        arsort($productSales);
+        return array_slice($productSales, 0, $topN, true);
+    }
+
+    private function getFrequentSellingPrices($sales, $topN = 5)
     {
-        if (empty($sales)) {
+        $priceFrequency = [];
+
+        foreach ($sales as $sale) {
+            $price = $sale->price;
+            $priceFrequency[(string)$price] = ($priceFrequency[(string)$price] ?? 0) + 1;
+        }
+
+        arsort($priceFrequency);
+        return array_slice($priceFrequency, 0, $topN, true);
+    }
+
+    private function getWeekdayPredictions($employeeId)
+    {
+        $minWeekdays = 20; // Require at least 20 weekdays of data
+        $today = Carbon::today();
+        $startDate = $today->copy()->subDays(90); // Look back 90 days
+
+        // Fetch sales data for weekdays
+        $sales = DivanjSale::where('employee_id', $employeeId)
+            ->whereRaw('DAYOFWEEK(date) BETWEEN 2 AND 6') // Monday to Friday
+            ->whereBetween('date', [$startDate, $today])
+            ->orderBy('date', 'desc')
+            ->get();
+
+        // Group by date to count unique weekdays
+        $groupedSales = $sales->groupBy(function ($sale) {
+            return Carbon::parse($sale->date)->format('Y-m-d');
+        });
+
+        if ($groupedSales->count() < $minWeekdays) {
             return [
-                'trend' => 'No data',
-                'nextDayPrediction' => 0,
-                'nextDayChange' => 0,
-                'nextDayTrend' => 'neutral',
-                'nextWeekSameDayPrediction' => 0,
-                'nextWeekChange' => 0,
-                'nextWeekTrend' => 'neutral',
-                'peakDays' => ['No data', 'No data'],
-                'salesForecast' => 'Not enough data to predict'
+                'error' => "Need at least {$minWeekdays} weekdays of sales data for accurate predictions",
+                'days' => [],
+                'total' => 0,
             ];
         }
 
-        // Calculate daily sales
-        $dailySales = [];
-        foreach ($sales as $sale) {
-            $date = Carbon::parse($sale['date'])->format('Y-m-d');
-            $dailySales[$date] = ($dailySales[$date] ?? 0) + $sale['quantity'];
-        }
+        // Calculate daily averages and trend
+        $averages = $this->calculateDailyAverages($sales);
+        $trendFactor = $this->calculateTrendFactor($sales, $startDate, $today);
 
-        // Calculate trend
-        $quantities = array_values($dailySales);
-        $days = range(1, count($quantities));
-        $n = count($quantities);
+        // Generate predictions for next 10 weekdays
+        return $this->generatePredictions($employeeId, 10, $averages, $trendFactor, false);
+    }
 
-        $sumX = array_sum($days);
-        $sumY = array_sum($quantities);
-        $sumXY = array_sum(array_map(fn($x, $y) => $x * $y, $days, $quantities));
-        $sumXX = array_sum(array_map(fn($x) => $x * $x, $days));
-
-        $slope = ($n * $sumXY - $sumX * $sumY) / (($n * $sumXX - $sumX * $sumX) ?: 1);
-        $intercept = ($sumY - $slope * $sumX) / $n;
-
-        $trend = $slope > 0.5 ? 'Up' : ($slope < -0.5 ? 'Down' : 'Flat');
-        $nextDayPrediction = max(0, round($slope * ($n + 1) + $intercept));
-        
-        // Calculate percentage change from last period
-        $lastPeriodAvg = $n > 7 ? array_sum(array_slice($quantities, -7)) / 7 : ($n > 0 ? array_sum($quantities) / $n : 0);
-        $nextDayChange = $lastPeriodAvg > 0 ? round(($nextDayPrediction - $lastPeriodAvg) / $lastPeriodAvg * 100) : 0;
-        $nextDayTrend = $nextDayChange > 5 ? 'up' : ($nextDayChange < -5 ? 'down' : 'neutral');
-
-        // Weekly pattern
-        $weeklyPattern = [];
-        foreach ($sales as $sale) {
-            $day = Carbon::parse($sale['date'])->format('l');
-            $weeklyPattern[$day] = ($weeklyPattern[$day] ?? 0) + $sale['quantity'];
-        }
-        
-        // Fill missing days with 0
-        $allDays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
-        foreach ($allDays as $day) {
-            $weeklyPattern[$day] = $weeklyPattern[$day] ?? 0;
-        }
-        
-        arsort($weeklyPattern);
-        $peakDays = array_slice(array_keys($weeklyPattern), 0, 2);
-
-        // Next week same day prediction
+    private function getWeekendPredictions($employeeId)
+    {
+        $minWeekendDays = 8; // Require at least 8 weekend days (4 weekends)
         $today = Carbon::today();
-        $nextWeekSameDay = $today->copy()->addWeek()->format('l');
-        $nextWeekSameDayPrediction = isset($weeklyPattern[$nextWeekSameDay]) 
-            ? round($weeklyPattern[$nextWeekSameDay] * ($slope > 0 ? 1.05 : ($slope < 0 ? 0.95 : 1))) 
-            : 0;
-            
-        $nextWeekChange = $weeklyPattern[$nextWeekSameDay] > 0 
-            ? round(($nextWeekSameDayPrediction - $weeklyPattern[$nextWeekSameDay]) / $weeklyPattern[$nextWeekSameDay] * 100)
-            : 0;
-        $nextWeekTrend = $nextWeekChange > 5 ? 'up' : ($nextWeekChange < -5 ? 'down' : 'neutral');
+        $startDate = $today->copy()->subDays(90); // Look back 90 days
 
-        $forecast = $n > 0 
-            ? "We expect $nextDayPrediction cases tomorrow ($nextDayChange% change). " .
-              "Next week's same day prediction: $nextWeekSameDayPrediction cases ($nextWeekChange% change)."
-            : "Not enough data to generate accurate predictions";
+        // Fetch sales data for weekends
+        $sales = DivanjSale::where('employee_id', $employeeId)
+            ->whereRaw('DAYOFWEEK(date) IN (1,7)') // Sunday (1) and Saturday (7)
+            ->whereBetween('date', [$startDate, $today])
+            ->orderBy('date', 'desc')
+            ->get();
+
+        // Group by date to count unique weekend days
+        $groupedSales = $sales->groupBy(function ($sale) {
+            return Carbon::parse($sale->date)->format('Y-m-d');
+        });
+
+        if ($groupedSales->count() < $minWeekendDays) {
+            return [
+                'error' => "Need at least {$minWeekendDays} weekend days of sales data for accurate predictions",
+                'days' => [],
+                'total' => 0,
+            ];
+        }
+
+        // Calculate daily averages and trend
+        $averages = $this->calculateDailyAverages($sales);
+        $trendFactor = $this->calculateTrendFactor($sales, $startDate, $today);
+
+        // Generate predictions for next 4 weekend days (2 weekends)
+        return $this->generatePredictions($employeeId, 4, $averages, $trendFactor, true);
+    }
+
+    private function calculateDailyAverages($sales)
+    {
+        $dayData = [
+            'Monday' => ['sum' => 0, 'days' => 0],
+            'Tuesday' => ['sum' => 0, 'days' => 0],
+            'Wednesday' => ['sum' => 0, 'days' => 0],
+            'Thursday' => ['sum' => 0, 'days' => 0],
+            'Friday' => ['sum' => 0, 'days' => 0],
+            'Saturday' => ['sum' => 0, 'days' => 0],
+            'Sunday' => ['sum' => 0, 'days' => 0],
+        ];
+
+        // Group sales by date to sum quantities per day
+        $dailyTotals = $sales->groupBy(function ($sale) {
+            return Carbon::parse($sale->date)->format('Y-m-d');
+        })->map(function ($daySales) {
+            return $daySales->sum('quantity');
+        });
+
+        // Assign totals to days of the week
+        foreach ($dailyTotals as $date => $total) {
+            $dayOfWeek = Carbon::parse($date)->format('l');
+            if (array_key_exists($dayOfWeek, $dayData)) {
+                $dayData[$dayOfWeek]['sum'] += $total;
+                $dayData[$dayOfWeek]['days']++;
+            }
+        }
+
+        $averages = [];
+        foreach ($dayData as $day => $data) {
+            $averages[$day] = $data['days'] > 0 ? $data['sum'] / $data['days'] : 0;
+        }
+
+        return $averages;
+    }
+
+    private function calculateTrendFactor($sales, Carbon $startDate, Carbon $endDate)
+    {
+        // Split data into recent (last 30 days) and earlier periods
+        $midPoint = $endDate->copy()->subDays(30);
+        $recentSales = $sales->filter(function ($sale) use ($midPoint, $endDate) {
+            return Carbon::parse($sale->date)->between($midPoint, $endDate);
+        });
+        $earlierSales = $sales->filter(function ($sale) use ($startDate, $midPoint) {
+            return Carbon::parse($sale->date)->between($startDate, $midPoint);
+        });
+
+        // Calculate average daily sales for each period
+        $recentDays = $recentSales->groupBy(function ($sale) {
+            return Carbon::parse($sale->date)->format('Y-m-d');
+        })->count();
+        $earlierDays = $earlierSales->groupBy(function ($sale) {
+            return Carbon::parse($sale->date)->format('Y-m-d');
+        })->count();
+
+        $recentAvg = $recentDays > 0 ? $recentSales->sum('quantity') / $recentDays : 0;
+        $earlierAvg = $earlierDays > 0 ? $earlierSales->sum('quantity') / $earlierDays : 0;
+
+        // Calculate trend factor (1.0 = no change, >1.0 = upward trend, <1.0 = downward trend)
+        $trendFactor = $earlierAvg > 0 ? $recentAvg / $earlierAvg : 1.0;
+        // Cap trend factor to prevent extreme adjustments
+        return max(0.8, min(1.2, $trendFactor));
+    }
+
+    private function generatePredictions($employeeId, $numDays, $averages, $trendFactor, $isWeekend)
+    {
+        $predictions = [];
+        $currentDate = Carbon::tomorrow();
+        $total = 0;
+        $count = 0;
+
+        while ($count < $numDays) {
+            $dayOfWeek = $currentDate->format('l');
+            if (($isWeekend && $currentDate->isWeekend()) || (!$isWeekend && $currentDate->isWeekday())) {
+                $basePrediction = $averages[$dayOfWeek] ?? 0;
+                // Apply trend factor
+                $predicted = $basePrediction * $trendFactor;
+                // Round to nearest integer, ensure non-negative
+                $predicted = max(0, round($predicted));
+
+                // Fallback to overall average if prediction is 0
+                if ($predicted == 0) {
+                    $overallAvg = $this->calculateFallbackAverage($employeeId, $isWeekend);
+                    $predicted = max(0, round($overallAvg * $trendFactor));
+                }
+
+                $predictions[] = [
+                    'date' => $currentDate->format('Y-m-d'),
+                    'day' => $dayOfWeek,
+                    'predicted' => $predicted,
+                ];
+
+                $total += $predicted;
+                $count++;
+            }
+            $currentDate->addDay();
+        }
 
         return [
-            'trend' => $trend,
-            'nextDayPrediction' => $nextDayPrediction,
-            'nextDayChange' => $nextDayChange,
-            'nextDayTrend' => $nextDayTrend,
-            'nextWeekSameDayPrediction' => $nextWeekSameDayPrediction,
-            'nextWeekChange' => $nextWeekChange,
-            'nextWeekTrend' => $nextWeekTrend,
-            'peakDays' => $peakDays,
-            'salesForecast' => $forecast
+            'days' => $predictions,
+            'total' => $total,
         ];
     }
 
-    private function getCommissionInsights($employeeId, Carbon $startDate, Carbon $endDate, $aiInsights)
+    private function calculateFallbackAverage($employeeId, $isWeekend)
     {
-        $commissions = DivanjCommission::where('employee_id', $employeeId)
-            ->whereBetween('start_date', [$startDate, $endDate])
-            ->get()
-            ->toArray();
+        $today = Carbon::today();
+        $startDate = $today->copy()->subDays(90);
 
         $sales = DivanjSale::where('employee_id', $employeeId)
-            ->whereBetween('date', [$startDate, $endDate])
-            ->get()
-            ->toArray();
+            ->whereBetween('date', [$startDate, $today])
+            ->whereRaw($isWeekend ? 'DAYOFWEEK(date) IN (1,7)' : 'DAYOFWEEK(date) BETWEEN 2 AND 6')
+            ->get();
 
-        $currentWeek = array_sum(array_column($commissions, 'commission_amount'));
-        
-        if (empty($sales)) {
-            return [
-                'currentWeek' => round($currentWeek, 2),
-                'currentWeekChange' => 0,
-                'currentWeekTrend' => 'neutral',
-                'nextWeek' => 0,
-                'nextWeekChange' => 0,
-                'nextWeekTrend' => 'neutral'
-            ];
+        $dailyTotals = $sales->groupBy(function ($sale) {
+            return Carbon::parse($sale->date)->format('Y-m-d');
+        })->count();
+
+        return $dailyTotals > 0 ? $sales->sum('quantity') / $dailyTotals : 0;
+    }
+
+    private function prepareChartData($daywiseSales)
+    {
+        $labels = [];
+        $quantities = [];
+
+        foreach ($daywiseSales as $day) {
+            $labels[] = Carbon::parse($day['date'])->format('M d');
+            $quantities[] = $day['total_qty'];
         }
 
-        // Calculate commission rate
-        $totalAmount = array_sum(array_column($sales, 'total'));
-        $avgCommissionRate = $totalAmount > 0 ? $currentWeek / $totalAmount : 0.1; // Default 10% if no data
-
-        // Calculate percentage change from last period
-        $lastPeriodCommissions = DivanjCommission::where('employee_id', $employeeId)
-            ->whereBetween('start_date', [$startDate->copy()->subWeek(), $startDate])
-            ->sum('commission_amount');
-            
-        $lastPeriodChange = $lastPeriodCommissions > 0 
-            ? round(($currentWeek - $lastPeriodCommissions) / $lastPeriodCommissions * 100)
-            : 0;
-        $currentWeekTrend = $lastPeriodChange > 5 ? 'up' : ($lastPeriodChange < -5 ? 'down' : 'neutral');
-
-        // Next week prediction
-        $nextWeekSales = $aiInsights['nextDayPrediction'] * 7;
-        $avgPrice = count($sales) > 0 ? $totalAmount / array_sum(array_column($sales, 'quantity')) : 0;
-        $nextWeek = round($nextWeekSales * $avgPrice * $avgCommissionRate, 2);
-        
-        $nextWeekChange = $currentWeek > 0 ? round(($nextWeek - $currentWeek) / $currentWeek * 100) : 0;
-        $nextWeekTrend = $nextWeekChange > 5 ? 'up' : ($nextWeekChange < -5 ? 'down' : 'neutral');
-
         return [
-            'currentWeek' => round($currentWeek, 2),
-            'currentWeekChange' => $lastPeriodChange,
-            'currentWeekTrend' => $currentWeekTrend,
-            'nextWeek' => $nextWeek,
-            'nextWeekChange' => $nextWeekChange,
-            'nextWeekTrend' => $nextWeekTrend
+            'labels' => $labels,
+            'quantities' => $quantities,
         ];
     }
 
-    private function prepareChartData($sales)
+ 
+
+    private function getMotivationMessage($employee, $weekdayPredictions, $weekendPredictions)
     {
-        $dailySales = [];
-        foreach ($sales as $sale) {
-            $date = Carbon::parse($sale['date'])->format('M d');
-            $dailySales[$date] = ($dailySales[$date] ?? 0) + $sale['quantity'];
+        $name = $employee->stage_name;
+        $totalPredicted = ($weekdayPredictions['total'] ?? 0) + ($weekendPredictions['total'] ?? 0);
+        $weeklyTarget = 25;
+        $achievement = min(100, round(($totalPredicted / $weeklyTarget) * 100));
+
+        $bestWeekday = '';
+        $bestWeekdaySales = 0;
+        foreach ($weekdayPredictions['days'] ?? [] as $day) {
+            if ($day['predicted'] > $bestWeekdaySales) {
+                $bestWeekdaySales = $day['predicted'];
+                $bestWeekday = $day['day'];
+            }
         }
 
-        return [
-            'labels' => array_keys($dailySales),
-            'quantities' => array_values($dailySales)
+        $messages = [
+            // Script adherence focus
+            "{$name}, your consistent approach is working! Stick to the script - greet warmly, confirm needs, and suggest complementary products. You're at {$achievement}% of target!",
+
+            // Cross-selling strategy
+            "{$name}, you're at {$achievement}% of target. Boost sales by upseeling & cross-selling - 'At this special price, can you squeeze 3 more cases?...' is an effective phrase. Your best day is {$bestWeekday} - capitalize on that energy!",
+
+            // Personalization
+            "{$name}, personalize every interaction. Use the customer's name 2-3 times naturally. 'But Mark, when your friend and family comes over..' This builds rapport.",
+
+            // Pacing and tone
+            "{$name}, maintain an enthusiastic tone throughout calls. Vary your pace - slower when explaining details, energetic when closing. You're on track for {$achievement}% of target!",
+
+            // Continuous flow
+            "Keep conversations flowing, {$name}. Avoid dead air - have transition phrases ready. 'I completely understand that you are not (mirror EXACT exceuse of customer)...' Your {$bestWeekday} performance shows this works!",
+
+            // Product knowledge
+            "{$name}, deep product knowledge drives sales. Highlight 3 key features for each item. You're at {$achievement}% - this extra detail could push you to 100%!",
+
+            // Closing technique
+            "Strong work {$name}! When closing, confirm his Address first: 'I have got you at the fake street, is that you?' rather than 'Would you like to buy?' Your {$bestWeekday} results prove this works!"
         ];
+
+        return $messages[array_rand($messages)];
     }
 }

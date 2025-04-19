@@ -38,12 +38,26 @@
 <div class="content-wrapper">
     <div class="container-fluid">
         <div class="card">
-            <div class="card-header d-flex justify-content-between align-items-center">
-                <h3>Sales Report</h3>
-                <a href="javascript:void(0);" class="btn btn-danger" data-bs-toggle="offcanvas" data-bs-target="#importSalesReport">
-                    <i class="ti ti-square-rounded-plus me-2"></i> Import Sales
-                </a>
+            <div class="card-header py-3 px-4 border-bottom d-flex justify-content-between align-items-center">
+                <h3 class="mb-0">Sales Report</h3>
+                <div class="d-flex flex-wrap align-items-center gap-2">
+                    @if(Auth::user()->isSuperAdmin() || Auth::user()->isHR())
+                        <form action="{{ route('divanj.sales.preview-import') }}" method="POST" enctype="multipart/form-data" class="d-flex align-items-center gap-2">
+                            @csrf
+                            <label for="file" class="form-label mb-0 small text-nowrap">Import Bulk</label>
+                            <input type="file" class="form-control form-control-sm" name="file" id="file" required>
+                            <button type="submit" class="btn btn-sm btn-outline-primary">Preview</button>
+                        </form>
+                        <a href="javascript:void(0);" class="btn btn-sm btn-outline-warning d-flex align-items-center" data-bs-toggle="offcanvas" data-bs-target="#importSalesReportAdmin">
+                            <i class="ti ti-square-rounded-plus me-2"></i>Individual Import
+                        </a>
+                    @endif
+                    <a href="javascript:void(0);" class="btn btn-sm btn-danger d-flex align-items-center" data-bs-toggle="offcanvas" data-bs-target="#importSalesReport">
+                        <i class="ti ti-square-rounded-plus me-2"></i> Import Sales
+                    </a>
+                </div>
             </div>
+
             <div class="card-body">
                 @if(session('success'))
                     <div class="alert alert-success">
@@ -158,6 +172,34 @@
         </form>
     </div>
 </div>
+
+<!-- Offcanvas for Admin Import -->
+<div class="offcanvas offcanvas-end" tabindex="-1" id="importSalesReportAdmin" aria-labelledby="importSalesReportAdminLabel">
+    <div class="offcanvas-header">
+        <h5 class="offcanvas-title text-light" id="importSalesReportAdminLabel">Admin Import Sales</h5>
+        <button type="button" class="btn-close text-reset" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+    </div>
+    <div class="offcanvas-body">
+        <form action="{{ route('divanj.admin.sales.import') }}" method="POST" enctype="multipart/form-data">
+            @csrf
+            <div class="mb-3">
+                <label for="employee_id" class="form-label">Select Employee</label>
+                <select class="form-select" name="employee_id" id="employee_id" required>
+                    <option value="">-- Select Employee --</option>
+                    @foreach($employees as $employee)
+                        <option value="{{ $employee->id }}">{{ $employee->stage_name }} (ID: {{ $employee->id }})</option>
+                    @endforeach
+                </select>
+            </div>
+            <div class="mb-3">
+                <label for="file" class="form-label">Upload Excel File</label>
+                <input type="file" class="form-control" name="file" id="file" required>
+            </div>
+            <button type="submit" class="btn btn-primary">Import</button>
+        </form>
+    </div>
+</div>
+
 
 
 @endsection

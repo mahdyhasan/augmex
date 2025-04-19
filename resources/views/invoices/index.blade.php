@@ -27,6 +27,7 @@
                             <th>Work End</th>
                             <th>Invoice Date</th>
                             <th>Total Amount</th>
+                            <th>Status</th>
                             <th>Actions</th>
                         </tr>
                     </thead>
@@ -40,9 +41,21 @@
                                 <td>{{ $invoice->work_end_date }}</td>
                                 <td>{{ $invoice->invoice_date }}</td>
                                 <td>{{ number_format($invoice->total_amount, 2) }}</td>
+                                <td>{{ $invoice->status }}</td>
                                 <td>
-                                    <a href="{{ route('invoices.edit', $invoice->id) }}" class="btn btn-warning btn-sm">Edit</a>
-                                    <a href="{{ route('invoices.view', $invoice->id) }}" class="btn btn-info btn-sm">View</a>
+                                    <div class="d-flex">
+                                        @if($invoice->status == 'pending')
+                                            <form action="{{ route('invoices.markInvoicePaid', $invoice->id) }}" method="POST" class="me-1">
+                                                @csrf
+                                                <button type="submit" class="btn btn-success btn-sm" title="Mark as Paid">
+                                                    <i class="fas fa-check-circle"></i>
+                                                </button>
+                                            </form>
+                                        @endif
+
+                                        <a href="{{ route('invoices.edit', $invoice->id) }}" class="btn btn-warning btn-sm">Edit</a>
+                                        <a href="{{ route('invoices.view', $invoice->id) }}" class="btn btn-info btn-sm">View</a>
+                                    </div>
                                 </td>
                             </tr>
                         @endforeach

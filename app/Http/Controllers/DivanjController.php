@@ -1,13 +1,16 @@
 <?php
 
-
 namespace App\Http\Controllers;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Log;
+
 use Carbon\Carbon;
 use Auth;
 use Carbon\CarbonPeriod;
 use DateTimeZone;
 use DB;
+use Session;
 
 use DataTables;
 use Excel;
@@ -39,6 +42,7 @@ use App\Models\User;
 use App\Models\UserType;
 
 use App\Imports\DivanjSalesImport;
+use App\Imports\SalesPreviewImport;
 
 
 class DivanjController extends Controller
@@ -163,14 +167,7 @@ class DivanjController extends Controller
     
 
  
-     /**
-      * Categorize sales into weekday/weekend totals
-      */
-      protected function calculateTarget(int $monthsWithCompany): int
-      {
-          return $monthsWithCompany <= 2 ? 15 : 25;
-      }
-  
+   
     /**
      * Categorize sales into weekday and weekend totals.
      */
@@ -292,6 +289,35 @@ class DivanjController extends Controller
     /**
      * Option B (Mixed): Use a portion of weekend sales to meet the target, then commission the surplus at 6%.
      */
+    // protected function calculateOptionB(
+    //     int $weekdayQty,
+    //     float $weekdayAmount,
+    //     int $weekendQty,
+    //     float $weekendAmount,
+    //     int $target,
+    //     Employee $employee,
+    //     Carbon $weekStart,
+    //     Carbon $weekEnd,
+    //     int $daysWithCompany
+    // ): float {
+    //     // Ensure total sales (weekday + weekend) meet the target
+    //     if (($weekdayQty + $weekendQty) < $target) return 0.0;
+        
+    //     $needed = max(0, $target - $weekdayQty);
+    //     // Retrieve weekend sales sorted in ascending order by total amount
+    //     $weekendSales = $this->getSortedWeekendSales($employee, $weekStart, $weekEnd);
+        
+    //     // Calculate how much weekend sale amount is used to reach the target and the surplus amount
+    //     list($usedAmount, $remainingAmount) = $this->calculateUsedWeekendSales($weekendSales, $needed);
+
+    //     // Combine weekday sales amount with the used weekend sales amount for base commission
+    //     $combinedAmount = $weekdayAmount + $usedAmount;
+    //     $base = $this->calculateBaseCommission($target, $combinedAmount, $daysWithCompany);
+        
+    //     return $base + ($remainingAmount * 0.06);
+    // }
+
+
     protected function calculateOptionB(
         int $weekdayQty,
         float $weekdayAmount,
@@ -303,21 +329,29 @@ class DivanjController extends Controller
         Carbon $weekEnd,
         int $daysWithCompany
     ): float {
-        // Ensure total sales (weekday + weekend) meet the target
-        if (($weekdayQty + $weekendQty) < $target) return 0.0;
-        
-        $needed = max(0, $target - $weekdayQty);
-        // Retrieve weekend sales sorted in ascending order by total amount
-        $weekendSales = $this->getSortedWeekendSales($employee, $weekStart, $weekEnd);
-        
-        // Calculate how much weekend sale amount is used to reach the target and the surplus amount
-        list($usedAmount, $remainingAmount) = $this->calculateUsedWeekendSales($weekendSales, $needed);
-
-        // Combine weekday sales amount with the used weekend sales amount for base commission
-        $combinedAmount = $weekdayAmount + $usedAmount;
-        $base = $this->calculateBaseCommission($target, $combinedAmount, $daysWithCompany);
-        
-        return $base + ($remainingAmount * 0.06);
+        // 1. Check if total sales meet the target
+        $totalQty = $weekdayQty + $weekendQty;
+        if ($totalQty < $target) {
+            return 0.0;
+        }
+    
+        // 2. Handle cases where there are NO weekend sales
+        if ($weekendQty === 0) {
+            return ($weekdayQty >= $target) ? 50.0 : 0.0; // Base commission only
+        }
+    
+        // 3. Calculate needed weekend sales
+        $neededFromWeekend = max(0, $target - $weekdayQty);
+    
+        // 4. Prorate weekend amount (now safe from division by zero)
+        $usedWeekendAmount = ($neededFromWeekend / $weekendQty) * $weekendAmount;
+        $leftoverWeekendAmount = $weekendAmount - $usedWeekendAmount;
+    
+        // 5. Calculate base + bonus
+        $baseCommission = 50.0; // Flat $50 if target is met
+        $bonus = $leftoverWeekendAmount * 0.06;
+    
+        return $baseCommission + $bonus;
     }
 
 
@@ -454,188 +488,204 @@ class DivanjController extends Controller
         }
         
 
+
+
+
+    //Daily Sales Summary    
     
     public function salesSummaryDivanj(Request $request)
-    {
-        // Ensure only super admins can access this functionality.
-        if (!Auth::check() || !Auth::user()->isSuperAdmin()) {
-            // Redirect non-admin users to the dashboard.
-            return redirect()->route('dashboard');
-            // Alternatively, you can abort with a 403 status:
-            // abort(403, 'Unauthorized action.');
+{
+    // Ensure only super admins can access this functionality.
+    if (!Auth::check() || !Auth::user()->isSuperAdmin()) {
+        return redirect()->route('dashboard');
+    }
+
+    // Retrieve the start and end dates from the request, defaulting to today.
+    $startDate = $request->input('start_date', now()->toDateString());
+    $endDate   = $request->input('end_date', now()->toDateString());
+
+    // Fetch active employees for client with ID 1.
+    $employees = Employee::with('user')
+        ->where('client_id', 1)
+        ->whereNull('date_of_termination')
+        ->get();
+
+    // Get the ID for the "Absent" status.
+    $absentStatusId = AttendanceStatus::where('name', 'Absent')->first()?->id ?? null;
+
+    // Retrieve attendance records for the selected employees within the date range.
+    $attendance = Attendance::whereIn('employee_id', $employees->pluck('id'))
+        ->whereBetween('date', [$startDate, $endDate])
+        ->with('employee.user')
+        ->get();
+
+    // Process and group attendance records by date.
+    $attendanceByDate = [];
+    foreach ($attendance as $record) {
+        $dateString = Carbon::parse($record->date)->format('Y-m-d');
+
+        $checkIn = $record->check_in
+            ? Carbon::parse($record->check_in)->timezone('Australia/Melbourne')
+            : null;
+        $checkOut = $record->check_out
+            ? Carbon::parse($record->check_out)->timezone('Australia/Melbourne')
+            : null;
+
+        $hours = 0;
+        if ($checkIn && $checkOut) {
+            $diff = $checkIn->floatDiffInHours($checkOut);
+            $hours = min(round($diff * 2) / 2, 8); // Round to the nearest 0.5 hour, capped at 8 hours.
         }
 
-        // Retrieve the start and end dates from the request, defaulting to today.
-        $startDate = $request->input('start_date', now()->toDateString());
-        $endDate   = $request->input('end_date', now()->toDateString());
+        $attendanceByDate[$dateString][] = [
+            'employee'  => $record->employee,
+            'check_in'  => $checkIn ? $checkIn->format('H:i') : null,
+            'check_out' => $checkOut ? $checkOut->format('H:i') : null,
+            'hours'     => $hours,
+            'status_id' => $record->status_id,
+        ];
+    }
 
-        // Fetch active employees for client with ID 1.
-        $employees = Employee::with('user')
-            ->where('client_id', 1)
-            ->whereNull('date_of_termination')
-            ->get();
+    // Identify absent employees for each day in the period.
+    $absentEmployeesByDate = [];
+    foreach ($employees as $employee) {
+        $attendanceDates = $attendance->where('employee_id', $employee->id)
+            ->pluck('date')
+            ->map(fn($date) => Carbon::parse($date)->toDateString())
+            ->toArray();
 
-        // Get the ID for the "Absent" status.
-        $absentStatusId = AttendanceStatus::where('name', 'Absent')->first()?->id ?? null;
-
-        // Retrieve attendance records for the selected employees within the date range.
-        $attendance = Attendance::whereIn('employee_id', $employees->pluck('id'))
-            ->whereBetween('date', [$startDate, $endDate])
-            ->with('employee.user')
-            ->get();
-
-        // Process and group attendance records by date.
-        $attendanceByDate = [];
-        foreach ($attendance as $record) {
-            $dateString = Carbon::parse($record->date)->format('Y-m-d');
-
-            $checkIn = $record->check_in
-                ? Carbon::parse($record->check_in)->timezone('Australia/Melbourne')
-                : null;
-            $checkOut = $record->check_out
-                ? Carbon::parse($record->check_out)->timezone('Australia/Melbourne')
-                : null;
-
-            $hours = 0;
-            if ($checkIn && $checkOut) {
-                $diff = $checkIn->floatDiffInHours($checkOut);
-                $hours = min(round($diff * 2) / 2, 8); // Round to the nearest 0.5 hour, capped at 8 hours.
+        $period = Carbon::parse($startDate)->toPeriod($endDate);
+        foreach ($period as $day) {
+            $dateStr = $day->toDateString();
+            if (!in_array($dateStr, $attendanceDates)) {
+                $absentEmployeesByDate[$dateStr][] = $employee;
             }
+        }
+    }
 
-            $attendanceByDate[$dateString][] = [
-                'employee'  => $record->employee,
-                'check_in'  => $checkIn ? $checkIn->format('H:i') : null,
-                'check_out' => $checkOut ? $checkOut->format('H:i') : null,
-                'hours'     => $hours,
-                'status_id' => $record->status_id,
+    // Retrieve sales records for the employees within the date range.
+    $sales = DivanjSale::whereIn('employee_id', $employees->pluck('id'))
+        ->whereBetween('date', [$startDate, $endDate])
+        ->with('employee.user')
+        ->get();
+
+    // Process and group sales records by date and employee.
+    $salesByDate = [];
+    $totalCases  = 0;
+    $totalSales  = 0;
+    foreach ($sales as $sale) {
+        $dateString = Carbon::parse($sale->date)->format('Y-m-d');
+
+        if (!isset($salesByDate[$dateString])) {
+            $salesByDate[$dateString] = [];
+        }
+
+        $employeeId = $sale->employee_id;
+        if (!isset($salesByDate[$dateString][$employeeId])) {
+            $salesByDate[$dateString][$employeeId] = [
+                'employee' => $sale->employee,
+                'cases'    => 0,
+                'amount'   => 0,
             ];
         }
 
-        // Identify absent employees for each day in the period.
-        $absentEmployeesByDate = [];
-        foreach ($employees as $employee) {
-            // Gather all attendance dates for this employee.
-            $attendanceDates = $attendance->where('employee_id', $employee->id)
-                ->pluck('date')
-                ->map(fn($date) => Carbon::parse($date)->toDateString())
-                ->toArray();
-
-            // Check each day within the range.
-            $period = Carbon::parse($startDate)->toPeriod($endDate);
-            foreach ($period as $day) {
-                $dateStr = $day->toDateString();
-                if (!in_array($dateStr, $attendanceDates)) {
-                    $absentEmployeesByDate[$dateStr][] = $employee;
-                }
-            }
-        }
-
-        // Retrieve sales records for the employees within the date range.
-        $sales = DivanjSale::whereIn('employee_id', $employees->pluck('id'))
-            ->whereBetween('date', [$startDate, $endDate])
-            ->with('employee.user')
-            ->get();
-
-        // Process and group sales records by date and employee.
-        $salesByDate = [];
-        $totalCases  = 0;
-        $totalSales  = 0;
-        foreach ($sales as $sale) {
-            $dateString = Carbon::parse($sale->date)->format('Y-m-d');
-
-            // Initialize the date group if not already set.
-            if (!isset($salesByDate[$dateString])) {
-                $salesByDate[$dateString] = [];
-            }
-
-            $employeeId = $sale->employee_id;
-            // Initialize the employee group for this date if needed.
-            if (!isset($salesByDate[$dateString][$employeeId])) {
-                $salesByDate[$dateString][$employeeId] = [
-                    'employee' => $sale->employee,
-                    'cases'    => 0,
-                    'amount'   => 0,
-                ];
-            }
-
-            // Accumulate the sales data.
-            $salesByDate[$dateString][$employeeId]['cases']  += $sale->quantity;
-            $salesByDate[$dateString][$employeeId]['amount'] += $sale->total;
-            $totalCases  += $sale->quantity;
-            $totalSales  += $sale->total;
-        }
-        
-        
-            // Generate employee summaries
-            $employeeSummaries = $employees->map(function ($employee) use ($attendanceByDate, $salesByDate, $absentEmployeesByDate, $absentStatusId) {  
-                $employeeId = $employee->id;
-                $presentDays = 0;
-                $absentDays = 0;
-                $incompleteDays = 0;
-                $totalHoursWorked = 0.0; // Changed from 8 hours per day to cumulative hours calculation
-                $totalCases = 0;
-                $totalSales = 0;
-            
-                foreach ($attendanceByDate as $date => $records) {
-                    // Check if the current date is a weekend (Saturday or Sunday)
-                    $dayOfWeek = \Carbon\Carbon::parse($date)->dayOfWeek;
-                    $isWeekend = ($dayOfWeek === \Carbon\Carbon::SATURDAY || $dayOfWeek === \Carbon\Carbon::SUNDAY);
-            
-                    $employeeRecord = collect($records)->firstWhere('employee.id', $employeeId);
-            
-                    if (!$isWeekend) { // Only count attendance on weekdays
-                        if ($employeeRecord) {
-                            if (isset($employeeRecord['status_id']) && $employeeRecord['status_id'] == $absentStatusId) {
-                                $absentDays++;
-                            } elseif ($employeeRecord['check_in'] && $employeeRecord['check_out']) {
-                                $presentDays++;
-                                $totalHoursWorked += $employeeRecord['hours']; // Sum actual hours worked for that day
-                            } else {
-                                $incompleteDays++;
-                            }
-                        } else {
-                            $absentDays++;
-                        }
-                    }
-            
-                    // Always count sales, even on weekends
-                    if (isset($salesByDate[$date][$employeeId])) {
-                        $totalCases += $salesByDate[$date][$employeeId]['cases'];
-                        $totalSales += $salesByDate[$date][$employeeId]['amount'];
-                    }
-                }
-            
-                return (object)[
-                    'stage_name'     => $employee->stage_name,
-                    'present_days'   => $presentDays,
-                    'absent_days'    => $absentDays,
-                    'incomplete_days'=> $incompleteDays,
-                    'total_hours_worked' => $totalHoursWorked, // Store the actual total hours worked
-                    'total_cases'    => $totalCases,
-                    'total_sales'    => $totalSales,
-                ];
-            });
-
-
-        
-        // Pass all data to the view.
-        return view('divanj.sales_summary', compact(
-            'employees',
-            'startDate',
-            'endDate',
-            'attendanceByDate',
-            'salesByDate',
-            'absentEmployeesByDate',
-            'totalCases',
-            'totalSales',
-            'absentStatusId',
-            'employeeSummaries' // This is the new variable passed to the view
-        ));
-
+        $salesByDate[$dateString][$employeeId]['cases']  += $sale->quantity;
+        $salesByDate[$dateString][$employeeId]['amount'] += $sale->total;
+        $totalCases  += $sale->quantity;
+        $totalSales  += $sale->total;
     }
 
+    // Calculate working days count (excluding weekends)
+    $workingDays = 0;
+    $start = Carbon::parse($startDate);
+    $end = Carbon::parse($endDate);
+    while ($start <= $end) {
+        if (!in_array($start->format('w'), [0, 6])) { // 0 = Sunday, 6 = Saturday
+            $workingDays++;
+        }
+        $start->addDay();
+    }
 
+    // Calculate average active agents per working day
+    $totalPresentAgents = 0;
+    foreach ($attendanceByDate as $date => $records) {
+        $dateObj = Carbon::parse($date);
+        if (!in_array($dateObj->format('w'), [0, 6])) {
+            $presentAgents = collect($records)->filter(function ($record) use ($absentStatusId) {
+                return !($record['status_id'] == $absentStatusId) && 
+                       ($record['check_in'] && $record['check_out']);
+            })->count();
+            $totalPresentAgents += $presentAgents;
+        }
+    }
+    
+    $avgActiveAgents = $workingDays > 0 ? $totalPresentAgents / $workingDays : 0;
+    $rangeAverage = $workingDays > 0 && $avgActiveAgents > 0 ? $totalCases / $workingDays / $avgActiveAgents : 0;
 
+    // Generate employee summaries
+    $employeeSummaries = $employees->map(function ($employee) use ($attendanceByDate, $salesByDate, $absentEmployeesByDate, $absentStatusId) {  
+        $employeeId = $employee->id;
+        $presentDays = 0;
+        $absentDays = 0;
+        $incompleteDays = 0;
+        $totalHoursWorked = 0.0;
+        $totalCases = 0;
+        $totalSales = 0;
+    
+        foreach ($attendanceByDate as $date => $records) {
+            $dayOfWeek = Carbon::parse($date)->dayOfWeek;
+            $isWeekend = ($dayOfWeek === Carbon::SATURDAY || $dayOfWeek === Carbon::SUNDAY);
+    
+            $employeeRecord = collect($records)->firstWhere('employee.id', $employeeId);
+    
+            if (!$isWeekend) {
+                if ($employeeRecord) {
+                    if (isset($employeeRecord['status_id']) && $employeeRecord['status_id'] == $absentStatusId) {
+                        $absentDays++;
+                    } elseif ($employeeRecord['check_in'] && $employeeRecord['check_out']) {
+                        $presentDays++;
+                        $totalHoursWorked += $employeeRecord['hours'];
+                    } else {
+                        $incompleteDays++;
+                    }
+                } else {
+                    $absentDays++;
+                }
+            }
+    
+            if (isset($salesByDate[$date][$employeeId])) {
+                $totalCases += $salesByDate[$date][$employeeId]['cases'];
+                $totalSales += $salesByDate[$date][$employeeId]['amount'];
+            }
+        }
+    
+        return (object)[
+            'stage_name'     => $employee->stage_name,
+            'present_days'   => $presentDays,
+            'absent_days'    => $absentDays,
+            'incomplete_days'=> $incompleteDays,
+            'total_hours_worked' => $totalHoursWorked,
+            'total_cases'    => $totalCases,
+            'total_sales'    => $totalSales,
+        ];
+    });
+
+    return view('divanj.sales_summary', compact(
+        'employees',
+        'startDate',
+        'endDate',
+        'attendanceByDate',
+        'salesByDate',
+        'absentEmployeesByDate',
+        'totalCases',
+        'totalSales',
+        'absentStatusId',
+        'employeeSummaries',
+        'workingDays',
+        'avgActiveAgents',
+        'rangeAverage'
+    ));
+}
 
 
 
@@ -656,6 +706,244 @@ class DivanjController extends Controller
 
         return redirect()->back()->with('success', 'Excel data imported successfully!');
     }
+
+
+    /**
+     * Import sales for admin (with employee selection)
+     */
+    public function importSalesDivanjAdmin(Request $request)
+    {
+        $request->validate([
+            'file' => 'required|file|mimes:xlsx,xls,csv',
+            'employee_id' => 'required|exists:employees,id'
+        ]);
+
+        $import = new DivanjSalesImport($request->employee_id);
+        
+        try {
+            Excel::import($import, $request->file('file'));
+            return redirect()->back()->with('success', 'Excel data imported successfully for employee ID: ' . $request->employee_id);
+        } catch (\Exception $e) {
+            return redirect()->back()->with('error', 'Error importing file: ' . $e->getMessage());
+        }
+    }     
+
+
+    public function previewSalesImport(Request $request)
+    {
+        $request->validate([
+            'file' => 'required|file|mimes:xlsx,xls,csv'
+        ]);
+
+        // Set timezone explicitly
+        date_default_timezone_set(config('app.timezone'));
+
+        // Get employees (keyed by stage name)
+        $employees = Employee::pluck('id', 'stage_name')->toArray();
+
+        // Process the Excel file as a raw array using the preview import class.
+        $importData = Excel::toArray(new SalesPreviewImport(), $request->file('file'))[0];
+
+        // Remove header row from preview data (the file saved for import will still have it removed)
+        array_shift($importData);
+
+        // Build matching keys based on file rows (using indices)
+        $matchKeys = [];
+        foreach ($importData as $row) {
+            $consultant = trim($row[0]);
+            $date = Carbon::parse($row[1])->timezone(config('app.timezone'))->format('Y-m-d');
+            $time = Carbon::parse($row[2])->timezone(config('app.timezone'))->format('H:i:s');
+            $firstWord = explode(' ', strtolower($consultant))[0];
+
+            // Try to match against employees list
+            $employeeId = null;
+            $employeeName = null;
+            foreach ($employees as $stage_name => $id) {
+                if (str_starts_with(strtolower($stage_name), $firstWord)) {
+                    $employeeId = $id;
+                    $employeeName = $stage_name;
+                    break;
+                }
+            }
+
+            if ($employeeId) {
+                $matchKeys[] = [
+                    'employee_id' => $employeeId,
+                    'date'        => $date,
+                    'time'        => $time,
+                    'name'        => trim(strtolower($row[4])) // product/service name in lower-case
+                ];
+            }
+        }
+
+        // Retrieve existing sales that match any of the keys (for comparison)
+        $existingSales = DivanjSale::with('employee')
+            ->where(function($query) use ($matchKeys) {
+                foreach ($matchKeys as $key) {
+                    $query->orWhere(function($subQuery) use ($key) {
+                        $subQuery->where('employee_id', $key['employee_id'])
+                                 ->whereDate('date', $key['date'])
+                                 ->whereTime('time', $key['time'])
+                                 ->whereRaw('LOWER(name) = ?', [$key['name']]);
+                    });
+                }
+            })
+            ->get()
+            ->keyBy(function($sale) {
+                return strtolower($sale->employee->stage_name) . '|' .
+                       Carbon::parse($sale->date)->format('Y-m-d') . '|' .
+                       Carbon::parse($sale->time)->format('H:i:s') . '|' .
+                       strtolower($sale->name);
+            });
+
+        // Prepare preview arrays
+        $previewData = [];
+        $unmatchedConsultants = [];
+        $newRecords = [];
+        // Start with all existing records (to later remove matched ones)
+        $recordsToDelete = $existingSales->toArray();
+        $unchangedRecords = [];
+
+        foreach ($importData as $row) {
+            $consultant  = $row[0];
+            $date        = Carbon::parse($row[1])->format('Y-m-d');
+            $time        = Carbon::parse($row[2])->format('H:i:s');
+            $productCode = $row[3];
+            $name        = trim(strtolower($row[4])); // lower-case for matching
+            $quantity    = (float)$row[5];
+            $price       = (float)$row[6];
+            $total       = (float)$row[7];
+
+            // Match employee based on first word
+            $firstWord = explode(' ', trim($consultant))[0];
+            $employeeId = null;
+            $employeeName = null;
+            foreach ($employees as $stage_name => $id) {
+                if (str_starts_with(strtolower($stage_name), strtolower($firstWord))) {
+                    $employeeId = $id;
+                    $employeeName = $stage_name;
+                    break;
+                }
+            }
+
+            $matchKey = strtolower($employeeName) . '|' . $date . '|' . $time . '|' . $name;
+            $isNew = true;
+            $isChanged = false;
+
+            if ($employeeId && $existingSale = $existingSales->get($matchKey)) {
+                if ((float)$existingSale->quantity != $quantity ||
+                    (float)$existingSale->price != $price ||
+                    (float)$existingSale->total != $total) {
+                    $isChanged = true;
+                } else {
+                    $unchangedRecords[] = $existingSale;
+                }
+                unset($recordsToDelete[$matchKey]);
+                $isNew = false;
+            }
+
+            $previewData[] = [
+                'consultant'    => $consultant,
+                'employee_id'   => $employeeId,
+                'employee_name' => $employeeName,
+                'date'          => $date,
+                'time'          => $time,
+                'product_code'  => $productCode,
+                'name'          => $name,
+                'quantity'      => $quantity,
+                'price'         => $price,
+                'total'         => $total,
+                'status'        => $isNew ? 'new' : ($isChanged ? 'changed' : 'unchanged'),
+                'matched'       => (bool)$employeeId
+            ];
+
+            if ($employeeId && $isNew) {
+                $newRecords[] = end($previewData);
+            }
+
+            if (!$employeeId && !in_array($consultant, $unmatchedConsultants)) {
+                $unmatchedConsultants[] = $consultant;
+            }
+        }
+
+        // Store the preview data in session
+        Session::put('sales_preview_data', [
+            'previewData'       => $previewData,
+            'newRecords'        => $newRecords,
+            'recordsToDelete'   => array_values($recordsToDelete),
+            'unchangedRecords'  => $unchangedRecords,
+            'unmatchedConsultants' => $unmatchedConsultants,
+            'file'              => $request->file('file')->store('temp')
+        ]);
+
+        return redirect()->route('divanj.show.sales.preview');
+    }
+
+    public function processSalesImport(Request $request)
+    {
+        $request->validate([
+            'file_path'         => 'required',
+            'import_new'        => 'sometimes|boolean',
+            'delete_missing'    => 'sometimes|boolean',
+            'records_to_delete' => 'sometimes|array',
+            'records_to_delete.*' => 'exists:divanj_sales,id'
+        ]);
+
+        try {
+            DB::beginTransaction();
+
+            Log::debug('Process Import Request:', $request->all());
+
+            // Import new records if requested
+            if ($request->import_new) {
+                $import = new DivanjSalesImport();
+                $import->onRow(function(array $row) {
+                    Log::debug('Importing row:', $row);
+                });
+                // Now use our file which has been stored from the preview step.
+                Excel::import($import, Storage::path($request->file_path));
+
+                $unmatched = $import->getUnmatchedConsultants();
+                if (count($unmatched)) {
+                    Log::warning('Unmatched consultants:', $unmatched);
+                }
+            }
+
+            // Delete missing records if requested
+            if ($request->delete_missing && !empty($request->records_to_delete)) {
+                Log::debug('Deleting records:', $request->records_to_delete);
+                $deletedCount = DivanjSale::whereIn('id', $request->records_to_delete)->delete();
+                Log::info("Deleted {$deletedCount} records");
+            }
+
+            Storage::delete($request->file_path);
+            DB::commit();
+
+            return redirect()->route('divanj.sales.report')
+                ->with('success', 'Sales data updated successfully!');
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Storage::delete($request->file_path);
+            Log::error('Import failed: ' . $e->getMessage(), [
+                'exception' => $e,
+                'trace'     => $e->getTraceAsString()
+            ]);
+            return redirect()->back()
+                ->with('error', 'Error processing import: ' . $e->getMessage());
+        }
+    }
+
+    public function showSalesPreview()
+    {
+        $data = Session::get('sales_preview_data');
+        if (!$data) {
+            return redirect()->route('divanj.sales.report')
+                ->with('error', 'No preview data found.');
+        }
+        return view('divanj.import-preview', $data);
+    }
+
+    
 
 
     public function salesReport(Request $request)
@@ -885,10 +1173,14 @@ class DivanjController extends Controller
         ));
     }
     
+
+
+
+
+
     // NARRATIVE REPORT FOR ALL AGENTS
     public function narrativeReportForAll(Request $request)
     {
-
         // Access control: allow only Admins
         if (!(Auth::user()->isSuperAdmin() )) {
             abort(403, 'Unauthorized access');

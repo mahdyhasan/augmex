@@ -80,11 +80,34 @@
 
             <div class="mb-3">
                 <label for="invoice_id" class="form-label">Invoice</label>
-                <select class="form-control" id="invoice_id" name="invoice_id" required>
+                <select class="form-control" id="invoice_id" name="invoice_id" required onchange="updateInvoiceDetails()">
+                    <option value="" disabled selected>Select an invoice</option>
                     @foreach($invoices as $invoice)
-                        <option value="{{ $invoice->id }}">Invoice #{{ $invoice->id }} - {{$invoice->invoice_no}}</option>
+                        <option value="{{ $invoice->id }}" 
+                                data-total="{{ $invoice->total_amount }}"
+                                data-client="{{ $invoice->client->company }}"
+                                data-status="{{ $invoice->status }}">
+                            Invoice #{{ $invoice->id }} - {{ $invoice->invoice_no }} ({{ $invoice->client->name }})
+                        </option>
                     @endforeach
                 </select>
+            </div>
+
+            <!-- Invoice Details Display -->
+            <div class="card mb-3" id="invoiceDetailsCard" style="display: none;">
+                <div class="card-body">
+                    <h6 class="card-title">Invoice Details</h6>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <p class="mb-1"><strong>Client:</strong> <span id="clientName">-</span></p>
+                            <p class="mb-1"><strong>Status:</strong> <span id="invoiceStatus">-</span></p>
+                        </div>
+                        <div class="col-md-6">
+                            <p class="mb-1"><strong>Total Amount:</strong> <span id="invoiceTotal">-</span></p>
+                            <p class="mb-1"><strong>Amount Due:</strong> <span id="amountDue">-</span></p>
+                        </div>
+                    </div>
+                </div>
             </div>
 
             <div class="mb-3">
@@ -112,6 +135,9 @@
         </form>
     </div>
 </div>
+
+
+
 @endsection
 @section('css')
 <!-- DataTables CSS -->
@@ -135,4 +161,38 @@
         });
     });
 </script>
+
+
+
+
+<script>
+    function updateInvoiceDetails() {
+        const select = document.getElementById('invoice_id');
+        const selectedOption = select.options[select.selectedIndex];
+        const detailsCard = document.getElementById('invoiceDetailsCard');
+        
+        if (select.value) {
+            // Update the details
+            document.getElementById('clientName').textContent = selectedOption.getAttribute('data-client');
+            document.getElementById('invoiceStatus').textContent = selectedOption.getAttribute('data-status');
+            document.getElementById('invoiceTotal').textContent = selectedOption.getAttribute('data-total');
+            
+            // Auto-fill the amount field with the total amount
+            document.getElementById('amount').value = selectedOption.getAttribute('data-total');
+            
+            // Show the details card
+            detailsCard.style.display = 'block';
+        } else {
+            // Hide the details card if no invoice is selected
+            detailsCard.style.display = 'none';
+        }
+    }
+
+    // Initialize date field with today's date
+    document.addEventListener('DOMContentLoaded', function() {
+        document.getElementById('payment_date').valueAsDate = new Date();
+    });
+</script>
+
+
 @endsection

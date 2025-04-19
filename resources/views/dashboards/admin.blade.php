@@ -213,7 +213,7 @@
                                     <th>Date</th>
                                     <th>Client</th>
                                     <th>Amount (Tk)</th>
-                                </tr>
+                                    <th>Status
                             </thead>
                             <tbody>
                                 @foreach($recentInvoices as $invoice)
@@ -221,6 +221,7 @@
                                     <td>{{ $invoice->invoice_date }}</td>
                                     <td>{{ $invoice->client->company }}</td>
                                     <td>{{ number_format($invoice->total_amount, 2) }}</td>
+                                    <td>{{ $invoice->status }}</td>
                                 </tr>
                                 @endforeach
                             </tbody>

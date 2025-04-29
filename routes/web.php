@@ -69,6 +69,23 @@ Route::group(['middleware' => 'auth'], function () {
     Route::prefix('accounts')->middleware(['auth'])->group(function () {
 
         Route::get('/income-statement', [AccountController::class, 'incomeStatement'])->name('accounts.incomeStatement');
+
+        Route::get('/expenses', function(Request $request) {
+            $request->validate([
+                'category_id' => 'required|integer|exists:expense_categories,id',
+                'start_date' => 'required|date',
+                'end_date' => 'required|date|after_or_equal:start_date'
+            ]);
+        
+            $expenses = Expense::with('expenseCategory')
+                ->where('category_id', $request->category_id)
+                ->whereBetween('expense_date', [$request->start_date, $request->end_date])
+                ->orderBy('expense_date', 'desc')
+                ->get();
+        
+            return response()->json($expenses);
+        })->middleware('auth:sanctum');
+
     });
 
 
@@ -197,9 +214,11 @@ Route::group(['middleware' => 'auth'], function () {
     Route::prefix('payroll')->middleware(['auth'])->group(function () {
         Route::get('/', [PayrollController::class, 'index'])->name('payrolls.index'); 
         Route::get('/{id}/edit', [PayrollController::class, 'edit'])->name('payrolls.edit'); 
+        Route::put('/salary-sheet', [PayrollController::class, 'updateSalarySheet'])->name('payrolls.update.salary.sheet');
         Route::put('/{id}', [PayrollController::class, 'update'])->name('payrolls.update');
         Route::get('/{id}/view', [PayrollController::class, 'view'])->name('payrolls.view');
         Route::post('/{id}/mark-as-paid', [PayrollController::class, 'markAsPaid'])->name('payrolls.markAsPaid');
+        Route::post('/mark-month-as-paid', [PayrollController::class, 'markMonthAsPaid'])->name('payrolls.markMonthAsPaid');
 
         Route::post('/generate-all', [PayrollController::class, 'generateAll'])->name('payrolls.generate.all');
  
@@ -209,7 +228,6 @@ Route::group(['middleware' => 'auth'], function () {
         Route::get('/cash-signature-sheet', [PayrollController::class, 'downloadCashSignatureSheet'])->name('payrolls.cash.signature');
 
         Route::get('/{payroll}/deductions', [PayrollController::class, 'showDeductions'])->name('payrolls.deductions');
-
     });
 
     

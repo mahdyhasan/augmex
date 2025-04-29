@@ -41,10 +41,35 @@ class PayrollController extends Controller
     }
     
     
-    public function index()
+    public function index(Request $request)
     {
-        $payrolls = Payroll::with('employee', 'employee.user', 'employee.leaves')->orderBy('pay_period_start', 'desc')->get();
-        $employees = Employee::with('user')->get(); // Fetch employees for the dropdown
+        $query = Payroll::with('employee.user', 'employee.leaves')
+            ->orderBy('id', 'desc');
+
+        // Apply filters
+        if ($employeeId = $request->employee_id) {
+            $query->where('employee_id', $employeeId);
+        }
+
+        if ($month = $request->month) {
+            $monthDate = Carbon::parse($month);
+            $startDate = $monthDate->copy()->subMonth()->day(25);
+            $endDate = $monthDate->copy()->day(24);
+            $query->where('pay_period_start', $startDate)
+                  ->where('pay_period_end', $endDate);
+        }
+
+        if ($year = $request->year) {
+            $query->where('year', $year);
+        }
+
+        if ($status = $request->payment_status) {
+            $query->where('payment_status', $status);
+        }
+
+        $payrolls = $query->get();
+        $employees = Employee::with('user')->orderBy('id')->get();
+
         return view('payroll.index', compact('payrolls', 'employees'));
     }
 
@@ -105,21 +130,49 @@ class PayrollController extends Controller
 
 
     public function markAsPaid(Request $request, $id)
-{
-    try {
-        $payroll = Payroll::findOrFail($id);
+    {
+        try {
+            $payroll = Payroll::findOrFail($id);
+            $payroll->payment_status = 'paid';
+            $payroll->payment_date = now();
+            $payroll->save();
 
-        $payroll->payment_status = 'paid';
-        $payroll->payment_date = now(); // Set payment date to today's date
-        $payroll->save();
-
-        return redirect()->route('payrolls.index')->with('success', 'Mark as paid successfully.');
-    } catch (\Exception $e) {
-        return redirect()->route('payrolls.index')->with('error', 'Error: ' . $e->getMessage());
+            return redirect()->route('payrolls.index')->with('success', 'Mark as paid successfully.');
+        } catch (\Exception $e) {
+            return redirect()->route('payrolls.index')->with('error', 'Error: ' . $e->getMessage());
+        }
     }
-}
 
 
+    public function markMonthAsPaid(Request $request)
+    {
+        $request->validate([
+            'month' => 'required|date_format:Y-m',
+        ]);
+
+        try {
+            $monthDate = Carbon::parse($request->month);
+            $startDate = $monthDate->copy()->subMonth()->day(25);
+            $endDate = $monthDate->copy()->day(24);
+
+            Payroll::where('pay_period_start', $startDate)
+                ->where('pay_period_end', $endDate)
+                ->where('payment_status', 'pending')
+                ->update([
+                    'payment_status' => 'paid',
+                    'payment_date' => now(),
+                ]);
+
+            return redirect()->route('payrolls.index', ['month' => $request->month])
+                ->with('success', 'All payrolls for the selected month marked as paid.');
+        } catch (\Exception $e) {
+            return redirect()->route('payrolls.index', ['month' => $request->month])
+                ->with('error', 'Error: ' . $e->getMessage());
+        }
+    }
+
+
+    
         public function generateAll(Request $request)
         {
             try {
@@ -441,6 +494,42 @@ class PayrollController extends Controller
             'selectedMonth' => $month->format('Y-m')
         ]);
     }
+
+
+
+    public function updateSalarySheet(Request $request)
+    {
+        $validated = $request->validate([
+            'payrolls' => 'required|array',
+            'payrolls.*.base_salary' => 'required|numeric|min:0',
+            'payrolls.*.transport' => 'required|numeric|min:0',
+            'payrolls.*.commission' => 'required|numeric|min:0',
+            'payrolls.*.bonuses' => 'required|numeric|min:0',
+            'payrolls.*.deductions' => 'required|numeric|min:0',
+            'payrolls.*.net_salary' => 'nullable|numeric|min:0', // Made nullable
+            'payrolls.*.payment_status' => 'required|in:paid,pending',
+            'month' => 'nullable|date_format:Y-m',
+        ]);
+
+        foreach ($validated['payrolls'] as $payrollId => $data) {
+            $payroll = Payroll::findOrFail($payrollId);
+            $totalSalary = $data['base_salary'] + $data['transport'] + $data['commission'] + $data['bonuses'];
+            $netSalary = $data['net_salary'] ?? ($totalSalary - $data['deductions']); // Fallback calculation
+            $payroll->update([
+                'base_salary' => $data['base_salary'],
+                'transport' => $data['transport'],
+                'commission' => $data['commission'],
+                'bonuses' => $data['bonuses'],
+                'deductions' => $data['deductions'],
+                'net_salary' => $netSalary,
+                'payment_status' => $data['payment_status'],
+            ]);
+        }
+
+        return redirect()->route('payrolls.salary.sheet', ['month' => $request->input('month', Carbon::now()->format('Y-m'))])
+            ->with('success', 'Payroll records updated successfully.');
+    }
+
 
     public function exportSalarySheet(Request $request)
     {

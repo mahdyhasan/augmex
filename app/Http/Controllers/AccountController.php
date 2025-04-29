@@ -303,51 +303,56 @@ class AccountController extends Controller
 
     public function incomeStatement(Request $request)
     {
-
-        // Access control: allow only Admins and users whose employee->client_id equals 1
-        if (!(Auth::user()->isSuperAdmin() )) {
+        if (!Auth::user()->isSuperAdmin()) {
             abort(403, 'Unauthorized access');
         }
-
+    
         $validated = $request->validate([
             'start_date' => 'sometimes|date',
             'end_date' => 'sometimes|date|after_or_equal:start_date'
         ]);
-
-        // Default to current month if no dates provided
+    
         $startDate = $request->input('start_date') ? Carbon::parse($request->input('start_date')) : now()->startOfMonth();
         $endDate = $request->input('end_date') ? Carbon::parse($request->input('end_date')) : now()->endOfMonth();
-
-        // Get revenue data with currency conversion
+    
+        // Get revenue data
         $revenuePayments = ClientPayment::with(['invoice.client.clientConditions'])
             ->whereBetween('payment_date', [$startDate, $endDate])
             ->get();
-
-        // Calculate revenue in original currency and BDT
+    
+        // Calculate revenue
         $revenueOriginal = 0;
         $revenueBdt = 0;
-
         foreach ($revenuePayments as $payment) {
             $currency = optional(optional($payment->invoice)->client)->clientConditions->first()->currency ?? 'USD';
             $revenueOriginal += $payment->amount;
             $revenueBdt += $payment->amount * ($this->exchangeRates[$currency] ?? 1);
         }
-
-        // Get expenses by category (assuming expenses are in BDT)
+    
+        // Get expenses with details
         $expensesByCategory = ExpenseCategory::with(['expenses' => function($query) use ($startDate, $endDate) {
                 $query->whereBetween('expense_date', [$startDate, $endDate]);
             }])
             ->get()
             ->map(function($category) {
                 return [
+                    'id' => $category->id,
                     'name' => $category->name,
-                    'amount' => $category->expenses->sum('amount')
+                    'amount' => $category->expenses->sum('amount'),
+                    'expense_details' => $category->expenses->map(function($expense) {
+                        return [
+                            'date' => $expense->expense_date,
+                            'description' => $expense->description,
+                            'amount' => $expense->amount,
+                            'receipt' => $expense->receipt
+                        ];
+                    })
                 ];
             });
-
+    
         $totalExpenses = $expensesByCategory->sum('amount');
         $netIncome = $revenueBdt - $totalExpenses;
-
+    
         return view('accounts.incomeStatement', [
             'startDate' => $startDate->format('Y-m-d'),
             'endDate' => $endDate->format('Y-m-d'),
@@ -358,9 +363,7 @@ class AccountController extends Controller
             'netIncome' => $netIncome,
             'exchangeRates' => $this->exchangeRates
         ]);
-        }
-
-
+    }
 
 
 

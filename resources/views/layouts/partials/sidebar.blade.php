@@ -97,12 +97,12 @@
 
                         <!-- Agent Menu (Accessible by Users & Admins) -->
                         @if(auth()->user()->isSuperAdmin() || auth()->user()->isHR() || auth()->user()->isAccountant() || auth()->user()->isUser())
-                        <li class="submenu open"> <!-- Use 'open' class to expand by default -->
-                            <a href="javascript:void(0);" class="text-dark"> <!-- Removed 'active' class -->
+                        <li class="submenu">
+                            <a href="javascript:void(0);"> 
                                 <i class="ti ti-link"></i><span>Agent</span>
                                 <span class="menu-arrow"></span>
                             </a>
-                            <ul style="display: block;"> <!-- Ensure the submenu is displayed by default -->
+                            <ul style="display: block;"> 
                                 <li><a href="{{ route('attendance.index') }}">Attendance</a></li>
                                 <li><a href="{{ route('attendance.leaves') }}">Leaves</a></li>
                                 <li><a href="{{ route('divanj.sales.report') }}">Sales Report</a></li>

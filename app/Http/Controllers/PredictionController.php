@@ -7,6 +7,7 @@ use Carbon\Carbon;
 use Auth;
 use App\Models\DivanjSale;
 use App\Models\Employee;
+use App\Models\Attendance;
 
 class PredictionController extends Controller
 {
@@ -194,8 +195,8 @@ class PredictionController extends Controller
         }
 
         // Calculate daily averages and trend
-        $averages = $this->calculateDailyAverages($sales);
-        $trendFactor = $this->calculateTrendFactor($sales, $startDate, $today);
+        $averages = $this->calculateDailyAverages($sales, $employeeId);
+        $trendFactor = $this->calculateTrendFactor($sales, $startDate, $today, $employeeId);
 
         // Generate predictions for next 10 weekdays
         return $this->generatePredictions($employeeId, 10, $averages, $trendFactor, false);
@@ -228,14 +229,14 @@ class PredictionController extends Controller
         }
 
         // Calculate daily averages and trend
-        $averages = $this->calculateDailyAverages($sales);
-        $trendFactor = $this->calculateTrendFactor($sales, $startDate, $today);
+        $averages = $this->calculateDailyAverages($sales, $employeeId);
+        $trendFactor = $this->calculateTrendFactor($sales, $startDate, $today, $employeeId);
 
         // Generate predictions for next 4 weekend days (2 weekends)
         return $this->generatePredictions($employeeId, 4, $averages, $trendFactor, true);
     }
 
-    private function calculateDailyAverages($sales)
+    private function calculateDailyAverages($sales, $employeeId)
     {
         $dayData = [
             'Monday' => ['sum' => 0, 'days' => 0],
@@ -246,42 +247,97 @@ class PredictionController extends Controller
             'Saturday' => ['sum' => 0, 'days' => 0],
             'Sunday' => ['sum' => 0, 'days' => 0],
         ];
-
+    
+        // Get all dates when employee was present (has attendance record)
+        $presentDates = Attendance::where('employee_id', $employeeId)
+            ->pluck('date')
+            ->map(function ($date) {
+                return Carbon::parse($date)->format('Y-m-d');
+            })
+            ->toArray();
+    
         // Group sales by date to sum quantities per day
         $dailyTotals = $sales->groupBy(function ($sale) {
             return Carbon::parse($sale->date)->format('Y-m-d');
         })->map(function ($daySales) {
             return $daySales->sum('quantity');
         });
-
-        // Assign totals to days of the week
+    
+        // Only include days when employee was present
         foreach ($dailyTotals as $date => $total) {
-            $dayOfWeek = Carbon::parse($date)->format('l');
-            if (array_key_exists($dayOfWeek, $dayData)) {
-                $dayData[$dayOfWeek]['sum'] += $total;
-                $dayData[$dayOfWeek]['days']++;
+            if (in_array($date, $presentDates)) {
+                $dayOfWeek = Carbon::parse($date)->format('l');
+                if (array_key_exists($dayOfWeek, $dayData)) {
+                    $dayData[$dayOfWeek]['sum'] += $total;
+                    $dayData[$dayOfWeek]['days']++;
+                }
             }
         }
-
+    
         $averages = [];
         foreach ($dayData as $day => $data) {
             $averages[$day] = $data['days'] > 0 ? $data['sum'] / $data['days'] : 0;
         }
-
+    
         return $averages;
     }
-
-    private function calculateTrendFactor($sales, Carbon $startDate, Carbon $endDate)
+    
+    private function calculateFallbackAverage($employeeId, $isWeekend)
     {
+        $today = Carbon::today();
+        $startDate = $today->copy()->subDays(90);
+    
+        // Get present dates first
+        $presentDates = Attendance::where('employee_id', $employeeId)
+            ->whereBetween('date', [$startDate, $today])
+            ->pluck('date')
+            ->map(function ($date) {
+                return Carbon::parse($date)->format('Y-m-d');
+            })
+            ->toArray();
+    
+        $sales = DivanjSale::where('employee_id', $employeeId)
+            ->whereBetween('date', [$startDate, $today])
+            ->whereRaw($isWeekend ? 'DAYOFWEEK(date) IN (1,7)' : 'DAYOFWEEK(date) BETWEEN 2 AND 6')
+            ->get();
+    
+        // Filter sales to only include present days
+        $filteredSales = $sales->filter(function ($sale) use ($presentDates) {
+            return in_array(Carbon::parse($sale->date)->format('Y-m-d'), $presentDates);
+        });
+    
+        $dailyTotals = $filteredSales->groupBy(function ($sale) {
+            return Carbon::parse($sale->date)->format('Y-m-d');
+        })->count();
+    
+        return $dailyTotals > 0 ? $filteredSales->sum('quantity') / $dailyTotals : 0;
+    }
+    
+    private function calculateTrendFactor($sales, Carbon $startDate, Carbon $endDate, $employeeId)
+    {
+        // Get present dates
+        $presentDates = Attendance::where('employee_id', $employeeId)
+            ->whereBetween('date', [$startDate, $endDate])
+            ->pluck('date')
+            ->map(function ($date) {
+                return Carbon::parse($date)->format('Y-m-d');
+            })
+            ->toArray();
+    
+        // Filter sales to only include present days
+        $filteredSales = $sales->filter(function ($sale) use ($presentDates) {
+            return in_array(Carbon::parse($sale->date)->format('Y-m-d'), $presentDates);
+        });
+    
         // Split data into recent (last 30 days) and earlier periods
         $midPoint = $endDate->copy()->subDays(30);
-        $recentSales = $sales->filter(function ($sale) use ($midPoint, $endDate) {
+        $recentSales = $filteredSales->filter(function ($sale) use ($midPoint, $endDate) {
             return Carbon::parse($sale->date)->between($midPoint, $endDate);
         });
-        $earlierSales = $sales->filter(function ($sale) use ($startDate, $midPoint) {
+        $earlierSales = $filteredSales->filter(function ($sale) use ($startDate, $midPoint) {
             return Carbon::parse($sale->date)->between($startDate, $midPoint);
         });
-
+    
         // Calculate average daily sales for each period
         $recentDays = $recentSales->groupBy(function ($sale) {
             return Carbon::parse($sale->date)->format('Y-m-d');
@@ -289,15 +345,17 @@ class PredictionController extends Controller
         $earlierDays = $earlierSales->groupBy(function ($sale) {
             return Carbon::parse($sale->date)->format('Y-m-d');
         })->count();
-
+    
         $recentAvg = $recentDays > 0 ? $recentSales->sum('quantity') / $recentDays : 0;
         $earlierAvg = $earlierDays > 0 ? $earlierSales->sum('quantity') / $earlierDays : 0;
-
-        // Calculate trend factor (1.0 = no change, >1.0 = upward trend, <1.0 = downward trend)
+    
+        // Calculate trend factor
         $trendFactor = $earlierAvg > 0 ? $recentAvg / $earlierAvg : 1.0;
-        // Cap trend factor to prevent extreme adjustments
         return max(0.8, min(1.2, $trendFactor));
     }
+    
+
+
 
     private function generatePredictions($employeeId, $numDays, $averages, $trendFactor, $isWeekend)
     {
@@ -339,22 +397,6 @@ class PredictionController extends Controller
         ];
     }
 
-    private function calculateFallbackAverage($employeeId, $isWeekend)
-    {
-        $today = Carbon::today();
-        $startDate = $today->copy()->subDays(90);
-
-        $sales = DivanjSale::where('employee_id', $employeeId)
-            ->whereBetween('date', [$startDate, $today])
-            ->whereRaw($isWeekend ? 'DAYOFWEEK(date) IN (1,7)' : 'DAYOFWEEK(date) BETWEEN 2 AND 6')
-            ->get();
-
-        $dailyTotals = $sales->groupBy(function ($sale) {
-            return Carbon::parse($sale->date)->format('Y-m-d');
-        })->count();
-
-        return $dailyTotals > 0 ? $sales->sum('quantity') / $dailyTotals : 0;
-    }
 
     private function prepareChartData($daywiseSales)
     {
@@ -395,7 +437,7 @@ class PredictionController extends Controller
             "{$name}, your consistent approach is working! Stick to the script - greet warmly, confirm needs, and suggest complementary products. You're at {$achievement}% of target!",
 
             // Cross-selling strategy
-            "{$name}, you're at {$achievement}% of target. Boost sales by upseeling & cross-selling - 'At this special price, can you squeeze 3 more cases?...' is an effective phrase. Your best day is {$bestWeekday} - capitalize on that energy!",
+            "{$name}, you're at {$achievement}% of target. Boost sales by upseeling & cross-selling - 'At that special price, can we pop you down 3 cases more?' is an effective phrase. Your best day is {$bestWeekday} - capitalize on that energy!",
 
             // Personalization
             "{$name}, personalize every interaction. Use the customer's name 2-3 times naturally. 'But Mark, when your friend and family comes over..' This builds rapport.",
@@ -404,13 +446,13 @@ class PredictionController extends Controller
             "{$name}, maintain an enthusiastic tone throughout calls. Vary your pace - slower when explaining details, energetic when closing. You're on track for {$achievement}% of target!",
 
             // Continuous flow
-            "Keep conversations flowing, {$name}. Avoid dead air - have transition phrases ready. 'I completely understand that you are not (mirror EXACT exceuse of customer)...' Your {$bestWeekday} performance shows this works!",
+            "Keep conversations flowing, {$name}. Avoid dead air - have transition phrases ready. 'I completely understand that (mirror EXACT excuse of the customer)...' Your {$bestWeekday} performance shows this works!",
 
             // Product knowledge
             "{$name}, deep product knowledge drives sales. Highlight 3 key features for each item. You're at {$achievement}% - this extra detail could push you to 100%!",
 
             // Closing technique
-            "Strong work {$name}! When closing, confirm his Address first: 'I have got you at the fake street, is that you?' rather than 'Would you like to buy?' Your {$bestWeekday} results prove this works!"
+            "Strong work {$name}! When closing, confirm his Address first: 'I have got you at 123 fake street, is that you?' rather than 'Would you like to buy?' Your {$bestWeekday} results prove this works!"
         ];
 
         return $messages[array_rand($messages)];

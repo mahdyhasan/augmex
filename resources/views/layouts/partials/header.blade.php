@@ -58,6 +58,7 @@
                                         <li><a href="{{ route('clients.index') }}">Clients</a></li>
                                         <li><a href="{{ route('accounts.incomeStatement') }}">Profit & Loss</a></li>
                                         <hr>
+                                        <li><a href="{{ route('employees.incentives.fines') }}">Incentive & Fines</a></li>
                                         <li><a href="{{ route('user.index') }}">User Management</a></li>
                                     </ul>
                                 </li>

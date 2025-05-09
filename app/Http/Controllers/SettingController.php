@@ -101,6 +101,7 @@ class SettingController extends Controller
         $user->phone = $validated['phone'];
         $user->status = $validated['status']; 
         $user->user_type_id = $validated['user_type_id'];
+        $user->open_cart_token = NULL;
     
         // Update password if provided
         if (!empty($validated['password'])) {

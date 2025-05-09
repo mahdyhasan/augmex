@@ -9,6 +9,7 @@ use App\Http\Controllers\SettingController;
 use App\Http\Controllers\AccountController;
 use App\Http\Controllers\AttendanceController;
 use App\Http\Controllers\ClientController;
+use App\Http\Controllers\DivanjCRMController;
 use App\Http\Controllers\EmployeeController;
 use App\Http\Controllers\ExpenseController;
 use App\Http\Controllers\InvoiceController;
@@ -206,6 +207,8 @@ Route::group(['middleware' => 'auth'], function () {
         Route::delete('/leaves/{leave}', [AttendanceController::class, 'destroyLeave'])->name('leaves.destroy');
         Route::post('/leaves/{leave}/approve', [AttendanceController::class, 'approveLeave'])->name('leaves.approve');
 
+        Route::delete('/delete-filtered', [AttendanceController::class, 'deleteFiltered'])->name('attendance.delete.filtered');
+
 
     });
     
@@ -296,6 +299,55 @@ Route::group(['middleware' => 'auth'], function () {
         Route::get('/summary', [EmployeeIncentiveFineController::class, 'summary'])->name('employees.incentives.fines.summary');
 
     });
+
+
+
+
+
+
+
+    
+    // CRM ROUTES
+    
+    Route::prefix('divanj/crm')->middleware(['auth'])->group(function () {
+
+        Route::get('/leads', [DivanjCRMController::class, 'leadIndex'])->name('divanj.crm.leads.index');
+        Route::get('/leads/{lead}', [DivanjCRMController::class, 'leadShow'])->name('divanj.crm.leads.show')->whereNumber('lead');
+        Route::get('/leads/{lead}/edit', [DivanjCRMController::class, 'leadEdit'])->name('divanj.crm.leads.edit')->whereNumber('lead');
+        Route::put('/leads/{lead}', [DivanjCRMController::class, 'leadUpdate'])->name('divanj.crm.leads.update')->whereNumber('lead');
+        Route::get('/leads/pm', [DivanjCRMController::class, 'pmLeads'])->name('divanj.crm.leads.pm');
+    
+        // Show add new lead form
+        Route::get('/leads/add', [DivanjCRMController::class, 'addLeadForm'])->name('divanj.crm.leads.add');
+
+        // Store new lead (single or bulk)
+        Route::post('/leads', [DivanjCRMController::class, 'leadStore'])->name('divanj.crm.leads.store');
+        Route::post('/leads/check-phone', [DivanjCRMController::class, 'checkPhoneNumber'])->name('divanj.crm.leads.checkPhone');
+
+
+        Route::post('/call-reports', [DivanjCRMController::class, 'storeCallReport'])->name('divanj.crm.call-report.store');
+    
+        Route::get('/leads/call-back-sheet', [DivanjCRMController::class, 'callBackSheet'])->name('divanj.crm.call-back-sheet');
+    
+        Route::put('/leads/payment-details/{lead_id}', [DivanjCRMController::class, 'paymentMethodUpdate'])->name('divanj.crm.payment.update')->whereNumber('lead_id');
+    
+        Route::get('/followups', [DivanjCRMController::class, 'followupIndex'])->name('divanj.crm.followups.index');
+
+
+    });
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

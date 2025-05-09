@@ -68,6 +68,19 @@
                     </form>
 
 
+                    <!-- Delete Attendance in Bulk -->
+                    @if(Auth::user()->isSuperAdmin() || Auth::user()->isHR())
+                        @if(request()->has('start_date') || request()->has('end_date') || request()->has('employee_name'))
+                            <div class="mb-3 text-end">
+                                <button class="btn btn-danger" id="deleteFilteredBtn">
+                                    <i class="fas fa-trash-alt me-2"></i>Delete Filtered Entries
+                                </button>
+                                <small class="text-muted d-block mt-1">This will delete all entries matching your current filters</small>
+                            </div>
+                        @endif
+                    @endif
+
+
                     <!-- Attendance Table -->
                     <table id="attendanceTable" class="table table-striped">
                         <thead>
@@ -226,7 +239,6 @@
             "info": true,
             "responsive": true,
             "order": [[2, 'desc']] // Default sort by date
-
         });
 
         // Submit filter form on change
@@ -235,9 +247,8 @@
         });
     });
 
-
     // LATE SUMMARY
-    document.getElementById('lateSummaryBtn').addEventListener('click', function () {
+    document.getElementById('lateSummaryBtn').addEventListener('click', function() {
         const startDate = "{{ $startDate }}";
         const endDate = "{{ $endDate }}";
         const employeeName = "{{ $employeeName }}";
@@ -305,6 +316,58 @@
         });
     });
 
-
+    // Delete filtered entries functionality
+    document.getElementById('deleteFilteredBtn')?.addEventListener('click', function() {
+        const startDate = document.getElementById('start_date').value;
+        const endDate = document.getElementById('end_date').value;
+        const employeeName = document.getElementById('employee_name').value;
+        
+        // Count how many records match the filter
+        const matchingCount = document.querySelectorAll('#attendanceTable tbody tr').length;
+        
+        if (matchingCount === 0) {
+            alert('No records match your current filters.');
+            return;
+        }
+        
+        if (confirm(`Are you sure you want to delete ${matchingCount} attendance record(s)?\n\nThis action cannot be undone.`)) {
+            // Show loading state
+            const btn = this;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i> Deleting...';
+            btn.disabled = true;
+            
+            // Send AJAX request
+            fetch("{{ route('attendance.delete.filtered') }}", {
+                method: 'DELETE',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: JSON.stringify({
+                    start_date: startDate,
+                    end_date: endDate,
+                    employee_name: employeeName
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert(data.message);
+                    window.location.reload(); // Refresh to show changes
+                } else {
+                    alert('Error: ' + data.message);
+                    btn.innerHTML = '<i class="fas fa-trash-alt me-2"></i>Delete Filtered Entries';
+                    btn.disabled = false;
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('An error occurred while deleting records.');
+                btn.innerHTML = '<i class="fas fa-trash-alt me-2"></i>Delete Filtered Entries';
+                btn.disabled = false;
+            });
+        }
+    });
 </script>
 @endsection

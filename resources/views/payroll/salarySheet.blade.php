@@ -117,6 +117,7 @@
                                     <th>Transport</th>
                                     <th>Commission</th>
                                     <th>Bonus</th>
+                                    <th>Others</th>
                                     <th>Total Salary</th>
                                     <th>Deductions</th>
                                     <th>Net Salary</th>
@@ -150,8 +151,13 @@
                                             name="payrolls[{{ $payroll->id }}][bonuses]" 
                                             value="{{ $payroll->bonuses }}" required>
                                     </td>
+                                    <td>
+                                        <input type="number" step="0.01" class="form-control form-control-sm text-right" 
+                                            name="payrolls[{{ $payroll->id }}][others]" 
+                                            value="{{ $payroll->others }}" required>
+                                    </td>
                                     <td class="text-right total-salary">
-                                        {{ number_format($payroll->base_salary + $payroll->transport + $payroll->commission + $payroll->bonuses, 2) }}
+                                        {{ number_format($payroll->base_salary + $payroll->transport + $payroll->commission + $payroll->bonuses + $payroll->others, 2) }}
                                     </td>
                                     <td>
                                         <input type="number" step="0.01" class="form-control form-control-sm text-right" 
@@ -210,9 +216,10 @@
             const transport = parseFloat(row.querySelector(`input[name="payrolls[${payrollId}][transport]"]`).value) || 0;
             const commission = parseFloat(row.querySelector(`input[name="payrolls[${payrollId}][commission]"]`).value) || 0;
             const bonuses = parseFloat(row.querySelector(`input[name="payrolls[${payrollId}][bonuses]"]`).value) || 0;
+            const others = parseFloat(row.querySelector(`input[name="payrolls[${payrollId}][others]"]`).value) || 0;
             const deductions = parseFloat(row.querySelector(`input[name="payrolls[${payrollId}][deductions]"]`).value) || 0;
             
-            const totalSalary = baseSalary + transport + commission + bonuses;
+            const totalSalary = baseSalary + transport + commission + bonuses + others;
             const netSalary = totalSalary - deductions;
             
             row.querySelector('.total-salary').textContent = totalSalary.toFixed(2);

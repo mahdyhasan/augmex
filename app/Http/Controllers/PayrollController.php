@@ -194,7 +194,9 @@ class PayrollController extends Controller
                     'USD' => 120
                 ];
 
-                $employees = Employee::with('user')->get();
+                $employees = Employee::with('user')->whereHas('user', function ($query) {
+                    $query->where('status', 1);
+                    })->get();
 
                 if ($employees->isEmpty()) {
                     return response()->json([
@@ -505,28 +507,32 @@ class PayrollController extends Controller
             'payrolls.*.transport' => 'required|numeric|min:0',
             'payrolls.*.commission' => 'required|numeric|min:0',
             'payrolls.*.bonuses' => 'required|numeric|min:0',
+            'payrolls.*.others' => 'required|numeric|min:0',
             'payrolls.*.deductions' => 'required|numeric|min:0',
-            'payrolls.*.net_salary' => 'nullable|numeric|min:0', // Made nullable
+            'payrolls.*.net_salary' => 'nullable|numeric',
             'payrolls.*.payment_status' => 'required|in:paid,pending',
             'month' => 'nullable|date_format:Y-m',
         ]);
-
+    
         foreach ($validated['payrolls'] as $payrollId => $data) {
             $payroll = Payroll::findOrFail($payrollId);
-            $totalSalary = $data['base_salary'] + $data['transport'] + $data['commission'] + $data['bonuses'];
-            $netSalary = $data['net_salary'] ?? ($totalSalary - $data['deductions']); // Fallback calculation
+            $totalSalary = $data['base_salary'] + $data['transport'] + $data['commission'] + 
+                          $data['bonuses'] + $data['others'];
+            $netSalary = $data['net_salary'] ?? ($totalSalary - $data['deductions']);
+            
             $payroll->update([
                 'base_salary' => $data['base_salary'],
                 'transport' => $data['transport'],
                 'commission' => $data['commission'],
                 'bonuses' => $data['bonuses'],
+                'others' => $data['others'],
                 'deductions' => $data['deductions'],
                 'net_salary' => $netSalary,
                 'payment_status' => $data['payment_status'],
             ]);
         }
-
-        return redirect()->route('payrolls.salary.sheet', ['month' => $request->input('month', Carbon::now()->format('Y-m'))])
+    
+        return redirect()->route('payrolls.salary.sheet', ['month' => $request->input('month')])
             ->with('success', 'Payroll records updated successfully.');
     }
 

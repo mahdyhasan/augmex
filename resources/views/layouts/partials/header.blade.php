@@ -133,6 +133,26 @@
 
                                 
                                 <!-- Employee Section (Only for Employees) -->
+
+                                @if(auth()->user()->isSuperAdmin() || auth()->user()->isHR() || auth()->user()->isAccountant() || auth()->user()->isUser())
+                                <li class="submenu">
+                                    <a href="javascript:void(0);">
+                                        <i class="fa fa-tasks"></i><span>CRM</span>
+                                        <span class="menu-arrow"></span>
+                                    </a>
+                                    <ul>
+                                        <li><a href="{{ route('divanj.crm.leads.index') }}">My Leads</a></li>
+                                        <li><a href="{{ route('divanj.crm.followups.index') }}">Followups</a></li>
+                                        <li><a href="{{ route('divanj.crm.leads.pm') }}">PM List</a></li>
+                                        <li><a href="{{ route('divanj.crm.call-back-sheet') }}">Call Back Sheet</a></li>
+                                        <hr>
+                                        <li><a href="{{ route('divanj.crm.leads.add') }}">Add New Lead</a></li>
+                                    </ul>
+                                </li>
+                                @endif
+
+
+
                                 @if(auth()->user()->isSuperAdmin() || auth()->user()->isHR() || auth()->user()->isAccountant() || auth()->user()->isUser())
                                 <li class="submenu">
                                     <a href="javascript:void(0);">

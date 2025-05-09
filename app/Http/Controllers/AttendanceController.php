@@ -215,6 +215,67 @@ class AttendanceController extends Controller
     }
     
 
+    // DELETE ATTENDANCE
+    public function deleteFiltered(Request $request)
+    {
+        if (!Auth::user()->isSuperAdmin() && !Auth::user()->isHR()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'You do not have permission to perform this action.'
+            ], 403);
+        }
+    
+        $startDate = $request->input('start_date');
+        $endDate = $request->input('end_date');
+        $employeeName = $request->input('employee_name');
+    
+        $query = Attendance::query();
+    
+        // Apply the same filters as the index method
+        if ($startDate && $endDate) {
+            $query->whereBetween('date', [$startDate, $endDate]);
+        } elseif ($startDate) {
+            $query->where('date', '>=', $startDate);
+        } elseif ($endDate) {
+            $query->where('date', '<=', $endDate);
+        }
+    
+        if ($employeeName) {
+            $query->whereHas('employee.user', function ($q) use ($employeeName) {
+                $q->where('name', 'like', '%' . $employeeName . '%');
+            });
+        }
+    
+        $count = $query->count();
+    
+        if ($count === 0) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No matching records found to delete.'
+            ]);
+        }
+    
+        try {
+            $query->delete();
+            
+            return response()->json([
+                'success' => true,
+                'message' => "Successfully deleted {$count} attendance record(s)."
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to delete records: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+
+
+
+
+
+
 
     // LATE SUMMARY
     public function lateSummary(Request $request)
@@ -306,7 +367,7 @@ class AttendanceController extends Controller
             ->when($isHR && $request->employee_id, fn($q) => $q->where('employee_id', $request->employee_id))
             ->when($request->approved !== null, fn($q) => $q->where('approved', $request->approved))
             ->latest()
-            ->paginate(20);
+            ->get();
     
         // Always pass employees, but for non-HR, pass only their own employee record
         $employees = $isHR 

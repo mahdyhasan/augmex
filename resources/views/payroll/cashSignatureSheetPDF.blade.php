@@ -1,29 +1,92 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+    <meta charset="UTF-8">
     <title>Cash Signature Sheet - {{ $monthName }}</title>
     <style>
-        body { font-family: Arial, sans-serif; margin-top: 200px; }
-        table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
-        td, th { border: 1px solid #000; padding: 8px; text-align: left; }
-        .title { text-align: center; font-weight: bold; margin-bottom: 20px; }
-        .footer { margin-top: 30px; }
-        .footer table { width: 100%; border: none; }
-        .footer td { border: none; padding: 3px; }
-        .text-right { text-align: right; }
+        body {
+            font-family: 'Helvetica Neue', Arial, sans-serif;
+            margin: 120px 30px;
+            background: #fff;
+            color: #333;
+        }
+        .title {
+            text-align: center;
+            font-weight: 700;
+            font-size: 22px;
+            margin-bottom: 30px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: #fff;
+            border: 1px solid #000;
+        }
+        th, td {
+            padding: 10px;
+            text-align: left;
+            border: 1px solid #000;
+            font-size: 14px;
+        }
+        th {
+            background-color: #f0f0f0;
+            font-weight: 600;
+            text-transform: uppercase;
+            font-size: 13px;
+        }
+        td.text-right {
+            text-align: right;
+        }
+        .total-row td {
+            font-weight: 700;
+            background-color: #f9f9f9;
+        }
+        .footer {
+            margin-top: 100px;
+        }
+        .footer table {
+            width: 100%;
+            border: none;
+            text-align: center;
+        }
+        .footer th, .footer td {
+            border: none;
+            font-size: 14px;
+            padding: 5px;
+        }
+        .footer .label {
+            font-weight: bold;
+            margin-bottom: 10px;
+            font-size: 15px;
+            text-decoration: underline;
+        }
+        .footer .info {
+            font-size: 14px;
+            margin-top: 5px;
+            color: #333;
+        }
+        @media print {
+            body {
+                background: #fff;
+            }
+            table, .footer {
+                page-break-inside: avoid;
+            }
+        }
     </style>
 </head>
 <body>
-    <div class="title">Cash Salary for the Month of {{ $monthName }}.</div>
-    
+
+    <div class="title">Cash Salary for the Month of {{ $monthName }}</div>
+
     <table>
         <thead>
             <tr>
-                <th width="5%">SL</th>
-                <th width="15%">ID</th>
-                <th width="35%">Name</th>
-                <th width="20%">BDT</th>
-                <th width="25%">Signature & Date</th>
+                <th>SL</th>
+                <th>ID</th>
+                <th>Name</th>
+                <th>BDT</th>
+                <th>Signature & Date</th>
             </tr>
         </thead>
         <tbody>
@@ -36,40 +99,41 @@
                 <td></td>
             </tr>
             @endforeach
-            <tr>
-                <td colspan="3" class="text-right"><strong>Total</strong></td>
-                <td class="text-right"><strong>{{ number_format($total, 2) }}</strong></td>
+            <tr class="total-row">
+                <td colspan="3" class="text-right">Total</td>
+                <td class="text-right">{{ number_format($total, 2) }}</td>
                 <td></td>
             </tr>
         </tbody>
     </table>
 
-    <br>    <br>
-
-
-    <div class="footer" style="margin-top: 50px;">
+    <div class="footer">
         <table>
-            <tr>
-                <td width="33%">Prepared By</td>
-                <td width="33%">Checked By</td>
-                <td width="33%">Approved By</td>
-            </tr>
-            <tr>
-                <td>S.M.Syful Islam</td>
-                <td>Mahdy Hasan</td>
-                <td>SJ Tarique</td>
-            </tr>
-            <tr>
-                <td>Consultant</td>
-                <td>Head of Growth</td>
-                <td>Managing Director</td>
-            </tr>
-            <tr>
-                <td>Tech Cloud Ltd.</td>
-                <td>Tech Cloud Ltd.</td>
-                <td>Tech Cloud Ltd.</td>
-            </tr>
+            <thead>
+                <tr>
+                    <th>Prepared By</th>
+                    <th>Checked By</th>
+                    <th>Approved By</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>S.M.Syful Islam</td>
+                    <td>Mahdy Hasan</td>
+                    <td>SJ Tarique</td>
+                </tr>
+                <tr>
+                    <td style="color: grey;">Consultant</td>
+                    <td style="color: grey;">Head of Growth</td>
+                    <td style="color: grey;">Managing Director</td>
+                </tr>                <tr>
+                    <td style="color: grey;">Tech Cloud Ltd.</td>
+                    <td style="color: grey;">Tech Cloud Ltd.</td>
+                    <td style="color: grey;">Tech Cloud Ltd.</td>
+                </tr>
+            </tbody>
         </table>
     </div>
+
 </body>
 </html>

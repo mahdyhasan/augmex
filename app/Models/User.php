@@ -18,6 +18,8 @@ class User extends Authenticatable
         'password',
         'user_type_id',
         'status',
+        'open_cart_token',
+
     ];
 
     protected $hidden = [
@@ -67,6 +69,29 @@ class User extends Authenticatable
     public function isUser()
     {
         return $this->user_type_id == 4; // Normal User
+    }
+
+
+
+
+    public function callBackSheets()
+    {
+        return $this->hasMany(DivanjCrmCallBackSheet::class, 'agent_id');
+    }
+
+    public function callHistories()
+    {
+        return $this->hasMany(DivanjCrmCallHistory::class, 'agent_id');
+    }
+
+    public function followups()
+    {
+        return $this->hasMany(DivanjCrmFollowup::class, 'agent_id');
+    }
+
+    public function leads()
+    {
+        return $this->hasMany(DivanjCrmLead::class, 'agent_id');
     }
 
 }
